@@ -13,6 +13,7 @@ export interface Evento {
   funcionarioPlantao: string;
   equipamentosNecessarios: string;
   numeroChamado: string;
+  requerente: string;
   removido: boolean;
   concluido?: boolean;
   dataRemocao?: string;
@@ -50,5 +51,20 @@ export interface InventarioItem {
   id: string;
   item: string;
   unidades: InventarioUnidade[];
+  updatedAt: string;
+}
+
+export interface Impressora {
+  id: string;
+  local: string;
+  marca: string;
+  modelo: string;
+  numeroSerie: string;
+  ip: string;
+  mac: string;
+  tonerPreto: number;
+  tonerCiano: number;
+  tonerMagenta: number;
+  tonerAmarelo: number;
   updatedAt: string;
 }

@@ -21,10 +21,10 @@
 
 .inventario-header h2 {
   color: var(--text);
-  font-size: 2.1rem;
-  margin-bottom: 0.35rem;
+  font-size: 1.35rem;
+  margin-bottom: 0.25rem;
   font-weight: 600;
-  line-height: 1.05;
+  line-height: 1.1;
 }
 
 .inventario-stats {
@@ -35,12 +35,12 @@
 
 .inventario-stat {
   color: var(--text-muted);
-  font-size: 0.92rem;
+  font-size: 0.8rem;
 }
 
 .inventario-stat strong {
   color: var(--blue);
-  font-size: 1rem;
+  font-size: 0.85rem;
 }
 
 .inventario-actions {
@@ -78,8 +78,8 @@
   color: var(--text);
   border: 1px solid var(--border-strong);
   border-radius: 6px;
-  padding: 0.6rem 0.8rem;
-  font-size: 0.94rem;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.85rem;
   font-weight: 500;
   transition:
     border-color 0.2s,
@@ -98,13 +98,10 @@
 }
 
 .inventario-list {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.9rem;
-  align-items: start;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
   width: 100%;
-  min-width: 0;
-  max-width: 100%;
 }
 
 .btn-add-item,
@@ -129,9 +126,9 @@
 .btn-remover-unidade,
 .btn-historico-unidade,
 .inventario-toast button {
-  padding: 0.55rem 0.9rem;
+  padding: 0.42rem 0.75rem;
   border-radius: 6px;
-  font-size: 0.84rem;
+  font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
   transition:
@@ -369,16 +366,27 @@
 
 .inventario-card {
   background: var(--surface);
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  box-shadow: 0 1px 8px var(--shadow);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.25rem;
   position: relative;
-  overflow: visible;
+  overflow: hidden;
   width: 100%;
   min-width: 0;
   transition:
     border-color 0.18s ease,
-    opacity 0.18s ease;
+    opacity 0.18s ease,
+    box-shadow 0.2s,
+    transform 0.15s;
+}
+
+html[data-theme="light"] .inventario-card {
+  border-color: rgba(43, 143, 251, 0.18);
+}
+
+.inventario-card:not(.is-dragging):hover {
+  box-shadow: 0 6px 28px var(--shadow);
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
 }
 
 .inventario-card.is-dragging {
@@ -388,7 +396,7 @@
 
 .inventario-card.is-drag-over {
   border-color: var(--blue);
-  box-shadow: 0 0 0 2px rgba(43, 143, 251, 0.14);
+  box-shadow: 0 0 0 2px rgba(43, 143, 251, 0.18);
 }
 
 /* Indicador visual de posicionamento do drag and drop */
@@ -447,14 +455,14 @@
 .inventario-card-header {
   width: 100%;
   background: var(--table-header-gradient);
+  border-bottom: 1px solid var(--border);
   color: var(--text);
-  padding: 0.85rem 1rem;
+  padding: 0.65rem 0.9rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
   text-align: left;
-  cursor: pointer;
 }
 
 .inventario-card-title {
@@ -465,7 +473,7 @@
 }
 
 .inventario-item-name {
-  font-size: 1rem;
+  font-size: 0.88rem;
   font-weight: 600;
   line-height: 1.1;
   overflow-wrap: anywhere;
@@ -543,70 +551,122 @@
 }
 
 .inventario-card-body {
-  padding: 0.85rem 1rem 1rem;
-  max-height: 2600px;
-  opacity: 1;
+  padding: 0;
+  width: 100%;
+  min-width: 0;
   overflow: hidden;
+}
+
+/* ─── Unit Table ──────────────────────────────────────────────── */
+.ut-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.ut-head,
+.ut-row {
+  display: grid;
+  grid-template-columns: 1.5rem 8rem 1fr 6.5rem 8rem 6.5rem 7.5rem 8.5rem 5.5rem;
+  align-items: center;
+  min-width: 780px;
+}
+
+.ut-head {
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  padding: 0.3rem 0.5rem;
+}
+
+.ut-head span {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0 0.35rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ut-row {
+  border-bottom: 1px solid var(--border);
+  padding: 0.12rem 0.5rem;
+  transition: background 0.12s;
+}
+
+.ut-row:last-child {
+  border-bottom: none;
+}
+
+.ut-row:hover {
+  background: rgba(43, 143, 251, 0.04);
+}
+
+.ut-num {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  text-align: center;
+  padding: 0 0.2rem;
+  user-select: none;
+}
+
+.ut-date {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  padding: 0 0.35rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ut-status {
+  padding: 0.18rem 0.3rem;
+}
+
+.ut-actions {
+  display: flex;
+  gap: 0.25rem;
+  justify-content: flex-end;
+  padding: 0.18rem 0.15rem;
+}
+
+.ut-actions .btn-historico-unidade,
+.ut-actions .btn-remover-unidade {
+  padding: 0.2rem 0.45rem;
+  font-size: 0.71rem;
+}
+
+.ut-input {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 0.26rem 0.38rem;
+  font-size: 0.79rem;
+  color: var(--text);
   width: 100%;
   min-width: 0;
-  transition:
-    max-height 0.32s cubic-bezier(0.4, 0, 0.2, 1),
-    opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1),
-    padding 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.inventario-card-body.is-closed {
-  max-height: 0;
-  opacity: 0;
-  padding-top: 0;
-  padding-bottom: 0;
-  pointer-events: none;
-}
-
-/* Lista de unidades em formato de box de formulário (Grid responsivo) */
-.unidades-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  width: 100%;
-}
-
-.unidade-item-box {
-  background: var(--bg-strong);
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.9rem;
-  box-shadow: 0 1px 4px var(--shadow);
-  transition: border-color 0.2s, box-shadow 0.2s;
-  width: 100%;
-  min-width: 0;
+  margin: 0.18rem 0.15rem;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
   box-sizing: border-box;
 }
 
-.unidade-item-box:hover {
-  border-color: rgba(43, 143, 251, 0.4);
-  box-shadow: 0 2px 8px var(--shadow);
+.ut-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.35;
 }
 
-.unidade-row-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 0.65rem;
-  width: 100%;
+.ut-input:hover {
+  border-color: var(--border);
+  background: var(--bg-strong);
 }
 
-.unidade-status-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  flex-wrap: wrap;
+.ut-input:focus {
+  outline: none;
+  border-color: var(--blue);
+  background: var(--bg-strong);
+  box-shadow: 0 0 0 2px rgba(43, 143, 251, 0.14);
 }
 
 select.status-select {
@@ -627,8 +687,14 @@ select.status-select {
   background-position: right 0.45rem center;
   background-size: 0.65rem;
   text-transform: none;
-  width: auto;
-  min-width: 110px;
+  width: 100%;
+  min-width: unset;
+}
+
+.ut-status select.status-select {
+  font-size: 0.71rem;
+  padding: 0.15rem 1.4rem 0.15rem 0.4rem;
+  min-height: 1.6rem;
 }
 
 select.status-select.status-disponivel {
@@ -671,61 +737,6 @@ select.status-select option {
   font-weight: 600;
 }
 
-.unidade-actions {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.unidade-actions button {
-  padding: 0.35rem 0.65rem;
-  font-size: 0.76rem;
-  border-radius: 5px;
-}
-
-.unidade-fields-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 0.75rem 1rem;
-  width: 100%;
-}
-
-.unidade-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  min-width: 0;
-}
-
-.unidade-field label {
-  color: var(--text-muted);
-  font-size: 0.74rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.02rem;
-}
-
-.unidade-field input {
-  padding: 0.42rem 0.55rem;
-  font-size: 0.82rem;
-  border-radius: 6px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-}
-
-.unidade-field.date-field {
-  justify-content: flex-end;
-}
-
-.unidade-date {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  padding: 0.42rem 0;
-  font-weight: 500;
-}
 
 .empty-state {
   text-align: center;
@@ -746,23 +757,6 @@ html[data-theme="light"] .btn-remover-item {
   color: #7a1f1f;
 }
 
-.inventario-list-desktop {
-  display: flex;
-  gap: 0.9rem;
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
-  align-items: flex-start;
-}
-
-.inventario-column {
-  display: flex;
-  flex-direction: column;
-  gap: 0.9rem;
-  flex: 1;
-  min-width: 0;
-  max-width: 100%;
-}
 
 @media (max-width: 920px) {
   .inventario-toolbar {
@@ -772,7 +766,7 @@ html[data-theme="light"] .btn-remover-item {
 
 @media (max-width: 768px) {
   .inventario-header h2 {
-    font-size: 1.8rem;
+    font-size: 1.2rem;
   }
 
   .inventario-stats {
@@ -814,11 +808,11 @@ html[data-theme="light"] .btn-remover-item {
 
 @media (max-width: 480px) {
   .inventario-header h2 {
-    font-size: 1.5rem;
+    font-size: 1.1rem;
   }
 
   .inventario-item-name {
-    font-size: 0.95rem;
+    font-size: 0.85rem;
   }
 
   .inventario-card-buttons {

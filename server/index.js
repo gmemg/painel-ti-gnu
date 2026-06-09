@@ -42,6 +42,7 @@ const initDatabase = async () => {
       funcionario_plantao TEXT,
       equipamentos_necessarios TEXT,
       numero_chamado TEXT,
+      requerente TEXT,
       removido BOOLEAN DEFAULT false,
       concluido BOOLEAN DEFAULT false,
       data_remocao TIMESTAMP,
@@ -58,11 +59,15 @@ const initDatabase = async () => {
       funcionario_plantao TEXT,
       equipamentos_necessarios TEXT,
       numero_chamado TEXT,
+      requerente TEXT,
       removido BOOLEAN DEFAULT false,
       concluido BOOLEAN DEFAULT false,
       data_remocao TIMESTAMP,
       data_conclusao TIMESTAMP
     );
+
+    ALTER TABLE eventos ADD COLUMN IF NOT EXISTS requerente TEXT;
+    ALTER TABLE historico_eventos ADD COLUMN IF NOT EXISTS requerente TEXT;
 
     CREATE TABLE IF NOT EXISTS inventario_itens (
       id TEXT PRIMARY KEY,
@@ -97,8 +102,38 @@ const initDatabase = async () => {
     INSERT INTO historico_contadores (id, valor)
     VALUES ('removidos', 0)
     ON CONFLICT (id) DO NOTHING;
+
+    CREATE TABLE IF NOT EXISTS impressoras (
+      id TEXT PRIMARY KEY,
+      local_texto TEXT,
+      marca TEXT,
+      modelo TEXT,
+      numero_serie TEXT,
+      ip TEXT,
+      mac TEXT,
+      toner_preto INTEGER DEFAULT 100,
+      toner_ciano INTEGER DEFAULT 100,
+      toner_magenta INTEGER DEFAULT 100,
+      toner_amarelo INTEGER DEFAULT 100,
+      updated_at TIMESTAMP NOT NULL
+    );
   `);
 };
+
+const rowToImpressora = (row) => ({
+  id: row.id,
+  local: row.local_texto || "",
+  marca: row.marca || "",
+  modelo: row.modelo || "",
+  numeroSerie: row.numero_serie || "",
+  ip: row.ip || "",
+  mac: row.mac || "",
+  tonerPreto: row.toner_preto ?? 100,
+  tonerCiano: row.toner_ciano ?? 100,
+  tonerMagenta: row.toner_magenta ?? 100,
+  tonerAmarelo: row.toner_amarelo ?? 100,
+  updatedAt: new Date(row.updated_at).toISOString(),
+});
 
 const rowToEvento = (row) => ({
   id: row.id,
@@ -110,6 +145,7 @@ const rowToEvento = (row) => ({
   funcionarioPlantao: row.funcionario_plantao || "",
   equipamentosNecessarios: row.equipamentos_necessarios || "",
   numeroChamado: row.numero_chamado || "",
+  requerente: row.requerente || "",
   removido: Boolean(row.removido),
   concluido: Boolean(row.concluido),
   dataRemocao: row.data_remocao
@@ -132,10 +168,10 @@ const upsertEventos = async (client, tableName, eventos) => {
       `
         INSERT INTO ${tableName} (
           id, nome_evento, adicionado_por, data_hora, dia_semana, local_evento,
-          funcionario_plantao, equipamentos_necessarios, numero_chamado,
+          funcionario_plantao, equipamentos_necessarios, numero_chamado, requerente,
           removido, concluido, data_remocao, data_conclusao
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         ON CONFLICT (id) DO UPDATE SET
           nome_evento = EXCLUDED.nome_evento,
           adicionado_por = EXCLUDED.adicionado_por,
@@ -145,6 +181,7 @@ const upsertEventos = async (client, tableName, eventos) => {
           funcionario_plantao = EXCLUDED.funcionario_plantao,
           equipamentos_necessarios = EXCLUDED.equipamentos_necessarios,
           numero_chamado = EXCLUDED.numero_chamado,
+          requerente = EXCLUDED.requerente,
           removido = EXCLUDED.removido,
           concluido = EXCLUDED.concluido,
           data_remocao = EXCLUDED.data_remocao,
@@ -160,6 +197,7 @@ const upsertEventos = async (client, tableName, eventos) => {
         evento.funcionarioPlantao || "",
         evento.equipamentosNecessarios || "",
         evento.numeroChamado || "",
+        evento.requerente || "",
         Boolean(evento.removido),
         Boolean(evento.concluido),
         evento.dataRemocao || null,
@@ -369,6 +407,81 @@ app.put("/api/inventario", async (req, res, next) => {
     client.release();
   }
 });
+app.get("/api/impressoras", async (_req, res, next) => {
+  try {
+    const result = await pool.query(
+      "SELECT * FROM impressoras ORDER BY updated_at ASC",
+    );
+    res.json(result.rows.map(rowToImpressora));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put("/api/impressoras", async (req, res, next) => {
+  const impressoras = req.body || [];
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const ids = impressoras.map((imp) => imp.id);
+    if (ids.length > 0) {
+      await client.query(
+        "DELETE FROM impressoras WHERE NOT (id = ANY($1::text[]))",
+        [ids],
+      );
+    } else {
+      await client.query("DELETE FROM impressoras");
+    }
+    for (const imp of impressoras) {
+      await client.query(
+        `
+        INSERT INTO impressoras (
+          id, local_texto, marca, modelo, numero_serie, ip, mac,
+          toner_preto, toner_ciano, toner_magenta, toner_amarelo, updated_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        ON CONFLICT (id) DO UPDATE SET
+          local_texto = EXCLUDED.local_texto,
+          marca = EXCLUDED.marca,
+          modelo = EXCLUDED.modelo,
+          numero_serie = EXCLUDED.numero_serie,
+          ip = EXCLUDED.ip,
+          mac = EXCLUDED.mac,
+          toner_preto = EXCLUDED.toner_preto,
+          toner_ciano = EXCLUDED.toner_ciano,
+          toner_magenta = EXCLUDED.toner_magenta,
+          toner_amarelo = EXCLUDED.toner_amarelo,
+          updated_at = EXCLUDED.updated_at
+        `,
+        [
+          imp.id,
+          imp.local || "",
+          imp.marca || "",
+          imp.modelo || "",
+          imp.numeroSerie || "",
+          imp.ip || "",
+          imp.mac || "",
+          imp.tonerPreto ?? 100,
+          imp.tonerCiano ?? 100,
+          imp.tonerMagenta ?? 100,
+          imp.tonerAmarelo ?? 100,
+          imp.updatedAt,
+        ],
+      );
+    }
+    await client.query("COMMIT");
+    const result = await pool.query(
+      "SELECT * FROM impressoras ORDER BY updated_at ASC",
+    );
+    res.json(result.rows.map(rowToImpressora));
+  } catch (error) {
+    await client.query("ROLLBACK");
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+
 const setupFrontend = async () => {
   if (isProduction) {
     app.use(express.static(distPath));

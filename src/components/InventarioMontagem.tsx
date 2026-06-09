@@ -142,7 +142,6 @@ const normalizeInventario = (data: any[]): InventarioItem[] =>
     };
   });
 
-
 // As datas são salvas como ISO em UTC (via toISOString).
 // Para exibir o horário real em que a ação ocorreu para o usuário, precisamos usar o fuso local.
 const formatDateTime = (value: string) => {
@@ -168,9 +167,6 @@ const normalizeText = (value: string) =>
 
 const InventarioMontagem = () => {
   const [itens, setItens] = useState<InventarioItem[]>([]);
-  const [itensExpandidos, setItensExpandidos] = useState<
-    Record<string, boolean>
-  >({});
   const [mostrarFormularioItem, setMostrarFormularioItem] = useState(false);
   const [novoItemNome, setNovoItemNome] = useState("");
   const [itemParaRemover, setItemParaRemover] = useState<InventarioItem | null>(
@@ -184,15 +180,6 @@ const InventarioMontagem = () => {
   const [undoState, setUndoState] = useState<UndoState>(null);
   const [inventarioCarregado, setInventarioCarregado] = useState(false);
 
-  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1100);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsDesktop(window.innerWidth >= 1100);
-    };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
   const [historicoAberto, setHistoricoAberto] = useState<{
     itemNome: string;
     unidadeId: string;
@@ -431,10 +418,6 @@ const InventarioMontagem = () => {
     return null;
   }, [historicoAberto, itens]);
 
-  const toggleItem = (id: string) => {
-    setItensExpandidos((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
-
   const markFieldStartValue = (
     itemId: string,
     unidadeId: string,
@@ -560,7 +543,6 @@ const InventarioMontagem = () => {
           : item,
       ),
     );
-    setItensExpandidos((prev) => ({ ...prev, [itemId]: true }));
   };
 
   const handleRemoveUnit = (itemId: string, unidadeId: string) => {
@@ -612,7 +594,6 @@ const InventarioMontagem = () => {
 
     const novoItem = createItem(nome);
     setItens((prev) => [...prev, novoItem]);
-    setItensExpandidos((prev) => ({ ...prev, [novoItem.id]: true }));
     setNovoItemNome("");
     setMostrarFormularioItem(false);
   };
@@ -661,11 +642,6 @@ const InventarioMontagem = () => {
     const index = itens.findIndex((item) => item.id === id);
 
     setItens((prev) => prev.filter((item) => item.id !== id));
-    setItensExpandidos((prev) => {
-      const proximo = { ...prev };
-      delete proximo[id];
-      return proximo;
-    });
     setUndoState({
       kind: "item",
       item: itemParaRemover,
@@ -692,7 +668,6 @@ const InventarioMontagem = () => {
         proximo.splice(undoState.index, 0, restaurado);
         return proximo;
       });
-      setItensExpandidos((prev) => ({ ...prev, [restaurado.id]: true }));
     }
 
     if (undoState.kind === "unit") {
@@ -712,7 +687,6 @@ const InventarioMontagem = () => {
           };
         }),
       );
-      setItensExpandidos((prev) => ({ ...prev, [undoState.itemId]: true }));
     }
 
     setUndoState(null);
@@ -733,7 +707,11 @@ const InventarioMontagem = () => {
     targetId: string,
   ) => {
     e.preventDefault();
-    if (!dragSourceRef.current || dragSourceRef.current === targetId || sortBy !== "manual")
+    if (
+      !dragSourceRef.current ||
+      dragSourceRef.current === targetId ||
+      sortBy !== "manual"
+    )
       return;
 
     e.dataTransfer.dropEffect = "move";
@@ -777,7 +755,6 @@ const InventarioMontagem = () => {
   };
 
   const renderItem = (item: InventarioItem) => {
-    const aberto = itensExpandidos[item.id] ?? false;
     const estaEditando = itemEditandoId === item.id;
     const estaArrastando = dragSourceId === item.id;
     const estaHover = dragOverId === item.id && dragSourceId !== item.id;
@@ -802,29 +779,7 @@ const InventarioMontagem = () => {
         onDrop={(e) => handleDrop(e, item.id)}
         onDragEnd={handleDragEnd}
       >
-        <div
-          className="inventario-card-header"
-          role="button"
-          tabIndex={0}
-          onMouseDown={(e) => {
-            if (estaEditando) return;
-            if (e.button !== 0) return;
-            e.preventDefault();
-            toggleItem(item.id);
-          }}
-          onTouchStart={(e) => {
-            if (estaEditando) return;
-            e.preventDefault();
-            toggleItem(item.id);
-          }}
-          onKeyDown={(e) => {
-            if (estaEditando) return;
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              toggleItem(item.id);
-            }
-          }}
-        >
+        <div className="inventario-card-header">
           <div className="inventario-card-title">
             {estaEditando ? (
               <div
@@ -964,269 +919,183 @@ const InventarioMontagem = () => {
         </div>
 
         <div
-          className={`inventario-card-body ${aberto ? "is-open" : "is-closed"}`}
-          aria-hidden={!aberto}
+          className="inventario-card-body"
           onDragStart={(e) => e.stopPropagation()}
         >
-          <div className="inventario-card-inner">
-            {item.unidades.length === 0 ? (
-              <div className="empty-state">Nenhuma unidade cadastrada.</div>
-            ) : (
-              <div className="unidades-list">
-                {item.unidades.map((unidade) => (
-                  <div key={unidade.id} className="unidade-item-box">
-                    <div className="unidade-row-header">
-                      <div className="unidade-status-wrapper">
-                        <select
-                          className={`unit-editor status-select status-${unidade.status}`}
-                          value={unidade.status}
-                          onChange={(e) =>
-                            handleStatusChange(
-                              item.id,
-                              unidade.id,
-                              e.target.value as InventarioStatus,
-                            )
-                          }
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              focusNextEditor(e.currentTarget);
-                            }
-                          }}
-                        >
-                          {STATUS_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="unidade-actions">
-                        <button
-                          type="button"
-                          className="btn-historico-unidade"
-                          onClick={() =>
-                            setHistoricoAberto({
-                              itemNome: item.item,
-                              unidadeId: unidade.id,
-                            })
-                          }
-                        >
-                          Histórico
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-remover-unidade"
-                          onClick={() => handleRemoveUnit(item.id, unidade.id)}
-                        >
-                          Remover
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="unidade-fields-grid">
-                      <div className="unidade-field">
-                        <label>Modelo</label>
-                        <input
-                          className="unit-editor"
-                          type="text"
-                          value={unidade.modelo}
-                          onFocus={() =>
-                            markFieldStartValue(
-                              item.id,
-                              unidade.id,
-                              "modelo",
-                              unidade.modelo,
-                            )
-                          }
-                          onBlur={() =>
-                            handleUnitBlur(
-                              item.id,
-                              unidade.id,
-                              "modelo",
-                              unidade.modelo,
-                            )
-                          }
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              focusNextEditor(e.currentTarget);
-                            }
-                          }}
-                          onChange={(e) =>
-                            handleUnitChange(
-                              item.id,
-                              unidade.id,
-                              "modelo",
-                              e.target.value,
-                            )
-                          }
-                        />
-                      </div>
-                      <div className="unidade-field">
-                        <label>Patrimônio</label>
-                        <input
-                          className="unit-editor"
-                          type="text"
-                          value={unidade.patrimonio}
-                          onFocus={() =>
-                            markFieldStartValue(
-                              item.id,
-                              unidade.id,
-                              "patrimonio",
-                              unidade.patrimonio,
-                            )
-                          }
-                          onBlur={() =>
-                            handleUnitBlur(
-                              item.id,
-                              unidade.id,
-                              "patrimonio",
-                              unidade.patrimonio,
-                            )
-                          }
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              focusNextEditor(e.currentTarget);
-                            }
-                          }}
-                          onChange={(e) =>
-                            handleUnitChange(
-                              item.id,
-                              unidade.id,
-                              "patrimonio",
-                              e.target.value,
-                            )
-                          }
-                        />
-                      </div>
-                      <div className="unidade-field">
-                        <label>Localização</label>
-                        <input
-                          className="unit-editor"
-                          type="text"
-                          value={unidade.localizacao}
-                          onFocus={() =>
-                            markFieldStartValue(
-                              item.id,
-                              unidade.id,
-                              "localizacao",
-                              unidade.localizacao,
-                            )
-                          }
-                          onBlur={() =>
-                            handleUnitBlur(
-                              item.id,
-                              unidade.id,
-                              "localizacao",
-                              unidade.localizacao,
-                            )
-                          }
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              focusNextEditor(e.currentTarget);
-                            }
-                          }}
-                          onChange={(e) =>
-                            handleUnitChange(
-                              item.id,
-                              unidade.id,
-                              "localizacao",
-                              e.target.value,
-                            )
-                          }
-                        />
-                      </div>
-                      <div className="unidade-field">
-                        <label>Requerente</label>
-                        <input
-                          className="unit-editor"
-                          type="text"
-                          value={unidade.requerente}
-                          onFocus={() =>
-                            markFieldStartValue(
-                              item.id,
-                              unidade.id,
-                              "requerente",
-                              unidade.requerente,
-                            )
-                          }
-                          onBlur={() =>
-                            handleUnitBlur(
-                              item.id,
-                              unidade.id,
-                              "requerente",
-                              unidade.requerente,
-                            )
-                          }
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              focusNextEditor(e.currentTarget);
-                            }
-                          }}
-                          onChange={(e) =>
-                            handleUnitChange(
-                              item.id,
-                              unidade.id,
-                              "requerente",
-                              e.target.value,
-                            )
-                          }
-                        />
-                      </div>
-                      <div className="unidade-field">
-                        <label>Montado por</label>
-                        <input
-                          className="unit-editor"
-                          type="text"
-                          value={unidade.montadoPor}
-                          onFocus={() =>
-                            markFieldStartValue(
-                              item.id,
-                              unidade.id,
-                              "montadoPor",
-                              unidade.montadoPor,
-                            )
-                          }
-                          onBlur={() =>
-                            handleUnitBlur(
-                              item.id,
-                              unidade.id,
-                              "montadoPor",
-                              unidade.montadoPor,
-                            )
-                          }
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              focusNextEditor(e.currentTarget);
-                            }
-                          }}
-                          onChange={(e) =>
-                            handleUnitChange(
-                              item.id,
-                              unidade.id,
-                              "montadoPor",
-                              e.target.value,
-                            )
-                          }
-                        />
-                      </div>
-                      <div className="unidade-field date-field">
-                        <label>Atualizado</label>
-                        <span className="unidade-date">
-                          {formatDateTime(unidade.updatedAt)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+          {item.unidades.length === 0 ? (
+            <div className="empty-state">Nenhuma unidade cadastrada.</div>
+          ) : (
+            <div className="ut-wrap">
+              <div className="ut-head">
+                <span>#</span>
+                <span>Status</span>
+                <span>Modelo</span>
+                <span>Patrimônio</span>
+                <span>Localização</span>
+                <span>Requerente</span>
+                <span>Montado por</span>
+                <span>Atualizado</span>
+                <span></span>
               </div>
-            )}
-          </div>
+              {item.unidades.map((unidade, uIdx) => (
+                <div key={unidade.id} className="ut-row">
+                  <span className="ut-num">{uIdx + 1}</span>
+                  <div className="ut-status">
+                    <select
+                      className={`unit-editor status-select status-${unidade.status}`}
+                      value={unidade.status}
+                      onChange={(e) =>
+                        handleStatusChange(
+                          item.id,
+                          unidade.id,
+                          e.target.value as InventarioStatus,
+                        )
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          focusNextEditor(e.currentTarget);
+                        }
+                      }}
+                    >
+                      {STATUS_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <input
+                    className="unit-editor ut-input"
+                    type="text"
+                    placeholder="Modelo"
+                    value={unidade.modelo}
+                    onFocus={() =>
+                      markFieldStartValue(item.id, unidade.id, "modelo", unidade.modelo)
+                    }
+                    onBlur={() =>
+                      handleUnitBlur(item.id, unidade.id, "modelo", unidade.modelo)
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        focusNextEditor(e.currentTarget);
+                      }
+                    }}
+                    onChange={(e) =>
+                      handleUnitChange(item.id, unidade.id, "modelo", e.target.value)
+                    }
+                  />
+                  <input
+                    className="unit-editor ut-input"
+                    type="text"
+                    placeholder="Patrimônio"
+                    value={unidade.patrimonio}
+                    onFocus={() =>
+                      markFieldStartValue(item.id, unidade.id, "patrimonio", unidade.patrimonio)
+                    }
+                    onBlur={() =>
+                      handleUnitBlur(item.id, unidade.id, "patrimonio", unidade.patrimonio)
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        focusNextEditor(e.currentTarget);
+                      }
+                    }}
+                    onChange={(e) =>
+                      handleUnitChange(item.id, unidade.id, "patrimonio", e.target.value)
+                    }
+                  />
+                  <input
+                    className="unit-editor ut-input"
+                    type="text"
+                    placeholder="Localização"
+                    value={unidade.localizacao}
+                    onFocus={() =>
+                      markFieldStartValue(item.id, unidade.id, "localizacao", unidade.localizacao)
+                    }
+                    onBlur={() =>
+                      handleUnitBlur(item.id, unidade.id, "localizacao", unidade.localizacao)
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        focusNextEditor(e.currentTarget);
+                      }
+                    }}
+                    onChange={(e) =>
+                      handleUnitChange(item.id, unidade.id, "localizacao", e.target.value)
+                    }
+                  />
+                  <input
+                    className="unit-editor ut-input"
+                    type="text"
+                    placeholder="Requerente"
+                    value={unidade.requerente}
+                    onFocus={() =>
+                      markFieldStartValue(item.id, unidade.id, "requerente", unidade.requerente)
+                    }
+                    onBlur={() =>
+                      handleUnitBlur(item.id, unidade.id, "requerente", unidade.requerente)
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        focusNextEditor(e.currentTarget);
+                      }
+                    }}
+                    onChange={(e) =>
+                      handleUnitChange(item.id, unidade.id, "requerente", e.target.value)
+                    }
+                  />
+                  <input
+                    className="unit-editor ut-input"
+                    type="text"
+                    placeholder="Montado por"
+                    value={unidade.montadoPor}
+                    onFocus={() =>
+                      markFieldStartValue(item.id, unidade.id, "montadoPor", unidade.montadoPor)
+                    }
+                    onBlur={() =>
+                      handleUnitBlur(item.id, unidade.id, "montadoPor", unidade.montadoPor)
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        focusNextEditor(e.currentTarget);
+                      }
+                    }}
+                    onChange={(e) =>
+                      handleUnitChange(item.id, unidade.id, "montadoPor", e.target.value)
+                    }
+                  />
+                  <span className="ut-date">{formatDateTime(unidade.updatedAt)}</span>
+                  <div className="ut-actions">
+                    <button
+                      type="button"
+                      className="btn-historico-unidade"
+                      onClick={() =>
+                        setHistoricoAberto({
+                          itemNome: item.item,
+                          unidadeId: unidade.id,
+                        })
+                      }
+                    >
+                      Hist.
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-remover-unidade"
+                      onClick={() => handleRemoveUnit(item.id, unidade.id)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
     );
@@ -1236,7 +1105,7 @@ const InventarioMontagem = () => {
     <div className="inventario">
       <div className="inventario-header">
         <div className="inventario-title">
-          <h2>INVENTÁRIO DE MONTAGEM</h2>
+          <h2>Inventário de montagem</h2>
           <div className="inventario-stats">
             <span className="inventario-stat">
               Itens cadastrados: <strong>{itens.length}</strong>
@@ -1439,24 +1308,7 @@ const InventarioMontagem = () => {
       )}
 
       <div className="inventario-list" ref={inventarioListRef}>
-        {isDesktop ? (
-          <div className="inventario-list-desktop">
-            <div className="inventario-column">
-              {itensFiltrados
-                .filter((_, idx) => idx % 2 === 0)
-                .map((item) => renderItem(item))}
-            </div>
-            <div className="inventario-column">
-              {itensFiltrados
-                .filter((_, idx) => idx % 2 !== 0)
-                .map((item) => renderItem(item))}
-            </div>
-          </div>
-        ) : (
-          <div className="inventario-list-mobile">
-            {itensFiltrados.map((item) => renderItem(item))}
-          </div>
-        )}
+        {itensFiltrados.map((item) => renderItem(item))}
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ import {
 import Painel from "./components/Painel";
 import Historico from "./components/Historico";
 import InventarioMontagem from "./components/InventarioMontagem";
+import Impressoras from "./components/Impressoras";
 import "./App.css";
 
 /**
@@ -132,6 +133,14 @@ function App() {
                 >
                   Inventário
                 </NavLink>
+                <NavLink
+                  to="/impressoras"
+                  className={({ isActive }) =>
+                    `side-nav-link${isActive ? " active" : ""}`
+                  }
+                >
+                  Impressoras
+                </NavLink>
               </nav>
             </div>
           </aside>
@@ -141,6 +150,7 @@ function App() {
               <Route path="/" element={<Painel />} />
               <Route path="/historico" element={<Historico />} />
               <Route path="/inventario" element={<InventarioMontagem />} />
+              <Route path="/impressoras" element={<Impressoras />} />
             </Routes>
           </main>
         </div>

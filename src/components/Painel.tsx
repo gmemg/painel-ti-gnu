@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Evento } from "../types";
 import {
-  addToHistorico,
   getEventos,
   reconcileEventosAutomaticos,
   saveEventos,
@@ -23,9 +22,6 @@ const Painel = () => {
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [eventoEditando, setEventoEditando] = useState<Evento | null>(null);
-  const [eventoParaRemover, setEventoParaRemover] = useState<Evento | null>(
-    null,
-  );
   const salvandoRef = useRef(false);
 
   useEffect(() => {
@@ -77,94 +73,6 @@ const Painel = () => {
     setMostrarFormulario(true);
   }, []);
 
-  /**
-   * Dispara o modal de confirmação antes da remoção.
-   *
-   * @param evento Evento alvo da remoção.
-   */
-  const handleRemover = useCallback((evento: Evento) => {
-    setEventoParaRemover(evento);
-  }, []);
-
-  /**
-   * Confirma a remoção lógica do evento, preservando histórico.
-   * A remoção é "soft delete" para permitir auditoria na tela de histórico.
-   */
-  const handleConfirmarRemocao = useCallback(async () => {
-    if (!eventoParaRemover) return;
-
-    const todosEventos = await getEventos();
-    const eventoAtualizado = {
-      ...eventoParaRemover,
-      removido: true,
-      dataRemocao: new Date().toISOString(),
-    };
-
-    const eventosAtualizados = todosEventos.map((e) =>
-      e.id === eventoParaRemover.id ? eventoAtualizado : e,
-    );
-
-    await saveEventos(eventosAtualizados);
-    await addToHistorico(eventoAtualizado);
-
-    setEventos(eventosAtualizados.filter((e) => !e.removido));
-    setEventoParaRemover(null);
-  }, [eventoParaRemover]);
-
-  /**
-   * Fecha o modal sem alterar dados.
-   */
-  const handleCancelarRemocao = useCallback(() => {
-    setEventoParaRemover(null);
-  }, []);
-
-  useEffect(() => {
-    if (!eventoParaRemover) return;
-
-    // Atalhos de teclado para acessibilidade e operação mais rápida.
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        handleCancelarRemocao();
-        return;
-      }
-
-      if (e.key === "Enter") {
-        handleConfirmarRemocao();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [eventoParaRemover, handleCancelarRemocao, handleConfirmarRemocao]);
-
-  /**
-   * Marca um evento como concluído e o remove da lista ativa.
-   * A conclusão também entra no histórico para rastreabilidade.
-   *
-   * @param evento Evento a concluir.
-   */
-  const handleConcluir = useCallback(async (evento: Evento) => {
-    if (evento.concluido) return;
-
-    const todosEventos = await getEventos();
-    const eventoAtualizado = {
-      ...evento,
-      concluido: true,
-      removido: true,
-      dataConclusao: new Date().toISOString(),
-      dataRemocao: new Date().toISOString(),
-    };
-
-    const eventosAtualizados = todosEventos.map((e) =>
-      e.id === evento.id ? eventoAtualizado : e,
-    );
-
-    await saveEventos(eventosAtualizados);
-    await addToHistorico(eventoAtualizado);
-    setEventos(eventosAtualizados.filter((e) => !e.removido));
-  }, []);
 
   /**
    * Salva o evento vindo do formulário, criando ou atualizando.
@@ -225,17 +133,18 @@ const Painel = () => {
   return (
     <div className="painel">
       <div className="painel-header">
-        <div className="painel-title">
-          <h2>MONTAGENS</h2>
+        <div className="painel-header-left">
+          <button className="btn-adicionar" onClick={handleAdicionar}>
+            + Adicionar Evento
+          </button>
           <span className="painel-stat">
             Montagens pendentes: <strong>{eventos.length}</strong>
           </span>
         </div>
-        <div className="painel-actions">
-          <button className="btn-adicionar" onClick={handleAdicionar}>
-            + Adicionar Evento
-          </button>
+        <div className="painel-header-center">
+          <h2>MONTAGENS</h2>
         </div>
+        <div className="painel-header-right" />
       </div>
 
       {mostrarFormulario && (
@@ -258,13 +167,14 @@ const Painel = () => {
               <th>Funcionário de Plantão</th>
               <th>Equipamentos Necessários</th>
               <th>Número do Chamado</th>
+              <th>Requerente</th>
               <th>Ações</th>
             </tr>
           </thead>
           <tbody>
             {eventosView.length === 0 ? (
               <tr>
-                <td colSpan={9} className="empty-state">
+                <td colSpan={10} className="empty-state">
                   Nenhum evento cadastrado. Clique em "Adicionar Evento" para
                   começar.
                 </td>
@@ -283,31 +193,14 @@ const Painel = () => {
                   <td>{evento.funcionarioPlantao}</td>
                   <td>{evento.equipamentosNecessarios}</td>
                   <td className="chamado-cell">{evento.numeroChamado}</td>
+                  <td>{evento.requerente || "-"}</td>
                   <td>
-                    <div className="acoes-buttons">
-                      <button
-                        className="btn-editar"
-                        onClick={() => handleEditar(evento)}
-                        title="Editar"
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        className="btn-concluir"
-                        onClick={() => handleConcluir(evento)}
-                        title="Marcar como concluído"
-                        disabled={evento.concluido}
-                      >
-                        {evento.concluido ? "Concluído" : "✅"}
-                      </button>
-                      <button
-                        className="btn-remover"
-                        onClick={() => handleRemover(evento)}
-                        title="Remover"
-                      >
-                        ❌
-                      </button>
-                    </div>
+                    <button
+                      className="btn-editar"
+                      onClick={() => handleEditar(evento)}
+                    >
+                      Editar
+                    </button>
                   </td>
                 </tr>
               ))
@@ -316,45 +209,6 @@ const Painel = () => {
         </table>
       </div>
 
-      {eventoParaRemover && (
-        <div
-          className="popup-overlay"
-          role="presentation"
-          onClick={handleCancelarRemocao}
-        >
-          <div
-            className="popup-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="popup-titulo"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="popup-header">
-              <h3 id="popup-titulo">Remover da lista</h3>
-            </div>
-            <div className="popup-body">
-              <p>
-                Tem certeza que deseja remover o evento{" "}
-                <strong>&quot;{eventoParaRemover.nomeEvento}&quot;</strong>?
-              </p>
-            </div>
-            <div className="popup-actions">
-              <button
-                className="popup-btn popup-btn-cancelar"
-                onClick={handleCancelarRemocao}
-              >
-                Cancelar
-              </button>
-              <button
-                className="popup-btn popup-btn-remover"
-                onClick={handleConfirmarRemocao}
-              >
-                Remover
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

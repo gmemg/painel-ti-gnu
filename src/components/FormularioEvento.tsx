@@ -31,6 +31,7 @@ const FormularioEvento = ({
     funcionarioPlantao: "",
     equipamentosNecessarios: "",
     numeroChamado: "",
+    requerente: "",
   });
 
   useEffect(() => {
@@ -49,6 +50,7 @@ const FormularioEvento = ({
         funcionarioPlantao: evento.funcionarioPlantao,
         equipamentosNecessarios: evento.equipamentosNecessarios,
         numeroChamado: evento.numeroChamado,
+        requerente: evento.requerente || "",
       });
     } else {
       setFormData({
@@ -59,6 +61,7 @@ const FormularioEvento = ({
         funcionarioPlantao: "",
         equipamentosNecessarios: "",
         numeroChamado: "",
+        requerente: "",
       });
     }
   }, [evento]);
@@ -116,6 +119,7 @@ const FormularioEvento = ({
         funcionarioPlantao: formData.funcionarioPlantao,
         equipamentosNecessarios: formData.equipamentosNecessarios,
         numeroChamado: formData.numeroChamado,
+        requerente: formData.requerente,
         removido: false,
         concluido: evento?.concluido || false,
         dataConclusao: evento?.dataConclusao,
@@ -217,6 +221,18 @@ const FormularioEvento = ({
               value={formData.numeroChamado}
               onChange={handleChange}
               placeholder="Ex: CH-2024-001"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="requerente">Requerente</label>
+            <input
+              type="text"
+              id="requerente"
+              name="requerente"
+              value={formData.requerente}
+              onChange={handleChange}
+              placeholder="Ex: Departamento Financeiro"
             />
           </div>
 

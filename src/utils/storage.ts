@@ -1,4 +1,4 @@
-import { Evento, InventarioItem } from "../types";
+import { Evento, Impressora, InventarioItem } from "../types";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "/api";
 
@@ -111,4 +111,15 @@ export const saveInventario = (
   requestJson<InventarioItem[]>("/inventario", {
     method: "PUT",
     body: JSON.stringify(itens),
+  });
+
+export const getImpressoras = (): Promise<Impressora[]> =>
+  requestJson<Impressora[]>("/impressoras");
+
+export const saveImpressoras = (
+  impressoras: Impressora[],
+): Promise<Impressora[]> =>
+  requestJson<Impressora[]>("/impressoras", {
+    method: "PUT",
+    body: JSON.stringify(impressoras),
   });
