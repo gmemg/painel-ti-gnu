@@ -1,0 +1,412 @@
+require("dotenv").config();
+
+const cors = require("cors");
+const express = require("express");
+const path = require("path");
+const { Pool, types } = require("pg");
+// TIMESTAMP WITHOUT TIME ZONE (OID 1114) é armazenado sem info de fuso.
+// O driver pg interpreta o valor bruto no fuso local do servidor, causando
+// dupla conversão quando o servidor está em UTC-3. Forçamos interpretação UTC
+// adicionando 'Z' ao string antes de criar o Date.
+types.setTypeParser(1114, (str) =>
+  str ? str.replace(" ", "T") + "Z" : null,
+);
+
+const app = express();
+const port = Number(process.env.PORT || 3000);
+const isProduction = process.env.NODE_ENV === "production";
+const distPath = path.join(__dirname, "..", "dist");
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+app.use(cors());
+app.use(express.json({ limit: "10mb" }));
+
+const assertDatabaseUrl = () => {
+  if (!process.env.DATABASE_URL) {
+    throw new Error("Configure DATABASE_URL no arquivo .env antes de iniciar.");
+  }
+};
+
+const initDatabase = async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS eventos (
+      id TEXT PRIMARY KEY,
+      nome_evento TEXT NOT NULL,
+      adicionado_por TEXT NOT NULL,
+      data_hora TIMESTAMP NOT NULL,
+      dia_semana TEXT NOT NULL,
+      local_evento TEXT NOT NULL,
+      funcionario_plantao TEXT,
+      equipamentos_necessarios TEXT,
+      numero_chamado TEXT,
+      removido BOOLEAN DEFAULT false,
+      concluido BOOLEAN DEFAULT false,
+      data_remocao TIMESTAMP,
+      data_conclusao TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS historico_eventos (
+      id TEXT PRIMARY KEY,
+      nome_evento TEXT NOT NULL,
+      adicionado_por TEXT NOT NULL,
+      data_hora TIMESTAMP NOT NULL,
+      dia_semana TEXT NOT NULL,
+      local_evento TEXT NOT NULL,
+      funcionario_plantao TEXT,
+      equipamentos_necessarios TEXT,
+      numero_chamado TEXT,
+      removido BOOLEAN DEFAULT false,
+      concluido BOOLEAN DEFAULT false,
+      data_remocao TIMESTAMP,
+      data_conclusao TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS inventario_itens (
+      id TEXT PRIMARY KEY,
+      item TEXT NOT NULL,
+      updated_at TIMESTAMP NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS inventario_unidades (
+      id TEXT PRIMARY KEY,
+      item_id TEXT REFERENCES inventario_itens(id) ON DELETE CASCADE,
+      modelo TEXT,
+      patrimonio TEXT,
+      localizacao TEXT,
+      requerente TEXT,
+      montado_por TEXT,
+      status TEXT NOT NULL,
+      updated_at TIMESTAMP NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS inventario_historico (
+      id TEXT PRIMARY KEY,
+      unidade_id TEXT REFERENCES inventario_unidades(id) ON DELETE CASCADE,
+      data TIMESTAMP NOT NULL,
+      descricao TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS historico_contadores (
+      id TEXT PRIMARY KEY,
+      valor INTEGER NOT NULL DEFAULT 0
+    );
+
+    INSERT INTO historico_contadores (id, valor)
+    VALUES ('removidos', 0)
+    ON CONFLICT (id) DO NOTHING;
+  `);
+};
+
+const rowToEvento = (row) => ({
+  id: row.id,
+  nomeEvento: row.nome_evento,
+  adicionadoPor: row.adicionado_por,
+  dataHora: new Date(row.data_hora).toISOString(),
+  diaSemana: row.dia_semana,
+  localEvento: row.local_evento,
+  funcionarioPlantao: row.funcionario_plantao || "",
+  equipamentosNecessarios: row.equipamentos_necessarios || "",
+  numeroChamado: row.numero_chamado || "",
+  removido: Boolean(row.removido),
+  concluido: Boolean(row.concluido),
+  dataRemocao: row.data_remocao
+    ? new Date(row.data_remocao).toISOString()
+    : undefined,
+  dataConclusao: row.data_conclusao
+    ? new Date(row.data_conclusao).toISOString()
+    : undefined,
+});
+
+const upsertEventos = async (client, tableName, eventos) => {
+  const ids = eventos.map((evento) => evento.id);
+  await client.query(
+    `DELETE FROM ${tableName} WHERE NOT (id = ANY($1::text[]))`,
+    [ids],
+  );
+
+  for (const evento of eventos) {
+    await client.query(
+      `
+        INSERT INTO ${tableName} (
+          id, nome_evento, adicionado_por, data_hora, dia_semana, local_evento,
+          funcionario_plantao, equipamentos_necessarios, numero_chamado,
+          removido, concluido, data_remocao, data_conclusao
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        ON CONFLICT (id) DO UPDATE SET
+          nome_evento = EXCLUDED.nome_evento,
+          adicionado_por = EXCLUDED.adicionado_por,
+          data_hora = EXCLUDED.data_hora,
+          dia_semana = EXCLUDED.dia_semana,
+          local_evento = EXCLUDED.local_evento,
+          funcionario_plantao = EXCLUDED.funcionario_plantao,
+          equipamentos_necessarios = EXCLUDED.equipamentos_necessarios,
+          numero_chamado = EXCLUDED.numero_chamado,
+          removido = EXCLUDED.removido,
+          concluido = EXCLUDED.concluido,
+          data_remocao = EXCLUDED.data_remocao,
+          data_conclusao = EXCLUDED.data_conclusao
+      `,
+      [
+        evento.id,
+        evento.nomeEvento,
+        evento.adicionadoPor || "",
+        evento.dataHora,
+        evento.diaSemana,
+        evento.localEvento,
+        evento.funcionarioPlantao || "",
+        evento.equipamentosNecessarios || "",
+        evento.numeroChamado || "",
+        Boolean(evento.removido),
+        Boolean(evento.concluido),
+        evento.dataRemocao || null,
+        evento.dataConclusao || null,
+      ],
+    );
+  }
+};
+
+const getEventosFromTable = async (tableName) => {
+  const result = await pool.query(
+    `SELECT * FROM ${tableName} ORDER BY data_hora ASC`,
+  );
+  return result.rows.map(rowToEvento);
+};
+
+app.get("/api/health", async (_req, res, next) => {
+  try {
+    await pool.query("SELECT 1");
+    res.json({ ok: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/api/eventos", async (_req, res, next) => {
+  try {
+    res.json(await getEventosFromTable("eventos"));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put("/api/eventos", async (req, res, next) => {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await upsertEventos(client, "eventos", req.body || []);
+    await client.query("COMMIT");
+    res.json(await getEventosFromTable("eventos"));
+  } catch (error) {
+    await client.query("ROLLBACK");
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+
+app.get("/api/historico", async (_req, res, next) => {
+  try {
+    res.json(await getEventosFromTable("historico_eventos"));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put("/api/historico", async (req, res, next) => {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await upsertEventos(client, "historico_eventos", req.body || []);
+    await client.query("COMMIT");
+    res.json(await getEventosFromTable("historico_eventos"));
+  } catch (error) {
+    await client.query("ROLLBACK");
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+
+app.get("/api/historico-contadores/removidos", async (_req, res, next) => {
+  try {
+    const result = await pool.query(
+      "SELECT valor FROM historico_contadores WHERE id = 'removidos'",
+    );
+    res.json({ valor: result.rows[0]?.valor ?? 0 });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post(
+  "/api/historico-contadores/removidos/increment",
+  async (_req, res, next) => {
+    try {
+      const result = await pool.query(`
+        INSERT INTO historico_contadores (id, valor)
+        VALUES ('removidos', 1)
+        ON CONFLICT (id) DO UPDATE SET valor = historico_contadores.valor + 1
+        RETURNING valor
+      `);
+      res.json({ valor: result.rows[0].valor });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+app.get("/api/inventario", async (_req, res, next) => {
+  try {
+    const itensResult = await pool.query(
+      "SELECT * FROM inventario_itens ORDER BY updated_at ASC",
+    );
+    const unidadesResult = await pool.query(
+      "SELECT * FROM inventario_unidades ORDER BY updated_at ASC",
+    );
+    const historicoResult = await pool.query(
+      "SELECT * FROM inventario_historico ORDER BY data DESC",
+    );
+
+    const historicoPorUnidade = new Map();
+    for (const entry of historicoResult.rows) {
+      const lista = historicoPorUnidade.get(entry.unidade_id) || [];
+      lista.push({
+        id: entry.id,
+        data: new Date(entry.data).toISOString(),
+        descricao: entry.descricao,
+      });
+      historicoPorUnidade.set(entry.unidade_id, lista);
+    }
+
+    const unidadesPorItem = new Map();
+    for (const unidade of unidadesResult.rows) {
+      const lista = unidadesPorItem.get(unidade.item_id) || [];
+      lista.push({
+        id: unidade.id,
+        modelo: unidade.modelo || "",
+        patrimonio: unidade.patrimonio || "",
+        localizacao: unidade.localizacao || "",
+        requerente: unidade.requerente || "",
+        montadoPor: unidade.montado_por || "",
+        status: unidade.status,
+        historico: historicoPorUnidade.get(unidade.id) || [],
+        updatedAt: new Date(unidade.updated_at).toISOString(),
+      });
+      unidadesPorItem.set(unidade.item_id, lista);
+    }
+
+    res.json(
+      itensResult.rows.map((item) => ({
+        id: item.id,
+        item: item.item,
+        unidades: unidadesPorItem.get(item.id) || [],
+        updatedAt: new Date(item.updated_at).toISOString(),
+      })),
+    );
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put("/api/inventario", async (req, res, next) => {
+  const itens = req.body || [];
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+    await client.query("DELETE FROM inventario_itens");
+
+    for (const item of itens) {
+      await client.query(
+        "INSERT INTO inventario_itens (id, item, updated_at) VALUES ($1, $2, $3)",
+        [item.id, item.item, item.updatedAt],
+      );
+
+      for (const unidade of item.unidades || []) {
+        await client.query(
+          `
+            INSERT INTO inventario_unidades (
+              id, item_id, modelo, patrimonio, localizacao, requerente,
+              montado_por, status, updated_at
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          `,
+          [
+            unidade.id,
+            item.id,
+            unidade.modelo || "",
+            unidade.patrimonio || "",
+            unidade.localizacao || "",
+            unidade.requerente || "",
+            unidade.montadoPor || "",
+            unidade.status,
+            unidade.updatedAt,
+          ],
+        );
+
+        for (const entry of unidade.historico || []) {
+          await client.query(
+            `
+              INSERT INTO inventario_historico (id, unidade_id, data, descricao)
+              VALUES ($1, $2, $3, $4)
+            `,
+            [entry.id, unidade.id, entry.data, entry.descricao],
+          );
+        }
+      }
+    }
+
+    await client.query("COMMIT");
+    res.json(itens);
+  } catch (error) {
+    await client.query("ROLLBACK");
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+const setupFrontend = async () => {
+  if (isProduction) {
+    app.use(express.static(distPath));
+    app.get(/^(?!\/api).*/, (_req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
+    });
+    return;
+  }
+
+  const { createServer } = await import("vite");
+  const vite = await createServer({
+    configFile: path.join(__dirname, "..", "vite.config.ts"),
+    server: { middlewareMode: true },
+    appType: "spa",
+  });
+  app.use(vite.middlewares);
+};
+
+app.use((error, _req, res, _next) => {
+  console.error(error);
+  res.status(500).json({ error: error.message || "Erro interno do servidor" });
+});
+
+assertDatabaseUrl();
+initDatabase()
+  .then(setupFrontend)
+  .then(() => {
+    app.listen(port, "0.0.0.0", () => {
+      const modo = isProduction ? "produção" : "desenvolvimento";
+      console.log(`Servidor (${modo}) em http://localhost:${port}`);
+      if (!isProduction) {
+        console.log(
+          "Desenvolvimento usa o mesmo servidor e API que npm start (sem build antigo em dist).",
+        );
+      }
+    });
+  })
+  .catch((error) => {
+    console.error("Erro ao iniciar o banco de dados", error);
+    process.exit(1);
+  });

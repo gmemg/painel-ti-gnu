@@ -1,0 +1,321 @@
+.historico {
+  width: 100%;
+}
+
+.historico-header {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.historico-header h2 {
+  color: var(--text);
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.historico-stats {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  color: var(--text-muted);
+  font-size: 1rem;
+}
+
+.stat-item strong {
+  color: var(--blue);
+  font-size: 1.1rem;
+}
+
+.tabela-container {
+  background: var(--surface-2);
+  border-radius: 6px;
+  box-shadow: 0 1px 8px var(--shadow);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  overflow-x: auto;
+}
+
+.tabela-historico {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1400px;
+}
+
+.tabela-historico thead {
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-2) 100%);
+  color: #ffffff;
+  border-bottom: 2px solid rgba(43, 143, 251, 0.5);
+}
+
+.tabela-historico th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.tabela-historico tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background-color 0.2s;
+  background-color: var(--surface-2);
+}
+
+.tabela-historico tbody tr:hover {
+  background-color: var(--surface-3);
+}
+
+.tabela-historico tbody tr.removido {
+  opacity: 0.7;
+  background-color: rgba(211, 47, 47, 0.12);
+}
+
+.tabela-historico tbody tr.removido:hover {
+  background-color: rgba(211, 47, 47, 0.2);
+}
+
+.tabela-historico tbody tr.ativo {
+  background-color: rgba(46, 125, 50, 0.12);
+}
+
+.tabela-historico tbody tr.ativo:hover {
+  background-color: rgba(46, 125, 50, 0.2);
+}
+
+.tabela-historico tbody tr.concluido {
+  background-color: rgba(46, 125, 50, 0.18);
+}
+
+.tabela-historico tbody tr.concluido:hover {
+  background-color: rgba(46, 125, 50, 0.24);
+}
+
+.tabela-historico tbody tr:last-child {
+  border-bottom: none;
+}
+
+.tabela-historico td {
+  padding: 1rem;
+  color: var(--text-subtle);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem !important;
+  color: var(--text-muted);
+  font-style: normal;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.status-badge.ativo {
+  background-color: var(--blue);
+  color: white;
+  border: 1px solid rgba(43, 143, 251, 0.6);
+}
+
+.status-badge.removido {
+  background-color: var(--red);
+  color: white;
+  border: 1px solid rgba(211, 47, 47, 0.6);
+}
+
+.status-badge.concluido {
+  background-color: var(--green);
+  color: white;
+  border: 1px solid rgba(46, 125, 50, 0.6);
+}
+
+.btn-remover-historico {
+  padding: 0.4rem 0.8rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background-color: var(--red);
+  color: white;
+  border: 1px solid rgba(211, 47, 47, 0.6);
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.btn-remover-historico:hover {
+  background-color: var(--red-2);
+}
+
+.popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  z-index: 1000;
+}
+
+.popup-modal {
+  width: min(520px, 95vw);
+  background: var(--modal-gradient);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 28px var(--shadow);
+  overflow: hidden;
+  animation: popupFadeIn 0.18s ease-out;
+}
+
+.popup-header {
+  padding: 1.25rem 1.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.popup-header h3 {
+  color: var(--text-strong);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.popup-body {
+  padding: 1rem 1.5rem 1.5rem;
+  color: var(--text-subtle);
+  line-height: 1.5;
+}
+
+.popup-body strong {
+  color: var(--text-strong);
+}
+
+.popup-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 0 1.5rem 1.5rem;
+}
+
+.popup-btn {
+  padding: 0.6rem 1.1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+
+.popup-btn-cancelar {
+  background: rgba(43, 143, 251, 0.12);
+  color: var(--text);
+  border: 1px solid rgba(43, 143, 251, 0.45);
+}
+
+.popup-btn-cancelar:hover {
+  background: rgba(43, 143, 251, 0.2);
+}
+
+.popup-btn-remover {
+  background: var(--red);
+  color: white;
+  border: 1px solid rgba(211, 47, 47, 0.6);
+}
+
+.popup-btn-remover:hover {
+  background: var(--red-2);
+}
+
+html[data-theme="light"] .popup-btn-cancelar {
+  background: rgba(43, 143, 251, 0.18);
+  color: #1c2333;
+  border-color: rgba(43, 143, 251, 0.55);
+}
+
+html[data-theme="light"] .popup-btn-cancelar:hover {
+  background: rgba(43, 143, 251, 0.28);
+}
+
+@keyframes popupFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 768px) {
+  .historico-stats {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .tabela-historico {
+    min-width: 1200px;
+  }
+
+  .popup-actions {
+    flex-direction: column-reverse;
+  }
+
+  .popup-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .historico-header h2 {
+    font-size: 2.2rem;
+  }
+
+  .stat-item {
+    font-size: 0.95rem;
+  }
+
+  .tabela-historico {
+    min-width: 1000px;
+  }
+
+  .tabela-historico th,
+  .tabela-historico td {
+    padding: 0.85rem 0.75rem;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .historico-header h2 {
+    font-size: 1.9rem;
+  }
+
+  .tabela-historico {
+    min-width: 840px;
+  }
+
+  .tabela-historico th,
+  .tabela-historico td {
+    padding: 0.7rem 0.6rem;
+    font-size: 0.82rem;
+  }
+
+  .btn-remover-historico {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.8rem;
+  }
+}

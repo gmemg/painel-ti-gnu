@@ -1,0 +1,400 @@
+.painel {
+  width: 100%;
+}
+
+.painel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.painel-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.painel-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.painel-header h2 {
+  color: var(--text);
+  font-size: 3rem;
+  font-weight: 600;
+}
+
+.painel-stat {
+  color: var(--text-muted);
+  font-size: 1rem;
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.painel-stat strong {
+  color: var(--blue);
+  font-size: 1.1rem;
+}
+
+.btn-adicionar {
+  background-color: var(--blue);
+  color: white;
+  border: 1px solid rgba(43, 143, 251, 0.5);
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-adicionar:hover {
+  background-color: var(--blue-2);
+}
+
+.btn-teste {
+  background: rgba(43, 143, 251, 0.1);
+  color: var(--text);
+  border: 1px solid rgba(43, 143, 251, 0.45);
+  padding: 0.75rem 1.2rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-teste:hover {
+  background: rgba(43, 143, 251, 0.18);
+}
+
+.tabela-container {
+  background: var(--surface-2);
+  border-radius: 6px;
+  box-shadow: 0 1px 8px var(--shadow);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  overflow-x: auto;
+}
+
+.tabela-eventos {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1200px;
+}
+
+.tabela-eventos thead {
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-2) 100%);
+  color: #ffffff;
+  border-bottom: 2px solid rgba(43, 143, 251, 0.5);
+}
+
+.tabela-eventos th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.tabela-eventos tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background-color 0.2s;
+  background-color: var(--surface-2);
+}
+
+.tabela-eventos tbody tr:hover {
+  background-color: var(--surface-3);
+}
+
+.tabela-eventos tbody tr:last-child {
+  border-bottom: none;
+}
+
+.tabela-eventos td {
+  padding: 1rem;
+  color: var(--text-subtle);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.chamado-cell {
+  white-space: nowrap;
+}
+
+.linha-urgente {
+  border-bottom-color: transparent;
+}
+
+.linha-urgente td {
+  animation: piscarLinhaUrgente 0.9s ease-in-out infinite;
+}
+
+.linha-urgente:hover td {
+  animation: piscarLinhaUrgente 0.9s ease-in-out infinite;
+}
+
+@keyframes piscarLinhaUrgente {
+  0%,
+  100% {
+    background-color: rgba(255, 0, 0, 0.18);
+  }
+  50% {
+    background-color: rgba(255, 0, 0, 0.5);
+  }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem !important;
+  color: var(--text-muted);
+  font-style: normal;
+}
+
+.acoes-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-editar,
+.btn-remover,
+.btn-concluir {
+  padding: 0.35rem 0.45rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  white-space: nowrap;
+  background: transparent;
+  box-shadow: none;
+}
+
+.btn-editar:hover {
+  background: rgba(43, 143, 251, 0.12);
+}
+
+.btn-remover {
+  color: inherit;
+}
+
+.btn-remover:hover {
+  background: rgba(211, 47, 47, 0.12);
+}
+
+.btn-concluir {
+  color: inherit;
+}
+
+.btn-concluir:hover:not(:disabled) {
+  background: rgba(46, 125, 50, 0.12);
+}
+
+.btn-concluir:disabled {
+  opacity: 0.45;
+  cursor: default;
+  box-shadow: none;
+}
+
+.popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  z-index: 1000;
+}
+
+.popup-modal {
+  width: min(520px, 95vw);
+  background: var(--modal-gradient);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 28px var(--shadow);
+  overflow: hidden;
+  animation: popupFadeIn 0.18s ease-out;
+}
+
+.popup-header {
+  padding: 1.25rem 1.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.popup-header h3 {
+  color: var(--text-strong);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.popup-body {
+  padding: 1rem 1.5rem 1.5rem;
+  color: var(--text-subtle);
+  line-height: 1.5;
+}
+
+.popup-body strong {
+  color: var(--text-strong);
+}
+
+.popup-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 0 1.5rem 1.5rem;
+}
+
+.popup-btn {
+  padding: 0.6rem 1.1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+
+.popup-btn-cancelar {
+  background: rgba(43, 143, 251, 0.12);
+  color: var(--text);
+  border: 1px solid rgba(43, 143, 251, 0.45);
+}
+
+.popup-btn-cancelar:hover {
+  background: rgba(43, 143, 251, 0.2);
+}
+
+.popup-btn-remover {
+  background: var(--red);
+  color: white;
+  border: 1px solid rgba(211, 47, 47, 0.6);
+}
+
+.popup-btn-remover:hover {
+  background: var(--red-2);
+}
+
+html[data-theme="light"] .btn-teste {
+  background: rgba(43, 143, 251, 0.18);
+  color: #1c2333;
+  border-color: rgba(43, 143, 251, 0.55);
+}
+
+html[data-theme="light"] .btn-teste:hover {
+  background: rgba(43, 143, 251, 0.26);
+}
+
+html[data-theme="light"] .popup-btn-cancelar {
+  background: rgba(43, 143, 251, 0.18);
+  color: #1c2333;
+  border-color: rgba(43, 143, 251, 0.55);
+}
+
+html[data-theme="light"] .popup-btn-cancelar:hover {
+  background: rgba(43, 143, 251, 0.28);
+}
+
+@keyframes popupFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 768px) {
+  .painel-header {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .painel-actions {
+    flex-direction: column;
+  }
+
+  .btn-adicionar {
+    width: 100%;
+  }
+
+  .btn-teste {
+    width: 100%;
+  }
+
+  .acoes-buttons {
+    flex-direction: column;
+  }
+
+  .btn-editar,
+  .btn-remover,
+  .btn-concluir {
+    width: 100%;
+  }
+
+  .popup-actions {
+    flex-direction: column-reverse;
+  }
+
+  .popup-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .painel-header h2 {
+    font-size: 2.2rem;
+  }
+
+  .painel-stat {
+    font-size: 0.95rem;
+  }
+
+  .tabela-eventos {
+    min-width: 980px;
+  }
+
+  .tabela-eventos th,
+  .tabela-eventos td {
+    padding: 0.85rem 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  .btn-adicionar,
+  .btn-teste {
+    padding: 0.65rem 1.1rem;
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .painel-header h2 {
+    font-size: 1.9rem;
+  }
+
+  .tabela-eventos {
+    min-width: 820px;
+  }
+
+  .tabela-eventos th,
+  .tabela-eventos td {
+    padding: 0.7rem 0.6rem;
+    font-size: 0.82rem;
+  }
+
+  .btn-adicionar,
+  .btn-teste {
+    font-size: 0.9rem;
+  }
+}

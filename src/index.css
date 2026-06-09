@@ -1,0 +1,93 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Poppins:wght@300;400;500;600;700&display=swap");
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: clamp(16px, 0.45vw + 12px, 19px);
+}
+
+:root {
+  color-scheme: dark;
+  --blue: #2b8ffb;
+  --blue-2: #4aa1ff;
+  --red: #d32f2f;
+  --red-2: #e53935;
+  --green: #2e7d32;
+  --green-2: #388e3c;
+  --bg: #11151c;
+  --bg-strong: #151a22;
+  --surface: #171c24;
+  --surface-2: #1b2028;
+  --surface-3: #222832;
+  --surface-4: #171c24;
+  --surface-5: #151a22;
+  --text: #e0e0e0;
+  --text-strong: #ffffff;
+  --text-muted: #b0b0b0;
+  --text-subtle: #d0d0d0;
+  --border: rgba(43, 143, 251, 0.16);
+  --border-strong: rgba(43, 143, 251, 0.26);
+  --shadow: rgba(0, 0, 0, 0.18);
+  --header-gradient: #151a22;
+  --table-header-gradient: #202630;
+  --side-nav-gradient: #151a22;
+  --modal-gradient: #1b2028;
+  --overlay: rgba(10, 12, 18, 0.62);
+  --app-bg: #11151c;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f6f7f9;
+  --bg-strong: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f1f3f5;
+  --surface-3: #e9edf1;
+  --surface-4: #ffffff;
+  --surface-5: #f6f8fc;
+  --text: #1c2333;
+  --text-strong: #0f141f;
+  --text-muted: #5f6b7a;
+  --text-subtle: #2d3648;
+  --border: rgba(43, 143, 251, 0.22);
+  --border-strong: rgba(43, 143, 251, 0.32);
+  --shadow: rgba(15, 23, 42, 0.05);
+  --header-gradient: #ffffff;
+  --table-header-gradient: #eef1f4;
+  --side-nav-gradient: #ffffff;
+  --modal-gradient: #ffffff;
+  --overlay: rgba(15, 23, 42, 0.34);
+  --app-bg: #f6f7f9;
+}
+
+body {
+  font-family:
+    "Poppins",
+    "Segoe UI",
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--app-bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 1.1rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+code {
+  font-family: "IBM Plex Mono", Menlo, Monaco, Consolas, "Courier New", monospace;
+}
