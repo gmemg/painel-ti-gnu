@@ -72,7 +72,7 @@
 /* ─── Grid ────────────────────────────────────────────────────── */
 .imp-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: 1.25rem;
 }
 
@@ -126,8 +126,8 @@ html[data-theme="light"] .imp-card {
   min-width: 0;
 }
 
-.imp-card-modelo {
-  font-size: 0.9rem;
+.imp-card-local {
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--text-strong);
   white-space: nowrap;
@@ -135,10 +135,10 @@ html[data-theme="light"] .imp-card {
   text-overflow: ellipsis;
 }
 
-.imp-card-marca {
-  font-size: 0.75rem;
-  color: var(--blue);
-  font-weight: 500;
+.imp-card-subtitle {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 400;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -176,6 +176,17 @@ html[data-theme="light"] .imp-card {
   border-color: rgba(211, 47, 47, 0.3);
 }
 
+.imp-btn-icon.imp-btn-link {
+  text-decoration: none;
+  color: var(--text-muted);
+}
+
+.imp-btn-icon.imp-btn-link:hover {
+  background: rgba(43, 143, 251, 0.12);
+  color: var(--blue);
+  border-color: rgba(43, 143, 251, 0.35);
+}
+
 .imp-card-body {
   display: flex;
   flex-direction: column;
@@ -196,6 +207,10 @@ html[data-theme="light"] .imp-card {
   flex-direction: column;
   gap: 0.1rem;
   min-width: 0;
+}
+
+.imp-info-item-full {
+  grid-column: span 2;
 }
 
 .imp-info-label {
@@ -239,19 +254,20 @@ html[data-theme="light"] .imp-card {
 
 .imp-toner-row {
   display: grid;
-  grid-template-columns: 4.5rem 1fr 2.5rem;
+  grid-template-columns: 1.1rem 1fr 2.5rem;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.25rem;
 }
 
 .imp-toner-label {
   font-size: 0.72rem;
   color: var(--text-subtle);
-  font-weight: 500;
+  font-weight: 700;
+  text-align: center;
 }
 
 .imp-toner-track {
-  height: 6px;
+  height: 7px;
   background: var(--surface-3);
   border-radius: 999px;
   overflow: hidden;
@@ -268,7 +284,7 @@ html[data-theme="light"] .imp-card {
   font-size: 0.68rem;
   color: var(--text-muted);
   font-family: "IBM Plex Mono", monospace;
-  text-align: right;
+  text-align: left;
 }
 
 /* ─── Empty / Loading / Error ─────────────────────────────────── */
@@ -415,6 +431,10 @@ html[data-theme="light"] .imp-card {
   gap: 0.35rem;
 }
 
+.imp-form-field-full {
+  grid-column: span 2;
+}
+
 .imp-form-field label {
   font-size: 0.75rem;
   font-weight: 600;
@@ -542,6 +562,12 @@ html[data-theme="light"] .imp-card {
   line-height: 1.5;
 }
 
+.imp-modal-erro {
+  font-size: 0.8rem;
+  color: #ef5350;
+  margin: 0 0 0.5rem;
+}
+
 .imp-modal-footer {
   display: flex;
   justify-content: flex-end;
@@ -606,4 +632,271 @@ html[data-theme="light"] .imp-card {
 
 .imp-btn-delete:hover {
   opacity: 0.88;
+}
+
+/* ─── Toolbar right group ─────────────────────────────────────── */
+.imp-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.imp-btn-solicitacoes {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1.1rem;
+  background: rgba(43, 143, 251, 0.08);
+  border: 1px solid rgba(43, 143, 251, 0.35);
+  border-radius: 0.55rem;
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.imp-btn-solicitacoes:hover {
+  background: rgba(43, 143, 251, 0.16);
+  border-color: rgba(43, 143, 251, 0.6);
+}
+
+.imp-btn-solicitacoes.active {
+  background: rgba(43, 143, 251, 0.18);
+  border-color: var(--blue);
+  color: var(--blue);
+  font-weight: 600;
+}
+
+/* ─── Toner View Header ───────────────────────────────────────── */
+.toner-view-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.toner-btn-voltar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.42rem 0.9rem;
+  background: rgba(43, 143, 251, 0.08);
+  border: 1px solid rgba(43, 143, 251, 0.32);
+  border-radius: 0.55rem;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.toner-btn-voltar:hover {
+  background: rgba(43, 143, 251, 0.16);
+  border-color: rgba(43, 143, 251, 0.6);
+  color: var(--text);
+}
+
+/* ─── Toner Panels Layout ─────────────────────────────────────── */
+.toner-paineis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (max-width: 1200px) {
+  .toner-paineis {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Toner Panel Card ────────────────────────────────────────── */
+.toner-panel {
+  background: var(--surface);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.25rem;
+  overflow: hidden;
+}
+
+html[data-theme="light"] .toner-panel {
+  border-color: rgba(43, 143, 251, 0.18);
+}
+
+.toner-panel-header {
+  background: var(--table-header-gradient);
+  border-bottom: 1px solid var(--border);
+  padding: 0.65rem 0.9rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 3px solid transparent;
+}
+
+.toner-panel-titulo {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.toner-btn-add {
+  padding: 0.28rem 0.65rem;
+  background: var(--blue);
+  color: #fff;
+  border: none;
+  border-radius: 0.45rem;
+  font-size: 0.73rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.12s;
+}
+
+.toner-btn-add:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.toner-empty {
+  padding: 1.75rem 1rem;
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+/* ─── Toner Table ─────────────────────────────────────────────── */
+.toner-table-wrap {
+  overflow-x: auto;
+}
+
+.toner-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.toner-table thead tr {
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.toner-th-modelo {
+  text-align: left;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.61rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.toner-th-cor {
+  text-align: center;
+  padding: 0.3rem 0.3rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  width: 2.4rem;
+  letter-spacing: 0.04em;
+}
+
+.toner-th-acoes {
+  width: 2.2rem;
+}
+
+.toner-row {
+  border-bottom: 1px solid var(--border);
+  transition: background 0.12s;
+}
+
+.toner-row:last-child {
+  border-bottom: none;
+}
+
+.toner-row:hover {
+  background: rgba(43, 143, 251, 0.04);
+}
+
+/* Modelo td padding */
+.toner-table tbody td:first-child {
+  padding: 0.1rem 0.4rem 0.1rem 0.65rem;
+}
+
+/* ─── Toner Inputs ────────────────────────────────────────────── */
+.toner-input {
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.79rem;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+
+.toner-input:hover {
+  border-color: var(--border);
+  background: var(--bg-strong);
+}
+
+.toner-input:focus {
+  outline: none;
+  border-color: var(--blue);
+  background: var(--bg-strong);
+  box-shadow: 0 0 0 2px rgba(43, 143, 251, 0.14);
+}
+
+.toner-input-modelo {
+  width: 100%;
+  padding: 0.27rem 0.45rem;
+  display: block;
+}
+
+.toner-input-modelo::placeholder {
+  color: var(--text-muted);
+  opacity: 0.4;
+}
+
+.toner-td-num {
+  padding: 0.1rem 0.18rem;
+  text-align: center;
+}
+
+.toner-input-num {
+  width: 2.1rem;
+  padding: 0.24rem 0.15rem;
+  text-align: center;
+  -moz-appearance: textfield;
+}
+
+.toner-input-num::-webkit-inner-spin-button,
+.toner-input-num::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+}
+
+.toner-input-num::placeholder {
+  color: var(--text-muted);
+  opacity: 0.3;
+}
+
+.toner-td-acoes {
+  padding: 0.1rem 0.35rem;
+  text-align: right;
+}
+
+.toner-btn-remove {
+  width: 1.6rem;
+  height: 1.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.toner-btn-remove:hover {
+  background: rgba(211, 47, 47, 0.12);
+  color: #ef5350;
+  border-color: rgba(211, 47, 47, 0.3);
 }

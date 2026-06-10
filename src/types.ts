@@ -57,14 +57,29 @@ export interface InventarioItem {
 export interface Impressora {
   id: string;
   local: string;
+  sede: string;
   marca: string;
   modelo: string;
   numeroSerie: string;
   ip: string;
   mac: string;
+  link: string;
   tonerPreto: number;
   tonerCiano: number;
   tonerMagenta: number;
   tonerAmarelo: number;
+  updatedAt: string;
+}
+
+export type TonerTipo = "solicitado" | "cheio" | "vazio";
+
+export interface TonerRegistro {
+  id: string;
+  tipo: TonerTipo;
+  modelo: string;
+  preto: number;
+  ciano: number;
+  magenta: number;
+  amarelo: number;
   updatedAt: string;
 }

@@ -106,6 +106,7 @@ const initDatabase = async () => {
     CREATE TABLE IF NOT EXISTS impressoras (
       id TEXT PRIMARY KEY,
       local_texto TEXT,
+      sede TEXT,
       marca TEXT,
       modelo TEXT,
       numero_serie TEXT,
@@ -117,17 +118,44 @@ const initDatabase = async () => {
       toner_amarelo INTEGER DEFAULT 100,
       updated_at TIMESTAMP NOT NULL
     );
+
+    ALTER TABLE impressoras ADD COLUMN IF NOT EXISTS sede TEXT;
+    ALTER TABLE impressoras ADD COLUMN IF NOT EXISTS link TEXT;
+
+    CREATE TABLE IF NOT EXISTS toner_registros (
+      id TEXT PRIMARY KEY,
+      tipo TEXT NOT NULL,
+      modelo TEXT,
+      preto INTEGER DEFAULT 0,
+      ciano INTEGER DEFAULT 0,
+      magenta INTEGER DEFAULT 0,
+      amarelo INTEGER DEFAULT 0,
+      updated_at TIMESTAMP NOT NULL
+    );
   `);
 };
+
+const rowToTonerRegistro = (row) => ({
+  id: row.id,
+  tipo: row.tipo,
+  modelo: row.modelo || "",
+  preto: row.preto ?? 0,
+  ciano: row.ciano ?? 0,
+  magenta: row.magenta ?? 0,
+  amarelo: row.amarelo ?? 0,
+  updatedAt: new Date(row.updated_at).toISOString(),
+});
 
 const rowToImpressora = (row) => ({
   id: row.id,
   local: row.local_texto || "",
+  sede: row.sede || "",
   marca: row.marca || "",
   modelo: row.modelo || "",
   numeroSerie: row.numero_serie || "",
   ip: row.ip || "",
   mac: row.mac || "",
+  link: row.link || "",
   tonerPreto: row.toner_preto ?? 100,
   tonerCiano: row.toner_ciano ?? 100,
   tonerMagenta: row.toner_magenta ?? 100,
@@ -436,17 +464,19 @@ app.put("/api/impressoras", async (req, res, next) => {
       await client.query(
         `
         INSERT INTO impressoras (
-          id, local_texto, marca, modelo, numero_serie, ip, mac,
+          id, local_texto, sede, marca, modelo, numero_serie, ip, mac, link,
           toner_preto, toner_ciano, toner_magenta, toner_amarelo, updated_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         ON CONFLICT (id) DO UPDATE SET
           local_texto = EXCLUDED.local_texto,
+          sede = EXCLUDED.sede,
           marca = EXCLUDED.marca,
           modelo = EXCLUDED.modelo,
           numero_serie = EXCLUDED.numero_serie,
           ip = EXCLUDED.ip,
           mac = EXCLUDED.mac,
+          link = EXCLUDED.link,
           toner_preto = EXCLUDED.toner_preto,
           toner_ciano = EXCLUDED.toner_ciano,
           toner_magenta = EXCLUDED.toner_magenta,
@@ -456,11 +486,13 @@ app.put("/api/impressoras", async (req, res, next) => {
         [
           imp.id,
           imp.local || "",
+          imp.sede || "",
           imp.marca || "",
           imp.modelo || "",
           imp.numeroSerie || "",
           imp.ip || "",
           imp.mac || "",
+          imp.link || "",
           imp.tonerPreto ?? 100,
           imp.tonerCiano ?? 100,
           imp.tonerMagenta ?? 100,
@@ -474,6 +506,68 @@ app.put("/api/impressoras", async (req, res, next) => {
       "SELECT * FROM impressoras ORDER BY updated_at ASC",
     );
     res.json(result.rows.map(rowToImpressora));
+  } catch (error) {
+    await client.query("ROLLBACK");
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+
+app.get("/api/toners", async (_req, res, next) => {
+  try {
+    const result = await pool.query(
+      "SELECT * FROM toner_registros ORDER BY updated_at ASC",
+    );
+    res.json(result.rows.map(rowToTonerRegistro));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put("/api/toners", async (req, res, next) => {
+  const registros = req.body || [];
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const ids = registros.map((r) => r.id);
+    if (ids.length > 0) {
+      await client.query(
+        "DELETE FROM toner_registros WHERE NOT (id = ANY($1::text[]))",
+        [ids],
+      );
+    } else {
+      await client.query("DELETE FROM toner_registros");
+    }
+    for (const r of registros) {
+      await client.query(
+        `INSERT INTO toner_registros (id, tipo, modelo, preto, ciano, magenta, amarelo, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (id) DO UPDATE SET
+           tipo = EXCLUDED.tipo,
+           modelo = EXCLUDED.modelo,
+           preto = EXCLUDED.preto,
+           ciano = EXCLUDED.ciano,
+           magenta = EXCLUDED.magenta,
+           amarelo = EXCLUDED.amarelo,
+           updated_at = EXCLUDED.updated_at`,
+        [
+          r.id,
+          r.tipo,
+          r.modelo || "",
+          r.preto ?? 0,
+          r.ciano ?? 0,
+          r.magenta ?? 0,
+          r.amarelo ?? 0,
+          r.updatedAt,
+        ],
+      );
+    }
+    await client.query("COMMIT");
+    const result = await pool.query(
+      "SELECT * FROM toner_registros ORDER BY updated_at ASC",
+    );
+    res.json(result.rows.map(rowToTonerRegistro));
   } catch (error) {
     await client.query("ROLLBACK");
     next(error);

@@ -1,24 +1,147 @@
 import { useEffect, useRef, useState } from "react";
-import { Impressora } from "../types";
-import { getImpressoras, saveImpressoras } from "../utils/storage";
+import { Impressora, TonerRegistro, TonerTipo } from "../types";
+import {
+  getImpressoras,
+  saveImpressoras,
+  getToners,
+  saveToners,
+} from "../utils/storage";
 import "./Impressoras.css";
 
 type TonerKey = "tonerPreto" | "tonerCiano" | "tonerMagenta" | "tonerAmarelo";
 
 const TONERS: Array<{ key: TonerKey; label: string; cor: string }> = [
-  { key: "tonerPreto", label: "Preto", cor: "#9ca3af" },
-  { key: "tonerCiano", label: "Ciano", cor: "#22d3ee" },
-  { key: "tonerMagenta", label: "Magenta", cor: "#f472b6" },
-  { key: "tonerAmarelo", label: "Amarelo", cor: "#facc15" },
+  { key: "tonerPreto", label: "P", cor: "#9ca3af" },
+  { key: "tonerCiano", label: "C", cor: "#00ccee" },
+  { key: "tonerMagenta", label: "M", cor: "#f0138a" },
+  { key: "tonerAmarelo", label: "A", cor: "#f5c200" },
 ];
+
+type TonerField = "preto" | "ciano" | "magenta" | "amarelo";
+
+const TONER_COLS: Array<{ key: TonerField; label: string; cor: string }> = [
+  { key: "preto", label: "P", cor: "#9ca3af" },
+  { key: "ciano", label: "C", cor: "#00ccee" },
+  { key: "magenta", label: "M", cor: "#f0138a" },
+  { key: "amarelo", label: "A", cor: "#f5c200" },
+];
+
+const TONER_PAINEIS: Array<{ tipo: TonerTipo; titulo: string; cor: string }> = [
+  { tipo: "solicitado", titulo: "Solicitados", cor: "#f97316" },
+  { tipo: "cheio", titulo: "Estoque Cheios", cor: "#22c55e" },
+  { tipo: "vazio", titulo: "Estoque Vazios", cor: "#ef4444" },
+];
+
+function TonerPanel({
+  tipo,
+  titulo,
+  cor,
+  registros,
+  onAdd,
+  onChange,
+  onRemove,
+}: {
+  tipo: TonerTipo;
+  titulo: string;
+  cor: string;
+  registros: TonerRegistro[];
+  onAdd: (tipo: TonerTipo) => void;
+  onChange: (id: string, field: string, value: string | number) => void;
+  onRemove: (id: string) => void;
+}) {
+  return (
+    <div className="toner-panel">
+      <div className="toner-panel-header" style={{ borderTopColor: cor }}>
+        <span className="toner-panel-titulo" style={{ color: cor }}>
+          {titulo}
+        </span>
+        <button
+          type="button"
+          className="toner-btn-add"
+          onClick={() => onAdd(tipo)}
+        >
+          + Adicionar
+        </button>
+      </div>
+      {registros.length === 0 ? (
+        <div className="toner-empty">Nenhum registro.</div>
+      ) : (
+        <div className="toner-table-wrap">
+          <table className="toner-table">
+            <thead>
+              <tr>
+                <th className="toner-th-modelo">Modelo</th>
+                {TONER_COLS.map((c) => (
+                  <th
+                    key={c.key}
+                    className="toner-th-cor"
+                    style={{ color: c.cor }}
+                  >
+                    {c.label}
+                  </th>
+                ))}
+                <th className="toner-th-acoes" />
+              </tr>
+            </thead>
+            <tbody>
+              {registros.map((r) => (
+                <tr key={r.id} className="toner-row">
+                  <td>
+                    <input
+                      className="toner-input toner-input-modelo"
+                      type="text"
+                      value={r.modelo}
+                      placeholder="Modelo"
+                      onChange={(e) => onChange(r.id, "modelo", e.target.value)}
+                    />
+                  </td>
+                  {TONER_COLS.map((c) => (
+                    <td key={c.key} className="toner-td-num">
+                      <input
+                        className="toner-input toner-input-num"
+                        type="number"
+                        min="0"
+                        value={r[c.key] === 0 ? "" : r[c.key]}
+                        placeholder="0"
+                        onChange={(e) =>
+                          onChange(
+                            r.id,
+                            c.key,
+                            Math.max(0, Number(e.target.value) || 0),
+                          )
+                        }
+                      />
+                    </td>
+                  ))}
+                  <td className="toner-td-acoes">
+                    <button
+                      type="button"
+                      className="toner-btn-remove"
+                      onClick={() => onRemove(r.id)}
+                      aria-label="Remover"
+                    >
+                      ✕
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const FORM_VAZIO: Omit<Impressora, "id" | "updatedAt"> = {
   local: "",
+  sede: "",
   marca: "",
   modelo: "",
   numeroSerie: "",
   ip: "",
   mac: "",
+  link: "",
   tonerPreto: 100,
   tonerCiano: 100,
   tonerMagenta: 100,
@@ -66,14 +189,43 @@ function ImpressoraCard({
     <div className="imp-card">
       <div className="imp-card-header">
         <div className="imp-card-title">
-          <span className="imp-card-modelo">
-            {impressora.modelo || "Sem modelo"}
+          <span className="imp-card-local">
+            {impressora.local || "Sem localização"}
           </span>
-          {impressora.marca && (
-            <span className="imp-card-marca">{impressora.marca}</span>
+          {(impressora.marca || impressora.modelo) && (
+            <span className="imp-card-subtitle">
+              {[impressora.marca, impressora.modelo]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
           )}
         </div>
         <div className="imp-card-actions">
+          {impressora.link && (
+            <a
+              href={impressora.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="imp-btn-icon imp-btn-link"
+              title="Abrir no GLPI"
+              aria-label="Abrir no GLPI"
+            >
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                width="15"
+                height="15"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M11 3h6m0 0v6m0-6L8 12M5 5H4a1 1 0 00-1 1v10a1 1 0 001 1h10a1 1 0 001-1v-1"
+                />
+              </svg>
+            </a>
+          )}
           <button
             type="button"
             className="imp-btn-icon"
@@ -105,13 +257,9 @@ function ImpressoraCard({
       <div className="imp-card-body">
         <div className="imp-info-grid">
           <div className="imp-info-item">
-            <span className="imp-info-label">Local</span>
-            <span className="imp-info-value">{impressora.local || "—"}</span>
-          </div>
-          <div className="imp-info-item">
-            <span className="imp-info-label">Nº Série</span>
+            <span className="imp-info-label">MAC</span>
             <span className="imp-info-value imp-info-mono">
-              {impressora.numeroSerie || "—"}
+              {impressora.mac || "—"}
             </span>
           </div>
           <div className="imp-info-item">
@@ -121,10 +269,14 @@ function ImpressoraCard({
             </span>
           </div>
           <div className="imp-info-item">
-            <span className="imp-info-label">MAC</span>
+            <span className="imp-info-label">Nº Série</span>
             <span className="imp-info-value imp-info-mono">
-              {impressora.mac || "—"}
+              {impressora.numeroSerie || "—"}
             </span>
+          </div>
+          <div className="imp-info-item">
+            <span className="imp-info-label">Sede</span>
+            <span className="imp-info-value">{impressora.sede || "—"}</span>
           </div>
         </div>
         <div className="imp-card-toners">
@@ -154,7 +306,11 @@ export default function Impressoras() {
   });
   const [confirmarRemocao, setConfirmarRemocao] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const [view, setView] = useState<"impressoras" | "toners">("impressoras");
+  const [toners, setToners] = useState<TonerRegistro[]>([]);
   const primeiroInputRef = useRef<HTMLInputElement>(null);
+  const tonersLoadedRef = useRef(false);
+  const tonerSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     getImpressoras()
@@ -185,11 +341,13 @@ export default function Impressoras() {
     setEditando(imp);
     setForm({
       local: imp.local,
+      sede: imp.sede,
       marca: imp.marca,
       modelo: imp.modelo,
       numeroSerie: imp.numeroSerie,
       ip: imp.ip,
       mac: imp.mac,
+      link: imp.link,
       tonerPreto: imp.tonerPreto,
       tonerCiano: imp.tonerCiano,
       tonerMagenta: imp.tonerMagenta,
@@ -210,9 +368,12 @@ export default function Impressoras() {
     setForm((f) => ({ ...f, [key]: value }));
   };
 
+  const [erroSalvar, setErroSalvar] = useState<string | null>(null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSalvando(true);
+    setErroSalvar(null);
     try {
       const agora = new Date().toISOString();
       if (editando) {
@@ -230,6 +391,8 @@ export default function Impressoras() {
         ]);
       }
       fecharModal();
+    } catch {
+      setErroSalvar("Erro ao salvar. Tente novamente.");
     } finally {
       setSalvando(false);
     }
@@ -244,6 +407,58 @@ export default function Impressoras() {
     } finally {
       setConfirmarRemocao(null);
     }
+  };
+
+  useEffect(() => {
+    getToners()
+      .then((data) => {
+        setToners(data);
+        tonersLoadedRef.current = true;
+      })
+      .catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    if (!tonersLoadedRef.current) return;
+    if (tonerSaveTimerRef.current) clearTimeout(tonerSaveTimerRef.current);
+    tonerSaveTimerRef.current = setTimeout(() => {
+      saveToners(toners).then(setToners).catch(console.error);
+    }, 400);
+    return () => {
+      if (tonerSaveTimerRef.current) clearTimeout(tonerSaveTimerRef.current);
+    };
+  }, [toners]);
+
+  const handleTonerAdd = (tipo: TonerTipo) => {
+    const novo: TonerRegistro = {
+      id: `tn_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      tipo,
+      modelo: "",
+      preto: 0,
+      ciano: 0,
+      magenta: 0,
+      amarelo: 0,
+      updatedAt: new Date().toISOString(),
+    };
+    setToners((prev) => [...prev, novo]);
+  };
+
+  const handleTonerChange = (
+    id: string,
+    field: string,
+    value: string | number,
+  ) => {
+    setToners((prev) =>
+      prev.map((r) =>
+        r.id === id
+          ? { ...r, [field]: value, updatedAt: new Date().toISOString() }
+          : r,
+      ),
+    );
+  };
+
+  const handleTonerRemove = (id: string) => {
+    setToners((prev) => prev.filter((r) => r.id !== id));
   };
 
   if (carregando) {
@@ -263,19 +478,55 @@ export default function Impressoras() {
     <div className="imp-page">
       <div className="imp-toolbar">
         <div className="imp-toolbar-title-group">
-          <h2 className="imp-toolbar-title">Impressoras</h2>
-          <div className="imp-toolbar-stats">
-            <span className="imp-toolbar-stat">
-              Impressoras cadastradas: <strong>{impressoras.length}</strong>
-            </span>
-          </div>
+          <h2 className="imp-toolbar-title">
+            {view === "toners" ? "Solicitações" : "Impressoras"}
+          </h2>
+          {view === "impressoras" && (
+            <div className="imp-toolbar-stats">
+              <span className="imp-toolbar-stat">
+                Impressoras cadastradas: <strong>{impressoras.length}</strong>
+              </span>
+            </div>
+          )}
         </div>
-        <button type="button" className="imp-btn-add" onClick={abrirModalNovo}>
-          + Adicionar
-        </button>
+        <div className="imp-toolbar-right">
+          {view === "impressoras" && (
+            <button
+              type="button"
+              className="imp-btn-add"
+              onClick={abrirModalNovo}
+            >
+              + Adicionar
+            </button>
+          )}
+          <button
+            type="button"
+            className="imp-btn-solicitacoes"
+            onClick={() =>
+              setView(view === "toners" ? "impressoras" : "toners")
+            }
+          >
+            {view === "toners" ? "Impressoras" : "Solicitações"}
+          </button>
+        </div>
       </div>
 
-      {impressoras.length === 0 ? (
+      {view === "toners" ? (
+        <div className="toner-paineis">
+          {TONER_PAINEIS.map((p) => (
+            <TonerPanel
+              key={p.tipo}
+              tipo={p.tipo}
+              titulo={p.titulo}
+              cor={p.cor}
+              registros={toners.filter((r) => r.tipo === p.tipo)}
+              onAdd={handleTonerAdd}
+              onChange={handleTonerChange}
+              onRemove={handleTonerRemove}
+            />
+          ))}
+        </div>
+      ) : impressoras.length === 0 ? (
         <div className="imp-vazio">
           <svg
             viewBox="0 0 24 24"
@@ -365,6 +616,16 @@ export default function Impressoras() {
                   />
                 </div>
                 <div className="imp-form-field">
+                  <label htmlFor="imp-sede">Sede</label>
+                  <input
+                    id="imp-sede"
+                    type="text"
+                    value={form.sede}
+                    onChange={(e) => setField("sede", e.target.value)}
+                    placeholder="Ex: Unidade Centro"
+                  />
+                </div>
+                <div className="imp-form-field">
                   <label htmlFor="imp-marca">Marca</label>
                   <input
                     id="imp-marca"
@@ -414,6 +675,16 @@ export default function Impressoras() {
                     placeholder="Ex: 00:1A:2B:3C:4D:5E"
                   />
                 </div>
+                <div className="imp-form-field imp-form-field-full">
+                  <label htmlFor="imp-link">Link (painel/acesso web)</label>
+                  <input
+                    id="imp-link"
+                    type="text"
+                    value={form.link}
+                    onChange={(e) => setField("link", e.target.value)}
+                    placeholder="Ex: http://192.168.1.100"
+                  />
+                </div>
               </div>
 
               <div className="imp-form-toners">
@@ -460,6 +731,7 @@ export default function Impressoras() {
                 ))}
               </div>
 
+              {erroSalvar && <p className="imp-modal-erro">{erroSalvar}</p>}
               <div className="imp-modal-footer">
                 <button
                   type="button"
