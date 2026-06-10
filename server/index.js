@@ -122,6 +122,38 @@ const initDatabase = async () => {
     ALTER TABLE impressoras ADD COLUMN IF NOT EXISTS sede TEXT;
     ALTER TABLE impressoras ADD COLUMN IF NOT EXISTS link TEXT;
 
+    CREATE TABLE IF NOT EXISTS tarefas (
+      id TEXT PRIMARY KEY,
+      tarefa TEXT NOT NULL,
+      descricao TEXT,
+      prioridade TEXT NOT NULL DEFAULT 'media',
+      status TEXT NOT NULL DEFAULT 'pendente',
+      responsavel TEXT,
+      prazo TIMESTAMP,
+      chamado TEXT,
+      data_criacao TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS historico_tarefas (
+      id TEXT PRIMARY KEY,
+      tarefa TEXT NOT NULL,
+      descricao TEXT,
+      prioridade TEXT NOT NULL DEFAULT 'media',
+      status TEXT NOT NULL,
+      responsavel TEXT,
+      prazo TIMESTAMP,
+      chamado TEXT,
+      data_criacao TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL
+    );
+
+    INSERT INTO historico_tarefas
+      SELECT * FROM tarefas WHERE status IN ('concluida', 'cancelada')
+    ON CONFLICT (id) DO NOTHING;
+
+    DELETE FROM tarefas WHERE status IN ('concluida', 'cancelada');
+
     CREATE TABLE IF NOT EXISTS toner_registros (
       id TEXT PRIMARY KEY,
       tipo TEXT NOT NULL,
@@ -134,6 +166,19 @@ const initDatabase = async () => {
     );
   `);
 };
+
+const rowToTarefa = (row) => ({
+  id: row.id,
+  tarefa: row.tarefa || "",
+  descricao: row.descricao || "",
+  prioridade: row.prioridade || "media",
+  status: row.status || "pendente",
+  responsavel: row.responsavel || "",
+  prazo: row.prazo ? new Date(row.prazo).toISOString() : "",
+  chamado: row.chamado || "",
+  dataCriacao: row.data_criacao ? new Date(row.data_criacao).toISOString() : "",
+  updatedAt: new Date(row.updated_at).toISOString(),
+});
 
 const rowToTonerRegistro = (row) => ({
   id: row.id,
@@ -573,6 +618,103 @@ app.put("/api/toners", async (req, res, next) => {
     next(error);
   } finally {
     client.release();
+  }
+});
+
+const TAREFA_FINISHED_STATUSES = ["concluida", "cancelada"];
+
+const upsertTarefa = async (client, tableName, t) => {
+  await client.query(
+    `INSERT INTO ${tableName} (id, tarefa, descricao, prioridade, status, responsavel, prazo, chamado, data_criacao, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+     ON CONFLICT (id) DO UPDATE SET
+       tarefa = EXCLUDED.tarefa,
+       descricao = EXCLUDED.descricao,
+       prioridade = EXCLUDED.prioridade,
+       status = EXCLUDED.status,
+       responsavel = EXCLUDED.responsavel,
+       prazo = EXCLUDED.prazo,
+       chamado = EXCLUDED.chamado,
+       data_criacao = EXCLUDED.data_criacao,
+       updated_at = EXCLUDED.updated_at`,
+    [
+      t.id,
+      t.tarefa || "",
+      t.descricao || "",
+      t.prioridade || "media",
+      t.status || "pendente",
+      t.responsavel || "",
+      t.prazo || null,
+      t.chamado || "",
+      t.dataCriacao || null,
+      t.updatedAt,
+    ],
+  );
+};
+
+app.get("/api/tarefas", async (_req, res, next) => {
+  try {
+    const result = await pool.query(
+      "SELECT * FROM tarefas ORDER BY updated_at ASC",
+    );
+    res.json(result.rows.map(rowToTarefa));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put("/api/tarefas", async (req, res, next) => {
+  const tarefas = req.body || [];
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const ativas = tarefas.filter(
+      (t) => !TAREFA_FINISHED_STATUSES.includes(t.status),
+    );
+    const finalizadas = tarefas.filter((t) =>
+      TAREFA_FINISHED_STATUSES.includes(t.status),
+    );
+
+    const ativasIds = ativas.map((t) => t.id);
+    if (ativasIds.length > 0) {
+      await client.query(
+        "DELETE FROM tarefas WHERE NOT (id = ANY($1::text[]))",
+        [ativasIds],
+      );
+    } else {
+      await client.query("DELETE FROM tarefas");
+    }
+    for (const t of ativas) {
+      await upsertTarefa(client, "tarefas", t);
+    }
+
+    for (const t of finalizadas) {
+      await client.query("DELETE FROM tarefas WHERE id = $1", [t.id]);
+      await upsertTarefa(client, "historico_tarefas", t);
+    }
+
+    await client.query("COMMIT");
+    const result = await pool.query(
+      "SELECT * FROM tarefas ORDER BY updated_at ASC",
+    );
+    res.json(result.rows.map(rowToTarefa));
+  } catch (error) {
+    await client.query("ROLLBACK");
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+
+app.get("/api/historico-tarefas", async (_req, res, next) => {
+  try {
+    const result = await pool.query(
+      "SELECT * FROM historico_tarefas ORDER BY updated_at DESC",
+    );
+    res.json(result.rows.map(rowToTarefa));
+  } catch (error) {
+    next(error);
   }
 });
 

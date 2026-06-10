@@ -1,4 +1,4 @@
-import { Evento, Impressora, InventarioItem, TonerRegistro } from "../types";
+import { Evento, Impressora, InventarioItem, Tarefa, TonerRegistro } from "../types";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "/api";
 
@@ -123,6 +123,50 @@ export const saveImpressoras = (
     method: "PUT",
     body: JSON.stringify(impressoras),
   });
+
+export const getTarefas = (): Promise<Tarefa[]> =>
+  requestJson<Tarefa[]>("/tarefas");
+
+export const getHistoricoTarefas = (): Promise<Tarefa[]> =>
+  requestJson<Tarefa[]>("/historico-tarefas");
+
+export const saveTarefas = (tarefas: Tarefa[]): Promise<Tarefa[]> =>
+  requestJson<Tarefa[]>("/tarefas", {
+    method: "PUT",
+    body: JSON.stringify(tarefas),
+  });
+
+export const reconcileTarefasAutomaticas = async (): Promise<Tarefa[]> => {
+  const agora = Date.now();
+  const tarefas = await getTarefas();
+  let houveMudanca = false;
+
+  const tarefasAtualizadas = tarefas.map((tarefa) => {
+    if (
+      tarefa.status !== "pendente" &&
+      tarefa.status !== "em_andamento"
+    ) {
+      return tarefa;
+    }
+
+    if (!tarefa.prazo || new Date(tarefa.prazo).getTime() > agora) {
+      return tarefa;
+    }
+
+    houveMudanca = true;
+    return {
+      ...tarefa,
+      status: "concluida" as const,
+      updatedAt: new Date().toISOString(),
+    };
+  });
+
+  if (!houveMudanca) {
+    return tarefas;
+  }
+
+  return saveTarefas(tarefasAtualizadas);
+};
 
 export const getToners = (): Promise<TonerRegistro[]> =>
   requestJson<TonerRegistro[]>("/toners");

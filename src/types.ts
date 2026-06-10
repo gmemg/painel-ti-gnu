@@ -71,6 +71,26 @@ export interface Impressora {
   updatedAt: string;
 }
 
+export type TarefaPrioridade = "baixa" | "media" | "alta" | "critica";
+export type TarefaStatus =
+  | "pendente"
+  | "em_andamento"
+  | "concluida"
+  | "cancelada";
+
+export interface Tarefa {
+  id: string;
+  tarefa: string;
+  descricao: string;
+  prioridade: TarefaPrioridade;
+  status: TarefaStatus;
+  responsavel: string;
+  prazo: string;
+  chamado: string;
+  dataCriacao: string;
+  updatedAt: string;
+}
+
 export type TonerTipo = "solicitado" | "cheio" | "vazio";
 
 export interface TonerRegistro {

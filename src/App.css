@@ -204,6 +204,12 @@ html[data-theme="light"] .theme-toggle:hover {
   border-color: rgba(43, 143, 251, 0.42);
 }
 
+.side-nav-link-tv {
+  margin-top: 0.5rem;
+  border-color: rgba(43, 143, 251, 0.35);
+  background: rgba(43, 143, 251, 0.08);
+}
+
 .main-content {
   flex: 1;
   padding: 2rem 2.5rem 2.5rem;

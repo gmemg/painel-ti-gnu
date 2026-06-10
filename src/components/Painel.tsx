@@ -62,7 +62,6 @@ const Painel = () => {
     setMostrarFormulario(true);
   }, []);
 
-
   /**
    * Abre o formulário preenchido para edição.
    *
@@ -72,7 +71,6 @@ const Painel = () => {
     setEventoEditando(evento);
     setMostrarFormulario(true);
   }, []);
-
 
   /**
    * Salva o evento vindo do formulário, criando ou atualizando.
@@ -119,6 +117,28 @@ const Painel = () => {
     setEventoEditando(null);
   }, []);
 
+  const adicionarEventoTeste = useCallback(async () => {
+    const agora = new Date();
+    const amanha = new Date(agora.getTime() + 24 * 60 * 60 * 1000);
+    const eventoTeste: Evento = {
+      id: `evt_teste_${Date.now()}`,
+      nomeEvento: "Evento de Teste",
+      adicionadoPor: "Sistema",
+      dataHora: amanha.toISOString(),
+      diaSemana: getDiaSemana(amanha.toISOString()),
+      localEvento: "Sala de Reunião 1",
+      funcionarioPlantao: "Funcionário Teste",
+      equipamentosNecessarios: "Notebook, Projetor",
+      numeroChamado: "00001",
+      requerente: "Requerente Teste",
+      removido: false,
+      concluido: false,
+    };
+    const todosEventos = await getEventos();
+    await saveEventos([...todosEventos, eventoTeste]);
+    refreshEventosAtivos();
+  }, [refreshEventosAtivos]);
+
   const eventosView = useMemo(
     () =>
       eventos.map((evento) => ({
@@ -136,6 +156,9 @@ const Painel = () => {
         <div className="painel-header-left">
           <button className="btn-adicionar" onClick={handleAdicionar}>
             + Adicionar Evento
+          </button>
+          <button className="btn-teste" onClick={adicionarEventoTeste}>
+            + Adicionar Teste
           </button>
           <span className="painel-stat">
             Montagens pendentes: <strong>{eventos.length}</strong>
@@ -175,8 +198,7 @@ const Painel = () => {
             {eventosView.length === 0 ? (
               <tr>
                 <td colSpan={10} className="empty-state">
-                  Nenhum evento cadastrado. Clique em "Adicionar Evento" para
-                  começar.
+                  Nenhum evento cadastrado.
                 </td>
               </tr>
             ) : (
@@ -208,7 +230,6 @@ const Painel = () => {
           </tbody>
         </table>
       </div>
-
     </div>
   );
 };

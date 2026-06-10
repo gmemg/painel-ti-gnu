@@ -27,8 +27,11 @@
 
 .historico-header h2 {
   color: var(--text);
-  font-size: 3rem;
-  font-weight: 600;
+  font-size: 2.5rem;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .historico-stats {
@@ -71,7 +74,7 @@
 .tabela-historico th {
   padding: 1rem;
   text-align: left;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.95rem;
 }
 
@@ -125,8 +128,10 @@
 .empty-state {
   text-align: center;
   padding: 3rem !important;
-  color: var(--text-muted);
+  color: var(--text-muted) !important;
   font-style: normal;
+  text-transform: none !important;
+  font-weight: 400 !important;
 }
 
 .status-badge {

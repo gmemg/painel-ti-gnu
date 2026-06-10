@@ -86,7 +86,7 @@ const Historico = () => {
       <div className="historico-header">
         <div className="historico-header-left" />
         <div className="historico-header-center">
-          <h2>HISTÓRICO DE MONTAGENS</h2>
+          <h2>HISTÓRICO MONTAGENS</h2>
           <div className="historico-stats">
             <span className="stat-item">
               Total de montagens: <strong>{totalMontagens}</strong>

@@ -4,11 +4,15 @@ import {
   Routes,
   Route,
   NavLink,
+  useLocation,
 } from "react-router-dom";
 import Painel from "./components/Painel";
 import Historico from "./components/Historico";
 import InventarioMontagem from "./components/InventarioMontagem";
 import Impressoras from "./components/Impressoras";
+import Tarefas from "./components/Tarefas";
+import HistoricoTarefas from "./components/HistoricoTarefas";
+import ModoTV from "./components/ModoTV";
 import "./App.css";
 
 /**
@@ -16,9 +20,11 @@ import "./App.css";
  * O Router fica aqui para que a navegação e o topo sejam persistentes
  * entre as telas de Painel e Histórico.
  */
-function App() {
+function AppLayout() {
+  const location = useLocation();
   const [tema, setTema] = useState<"dark" | "light">("dark");
   const [menuAberto, setMenuAberto] = useState(true);
+  const isTVMode = location.pathname === "/tv";
 
   useEffect(() => {
     const salvo = localStorage.getItem("tema_app");
@@ -33,8 +39,15 @@ function App() {
     localStorage.setItem("tema_app", tema);
   }, [tema]);
 
+  if (isTVMode) {
+    return (
+      <Routes>
+        <Route path="/tv" element={<ModoTV />} />
+      </Routes>
+    );
+  }
+
   return (
-    <Router>
       <div className="app">
         <header className="app-header">
           <div className="header-content">
@@ -141,6 +154,30 @@ function App() {
                 >
                   Impressoras
                 </NavLink>
+                <NavLink
+                  to="/tarefas"
+                  className={({ isActive }) =>
+                    `side-nav-link${isActive ? " active" : ""}`
+                  }
+                >
+                  Lista de Tarefas
+                </NavLink>
+                <NavLink
+                  to="/historico-tarefas"
+                  className={({ isActive }) =>
+                    `side-nav-link${isActive ? " active" : ""}`
+                  }
+                >
+                  Histórico de Tarefas
+                </NavLink>
+                <NavLink
+                  to="/tv"
+                  className={({ isActive }) =>
+                    `side-nav-link side-nav-link-tv${isActive ? " active" : ""}`
+                  }
+                >
+                  Modo TV
+                </NavLink>
               </nav>
             </div>
           </aside>
@@ -151,10 +188,19 @@ function App() {
               <Route path="/historico" element={<Historico />} />
               <Route path="/inventario" element={<InventarioMontagem />} />
               <Route path="/impressoras" element={<Impressoras />} />
+              <Route path="/tarefas" element={<Tarefas />} />
+              <Route path="/historico-tarefas" element={<HistoricoTarefas />} />
             </Routes>
           </main>
         </div>
       </div>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AppLayout />
     </Router>
   );
 }
