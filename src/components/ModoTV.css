@@ -38,6 +38,9 @@
   padding: 0.65rem 1.75rem;
   gap: 1rem;
   flex-shrink: 0;
+  background: rgba(15, 22, 41, 0.55);
+  backdrop-filter: blur(2px);
+  border-bottom: 1px solid rgba(59, 130, 246, 0.18);
 }
 
 .tv-topbar-left {
@@ -187,7 +190,8 @@
   border-radius: 10px;
   overflow: hidden;
   border: 1px solid rgba(59, 130, 246, 0.18);
-  background: rgba(15, 22, 41, 0.93);
+  background: rgba(15, 22, 41, 0.55);
+  backdrop-filter: blur(2px);
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.02) inset,
     0 8px 48px rgba(0, 0, 0, 0.6),
@@ -241,7 +245,7 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #ffffff;
-  background: linear-gradient(135deg, rgba(43, 143, 251, 0.95) 0%, rgba(21, 100, 192, 0.95) 100%);
+  background: linear-gradient(135deg, rgba(43, 143, 251, 0.78) 0%, rgba(21, 100, 192, 0.78) 100%);
   border-bottom: 2px solid rgba(43, 143, 251, 0.5);
   white-space: normal;
   word-break: break-word;
@@ -254,11 +258,11 @@
 
 /* ─── Linhas do corpo ────────────────────────────────────────────── */
 .tv-tabela tbody tr {
-  background: rgba(15, 22, 41, 0.93);
+  background: rgba(15, 22, 41, 0.5);
 }
 
 .tv-tabela tbody tr:nth-child(even) {
-  background: rgba(19, 30, 53, 0.93);
+  background: rgba(19, 30, 53, 0.5);
 }
 
 .tv-tabela tbody tr:last-child td {
