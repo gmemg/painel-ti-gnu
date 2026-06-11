@@ -29,6 +29,7 @@ const FormularioEvento = ({
     dataHora: "",
     localEvento: "",
     funcionarioPlantao: "",
+    plantaoEventos: "",
     equipamentosNecessarios: "",
     numeroChamado: "",
     requerente: "",
@@ -48,6 +49,7 @@ const FormularioEvento = ({
         dataHora: dataHoraFormatada,
         localEvento: evento.localEvento,
         funcionarioPlantao: evento.funcionarioPlantao,
+        plantaoEventos: evento.plantaoEventos || "",
         equipamentosNecessarios: evento.equipamentosNecessarios,
         numeroChamado: evento.numeroChamado,
         requerente: evento.requerente || "",
@@ -59,6 +61,7 @@ const FormularioEvento = ({
         dataHora: "",
         localEvento: "",
         funcionarioPlantao: "",
+        plantaoEventos: "",
         equipamentosNecessarios: "",
         numeroChamado: "",
         requerente: "",
@@ -117,6 +120,7 @@ const FormularioEvento = ({
         diaSemana: getDiaSemana(formData.dataHora),
         localEvento: formData.localEvento,
         funcionarioPlantao: formData.funcionarioPlantao,
+        plantaoEventos: formData.plantaoEventos,
         equipamentosNecessarios: formData.equipamentosNecessarios,
         numeroChamado: formData.numeroChamado,
         requerente: formData.requerente,
@@ -187,7 +191,7 @@ const FormularioEvento = ({
           </div>
 
           <div className="form-group">
-            <label htmlFor="funcionarioPlantao">Funcionário de Plantão</label>
+            <label htmlFor="funcionarioPlantao">Plantão TI</label>
             <input
               type="text"
               id="funcionarioPlantao"
@@ -195,6 +199,18 @@ const FormularioEvento = ({
               value={formData.funcionarioPlantao}
               onChange={handleChange}
               placeholder="Ex: João Silva"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="plantaoEventos">Plantão Eventos</label>
+            <input
+              type="text"
+              id="plantaoEventos"
+              name="plantaoEventos"
+              value={formData.plantaoEventos}
+              onChange={handleChange}
+              placeholder="Ex: Maria Souza"
             />
           </div>
 

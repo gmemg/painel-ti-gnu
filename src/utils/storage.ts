@@ -102,6 +102,15 @@ export const incrementHistoricoRemovidosCount = (): Promise<number> =>
     method: "POST",
   }).then((data) => data.valor);
 
+export const getEquipamentosPendentes = (): Promise<Evento[]> =>
+  requestJson<Evento[]>("/equipamentos-pendentes");
+
+export const saveEquipamentosPendentes = (eventos: Evento[]): Promise<Evento[]> =>
+  requestJson<Evento[]>("/equipamentos-pendentes", {
+    method: "PUT",
+    body: JSON.stringify(eventos),
+  });
+
 export const getInventario = (): Promise<InventarioItem[]> =>
   requestJson<InventarioItem[]>("/inventario");
 

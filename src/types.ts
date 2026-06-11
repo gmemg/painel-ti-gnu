@@ -11,6 +11,7 @@ export interface Evento {
   diaSemana: string;
   localEvento: string;
   funcionarioPlantao: string;
+  plantaoEventos: string;
   equipamentosNecessarios: string;
   numeroChamado: string;
   requerente: string;

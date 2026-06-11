@@ -60,6 +60,7 @@ export default function Tarefas() {
   const [salvando, setSalvando] = useState(false);
   const [erroSalvar, setErroSalvar] = useState<string | null>(null);
   const [confirmarRemocao, setConfirmarRemocao] = useState<string | null>(null);
+  const [confirmarConclusao, setConfirmarConclusao] = useState<string | null>(null);
   const primeiroInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -92,7 +93,7 @@ export default function Tarefas() {
 
   const adicionarTarefaTeste = async () => {
     const agora = new Date();
-    const emUmaSemana = new Date(agora.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const emDozeHoras = new Date(agora.getTime() + 12 * 60 * 60 * 1000);
     const tarefaTeste: Tarefa = {
       id: gerarId(),
       tarefa: "Tarefa de Teste",
@@ -100,7 +101,7 @@ export default function Tarefas() {
       prioridade: "media",
       status: "pendente",
       responsavel: "Responsável Teste",
-      prazo: emUmaSemana.toISOString(),
+      prazo: emDozeHoras.toISOString(),
       chamado: "00001",
       dataCriacao: agora.toISOString(),
       updatedAt: agora.toISOString(),
@@ -184,6 +185,21 @@ export default function Tarefas() {
       await salvarLista(tarefas.filter((t) => t.id !== confirmarRemocao));
     } finally {
       setConfirmarRemocao(null);
+    }
+  };
+
+  const confirmarConcluir = async () => {
+    if (!confirmarConclusao) return;
+    try {
+      await salvarLista(
+        tarefas.map((t) =>
+          t.id === confirmarConclusao
+            ? { ...t, status: "concluida" as const, updatedAt: new Date().toISOString() }
+            : t,
+        ),
+      );
+    } finally {
+      setConfirmarConclusao(null);
     }
   };
 
@@ -274,18 +290,25 @@ export default function Tarefas() {
                     <div className="trf-acoes-inner">
                       <button
                         type="button"
-                        className="trf-btn-editar"
-                        onClick={() => abrirModalEditar(t)}
+                        className="trf-btn-concluir"
+                        onClick={() => setConfirmarConclusao(t.id)}
+                        title="Concluir tarefa"
+                        aria-label="Concluir tarefa"
                       >
-                        Editar
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
                       </button>
                       <button
                         type="button"
-                        className="trf-btn-remover"
-                        onClick={() => setConfirmarRemocao(t.id)}
-                        aria-label="Remover tarefa"
+                        className="trf-btn-editar"
+                        onClick={() => abrirModalEditar(t)}
+                        title="Editar tarefa"
+                        aria-label="Editar tarefa"
                       >
-                        ✕
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                        </svg>
                       </button>
                     </div>
                   </td>
@@ -464,6 +487,43 @@ export default function Tarefas() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {confirmarConclusao && (
+        <div
+          className="trf-modal-overlay"
+          onClick={() => setConfirmarConclusao(null)}
+        >
+          <div
+            className="trf-modal trf-modal-confirm"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="trf-modal-header">
+              <h3>Concluir tarefa</h3>
+            </div>
+            <div className="trf-modal-body">
+              Confirmar conclusão desta tarefa? Ela será enviada para o histórico.
+            </div>
+            <div className="trf-modal-footer">
+              <button
+                type="button"
+                className="trf-btn-cancel"
+                onClick={() => setConfirmarConclusao(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="trf-btn-concluir-confirm"
+                onClick={confirmarConcluir}
+              >
+                Concluir
+              </button>
+            </div>
           </div>
         </div>
       )}

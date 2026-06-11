@@ -200,40 +200,45 @@
   align-items: center;
 }
 
-.trf-btn-editar {
-  padding: 0.35rem 0.85rem;
-  border: 1px solid rgba(43, 143, 251, 0.45);
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.82rem;
-  font-weight: 600;
-  white-space: nowrap;
-  background: rgba(43, 143, 251, 0.1);
-  color: var(--text);
-  transition: background 0.2s, border-color 0.2s;
-  text-transform: none;
-}
-
-.trf-btn-editar:hover {
-  background: rgba(43, 143, 251, 0.2);
-  border-color: rgba(43, 143, 251, 0.7);
-}
-
+.trf-btn-editar,
+.trf-btn-concluir,
 .trf-btn-remover {
-  padding: 0.35rem 0.45rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 1.1rem;
-  font-weight: 500;
-  transition: background 0.2s;
-  white-space: nowrap;
+  border-radius: 4px;
   background: transparent;
-  color: inherit;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  box-shadow: none;
 }
 
+.trf-btn-editar:hover,
+.trf-btn-concluir:hover,
 .trf-btn-remover:hover {
-  background: rgba(211, 47, 47, 0.12);
+  color: var(--text);
+  background: var(--surface-3);
+}
+
+.trf-btn-concluir-confirm {
+  padding: 0.6rem 1.1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: #16a34a;
+  color: white;
+  border: 1px solid rgba(22, 163, 74, 0.6);
+  transition: background 0.2s;
+}
+
+.trf-btn-concluir-confirm:hover {
+  background: #15803d;
 }
 
 /* ─── Empty ────────────────────────────────────────────────────── */

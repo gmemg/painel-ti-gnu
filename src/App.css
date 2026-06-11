@@ -76,6 +76,28 @@
 
 .header-actions {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tv-btn {
+  background: transparent;
+  color: var(--text-strong);
+  border: 1px solid var(--border-strong);
+  padding: 0.55rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.tv-btn:hover {
+  background: rgba(43, 143, 251, 0.14);
 }
 
 .theme-toggle {

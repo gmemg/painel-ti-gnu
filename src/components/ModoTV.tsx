@@ -4,19 +4,27 @@ import { Evento, Tarefa } from "../types";
 import {
   reconcileEventosAutomaticos,
   reconcileTarefasAutomaticas,
+  getEquipamentosPendentes,
 } from "../utils/storage";
 import { formatDateTime } from "../utils/dateUtils";
 import "./ModoTV.css";
 
 const INTERVALO = 30;
 
-function prazoUrgente(prazo: string): boolean {
-  if (!prazo) return false;
-  const diff = new Date(prazo).getTime() - Date.now();
+function dentroDeVinteQuatroHoras(dataHora: string): boolean {
+  if (!dataHora) return false;
+  const diff = new Date(dataHora).getTime() - Date.now();
   return diff >= 0 && diff <= 24 * 60 * 60 * 1000;
 }
 
-type Tela = "tarefas" | "montagens";
+type Tela = "montagens" | "tarefas" | "equipamentos";
+const TELAS: Tela[] = ["montagens", "tarefas", "equipamentos"];
+
+const TELA_LABEL: Record<Tela, string> = {
+  montagens: "MONTAGENS",
+  tarefas: "TAREFAS",
+  equipamentos: "EQUIPAMENTOS PENDENTES",
+};
 
 const STATUS_LABEL: Record<string, string> = {
   pendente: "Pendente",
@@ -32,19 +40,35 @@ const STATUS_COR: Record<string, string> = {
   cancelada: "#ef4444",
 };
 
+/* colunas com largura igual — table-layout:fixed distribui automaticamente */
+const ColgroupEvento = () => (
+  <colgroup>
+    <col /><col /><col /><col /><col /><col /><col /><col /><col />
+  </colgroup>
+);
+
+const ColgroupTarefa = () => (
+  <colgroup>
+    <col /><col /><col /><col /><col /><col /><col />
+  </colgroup>
+);
+
 export default function ModoTV() {
   const [tela, setTela] = useState<Tela>("montagens");
   const [segundos, setSegundos] = useState(INTERVALO);
   const [tarefas, setTarefas] = useState<Tarefa[]>([]);
   const [eventos, setEventos] = useState<Evento[]>([]);
+  const [equipamentos, setEquipamentos] = useState<Evento[]>([]);
 
   const carregarDados = useCallback(async () => {
-    const [ativas, todosEventos] = await Promise.all([
+    const [ativas, todosEventos, pendentes] = await Promise.all([
       reconcileTarefasAutomaticas(),
       reconcileEventosAutomaticos(),
+      getEquipamentosPendentes(),
     ]);
     setTarefas(ativas);
     setEventos(todosEventos.filter((e) => !e.removido));
+    setEquipamentos(pendentes);
   }, []);
 
   useEffect(() => {
@@ -55,10 +79,7 @@ export default function ModoTV() {
     const id = window.setInterval(() => {
       setSegundos((prev) => {
         if (prev <= 1) {
-          setTela((t) => {
-            const proxima = t === "montagens" ? "tarefas" : "montagens";
-            return proxima;
-          });
+          setTela((t) => TELAS[(TELAS.indexOf(t) + 1) % TELAS.length]);
           carregarDados().catch(console.error);
           return INTERVALO;
         }
@@ -68,8 +89,22 @@ export default function ModoTV() {
     return () => window.clearInterval(id);
   }, [carregarDados]);
 
-  // reaches 100% when segundos === 1 (last tick before reset)
+  const handleSkip = useCallback(() => {
+    setTela((t) => TELAS[(TELAS.indexOf(t) + 1) % TELAS.length]);
+    setSegundos(INTERVALO);
+    carregarDados().catch(console.error);
+  }, [carregarDados]);
+
   const progresso = ((INTERVALO - segundos) / (INTERVALO - 1)) * 100;
+  const isTarefas = tela === "tarefas";
+  const Colgroup = isTarefas ? ColgroupTarefa : ColgroupEvento;
+
+  const totalTela =
+    tela === "montagens"
+      ? eventos.length
+      : tela === "tarefas"
+      ? tarefas.length
+      : equipamentos.length;
 
   return (
     <div className="tv-page">
@@ -79,18 +114,45 @@ export default function ModoTV() {
         alt=""
         aria-hidden="true"
       />
+
       <div className="tv-topbar">
+        {/* esquerda: sair + contador */}
         <div className="tv-topbar-left">
-          <span className="tv-contador">
-            {tela === "montagens" ? eventos.length : tarefas.length} item(s)
-          </span>
           <Link to="/" className="tv-sair">Sair</Link>
+          <span className="tv-contador">{totalTela} item{totalTela !== 1 ? "s" : ""}</span>
         </div>
+
+        {/* centro: título + dots */}
         <div className="tv-topbar-center">
-          <span className="tv-titulo">{tela === "montagens" ? "MONTAGENS" : "TAREFAS"}</span>
-          <span className="tv-countdown">{segundos}s</span>
+          <span className="tv-titulo">{TELA_LABEL[tela]}</span>
+          <div className="tv-dots">
+            {TELAS.map((t) => (
+              <span
+                key={t}
+                className={t === tela ? "tv-dot tv-dot-active" : "tv-dot"}
+              />
+            ))}
+          </div>
         </div>
-        <div className="tv-topbar-right" />
+
+        {/* direita: countdown + skip */}
+        <div className="tv-topbar-right">
+          <span className="tv-countdown">{segundos}s</span>
+          <button
+            className="tv-skip"
+            onClick={handleSkip}
+            title="Próxima tela"
+            aria-label="Próxima tela"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+              <path
+                fillRule="evenodd"
+                d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div className="tv-progress">
@@ -98,88 +160,132 @@ export default function ModoTV() {
       </div>
 
       <div className="tv-conteudo">
-        {tela === "montagens" ? (
-          <table className="tv-tabela">
-            <thead>
-              <tr>
-                <th>Nome do Evento</th>
-                <th>Adicionado por</th>
-                <th>Data e Hora</th>
-                <th>Dia da Semana</th>
-                <th>Local do Evento</th>
-                <th>Func. de Plantão</th>
-                <th>Equipamentos</th>
-                <th>Chamado</th>
-                <th>Requerente</th>
-              </tr>
-            </thead>
-            <tbody>
-              {eventos.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="tv-empty">Nenhuma montagem cadastrada.</td>
-                </tr>
-              ) : (
-                eventos.map((e) => (
-                  <tr key={e.id}>
-                    <td className="tv-td-destaque">{e.nomeEvento}</td>
-                    <td>{e.adicionadoPor || "—"}</td>
-                    <td>{formatDateTime(e.dataHora)}</td>
-                    <td>{e.diaSemana || "—"}</td>
-                    <td>{e.localEvento || "—"}</td>
-                    <td>{e.funcionarioPlantao || "—"}</td>
-                    <td className="tv-td-desc">{e.equipamentosNecessarios || "—"}</td>
-                    <td>{e.numeroChamado || "—"}</td>
-                    <td>{e.requerente || "—"}</td>
+        <div className="tv-tabela-wrap">
+          <div className="tv-tbody-wrap">
+            <table className="tv-tabela">
+              <Colgroup />
+              <thead>
+                {isTarefas ? (
+                  <tr>
+                    <th>Tarefa</th>
+                    <th>Descrição</th>
+                    <th>Status</th>
+                    <th>Responsável</th>
+                    <th>Prazo</th>
+                    <th>Chamado</th>
+                    <th>Criado em</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        ) : (
-          <table className="tv-tabela">
-            <thead>
-              <tr>
-                <th>Tarefa</th>
-                <th>Descrição</th>
-                <th>Status</th>
-                <th>Responsável</th>
-                <th>Prazo</th>
-                <th>Chamado</th>
-                <th>Criado em</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tarefas.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="tv-empty">Nenhuma tarefa pendente.</td>
-                </tr>
-              ) : (
-                tarefas.map((t) => (
-                  <tr key={t.id} className={t.prazo && prazoUrgente(t.prazo) ? "tv-linha-urgente" : undefined}>
-                    <td className="tv-td-destaque">{t.tarefa}</td>
-                    <td className="tv-td-desc">{t.descricao || "—"}</td>
-                    <td>
-                      <span
-                        className="tv-status-badge"
-                        style={{
-                          backgroundColor: (STATUS_COR[t.status] ?? "#9ca3af") + "33",
-                          color: STATUS_COR[t.status] ?? "#9ca3af",
-                          borderColor: (STATUS_COR[t.status] ?? "#9ca3af") + "88",
-                        }}
+                ) : (
+                  <tr>
+                    <th>Nome do Evento</th>
+                    <th>Data e Hora</th>
+                    <th>Dia</th>
+                    <th>Local</th>
+                    <th>Plantão TI</th>
+                    <th>Plantão Eventos</th>
+                    <th>Equipamentos</th>
+                    <th>Chamado</th>
+                    <th>Requerente</th>
+                  </tr>
+                )}
+              </thead>
+              <tbody>
+                {tela === "equipamentos" ? (
+                  equipamentos.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="tv-empty">
+                        Nenhum equipamento pendente.
+                      </td>
+                    </tr>
+                  ) : (
+                    equipamentos.map((e) => (
+                      <tr key={e.id}>
+                        <td className="tv-td-destaque">{e.nomeEvento}</td>
+                        <td>{formatDateTime(e.dataHora)}</td>
+                        <td>{e.diaSemana || "—"}</td>
+                        <td>{e.localEvento || "—"}</td>
+                        <td>{e.funcionarioPlantao || "—"}</td>
+                        <td>{e.plantaoEventos || "—"}</td>
+                        <td className="tv-td-desc">{e.equipamentosNecessarios || "—"}</td>
+                        <td>{e.numeroChamado || "—"}</td>
+                        <td>{e.requerente || "—"}</td>
+                      </tr>
+                    ))
+                  )
+                ) : tela === "montagens" ? (
+                  eventos.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="tv-empty">
+                        Nenhuma montagem cadastrada.
+                      </td>
+                    </tr>
+                  ) : (
+                    eventos.map((e) => (
+                      <tr
+                        key={e.id}
+                        className={
+                          dentroDeVinteQuatroHoras(e.dataHora)
+                            ? "tv-linha-urgente"
+                            : undefined
+                        }
                       >
-                        {STATUS_LABEL[t.status] ?? t.status}
-                      </span>
-                    </td>
-                    <td>{t.responsavel || "—"}</td>
-                    <td>{t.prazo ? formatDateTime(t.prazo) : "—"}</td>
-                    <td>{t.chamado || "—"}</td>
-                    <td>{t.dataCriacao ? formatDateTime(t.dataCriacao) : "—"}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        )}
+                        <td className="tv-td-destaque">{e.nomeEvento}</td>
+                        <td>{formatDateTime(e.dataHora)}</td>
+                        <td>{e.diaSemana || "—"}</td>
+                        <td>{e.localEvento || "—"}</td>
+                        <td>{e.funcionarioPlantao || "—"}</td>
+                        <td>{e.plantaoEventos || "—"}</td>
+                        <td className="tv-td-desc">{e.equipamentosNecessarios || "—"}</td>
+                        <td>{e.numeroChamado || "—"}</td>
+                        <td>{e.requerente || "—"}</td>
+                      </tr>
+                    ))
+                  )
+                ) : (
+                  tarefas.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="tv-empty">
+                        Nenhuma tarefa pendente.
+                      </td>
+                    </tr>
+                  ) : (
+                    tarefas.map((t) => (
+                      <tr
+                        key={t.id}
+                        className={
+                          dentroDeVinteQuatroHoras(t.prazo)
+                            ? "tv-linha-urgente"
+                            : undefined
+                        }
+                      >
+                        <td className="tv-td-destaque">{t.tarefa}</td>
+                        <td className="tv-td-desc">{t.descricao || "—"}</td>
+                        <td>
+                          <span
+                            className="tv-status-badge"
+                            style={{
+                              backgroundColor:
+                                (STATUS_COR[t.status] ?? "#9ca3af") + "26",
+                              color: STATUS_COR[t.status] ?? "#9ca3af",
+                              borderColor:
+                                (STATUS_COR[t.status] ?? "#9ca3af") + "77",
+                            }}
+                          >
+                            {STATUS_LABEL[t.status] ?? t.status}
+                          </span>
+                        </td>
+                        <td>{t.responsavel || "—"}</td>
+                        <td>{t.prazo ? formatDateTime(t.prazo) : "—"}</td>
+                        <td>{t.chamado || "—"}</td>
+                        <td>{t.dataCriacao ? formatDateTime(t.dataCriacao) : "—"}</td>
+                      </tr>
+                    ))
+                  )
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   );

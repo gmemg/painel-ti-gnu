@@ -68,6 +68,26 @@ const initDatabase = async () => {
 
     ALTER TABLE eventos ADD COLUMN IF NOT EXISTS requerente TEXT;
     ALTER TABLE historico_eventos ADD COLUMN IF NOT EXISTS requerente TEXT;
+    ALTER TABLE eventos ADD COLUMN IF NOT EXISTS plantao_eventos TEXT;
+    ALTER TABLE historico_eventos ADD COLUMN IF NOT EXISTS plantao_eventos TEXT;
+
+    CREATE TABLE IF NOT EXISTS equipamentos_pendentes (
+      id TEXT PRIMARY KEY,
+      nome_evento TEXT NOT NULL,
+      adicionado_por TEXT NOT NULL,
+      data_hora TIMESTAMP NOT NULL,
+      dia_semana TEXT NOT NULL,
+      local_evento TEXT NOT NULL,
+      funcionario_plantao TEXT,
+      plantao_eventos TEXT,
+      equipamentos_necessarios TEXT,
+      numero_chamado TEXT,
+      requerente TEXT,
+      removido BOOLEAN DEFAULT false,
+      concluido BOOLEAN DEFAULT false,
+      data_remocao TIMESTAMP,
+      data_conclusao TIMESTAMP
+    );
 
     CREATE TABLE IF NOT EXISTS inventario_itens (
       id TEXT PRIMARY KEY,
@@ -216,6 +236,7 @@ const rowToEvento = (row) => ({
   diaSemana: row.dia_semana,
   localEvento: row.local_evento,
   funcionarioPlantao: row.funcionario_plantao || "",
+  plantaoEventos: row.plantao_eventos || "",
   equipamentosNecessarios: row.equipamentos_necessarios || "",
   numeroChamado: row.numero_chamado || "",
   requerente: row.requerente || "",
@@ -241,10 +262,10 @@ const upsertEventos = async (client, tableName, eventos) => {
       `
         INSERT INTO ${tableName} (
           id, nome_evento, adicionado_por, data_hora, dia_semana, local_evento,
-          funcionario_plantao, equipamentos_necessarios, numero_chamado, requerente,
+          funcionario_plantao, plantao_eventos, equipamentos_necessarios, numero_chamado, requerente,
           removido, concluido, data_remocao, data_conclusao
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
         ON CONFLICT (id) DO UPDATE SET
           nome_evento = EXCLUDED.nome_evento,
           adicionado_por = EXCLUDED.adicionado_por,
@@ -252,6 +273,7 @@ const upsertEventos = async (client, tableName, eventos) => {
           dia_semana = EXCLUDED.dia_semana,
           local_evento = EXCLUDED.local_evento,
           funcionario_plantao = EXCLUDED.funcionario_plantao,
+          plantao_eventos = EXCLUDED.plantao_eventos,
           equipamentos_necessarios = EXCLUDED.equipamentos_necessarios,
           numero_chamado = EXCLUDED.numero_chamado,
           requerente = EXCLUDED.requerente,
@@ -268,6 +290,7 @@ const upsertEventos = async (client, tableName, eventos) => {
         evento.diaSemana,
         evento.localEvento,
         evento.funcionarioPlantao || "",
+        evento.plantaoEventos || "",
         evento.equipamentosNecessarios || "",
         evento.numeroChamado || "",
         evento.requerente || "",
@@ -334,6 +357,29 @@ app.put("/api/historico", async (req, res, next) => {
     await upsertEventos(client, "historico_eventos", req.body || []);
     await client.query("COMMIT");
     res.json(await getEventosFromTable("historico_eventos"));
+  } catch (error) {
+    await client.query("ROLLBACK");
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+
+app.get("/api/equipamentos-pendentes", async (_req, res, next) => {
+  try {
+    res.json(await getEventosFromTable("equipamentos_pendentes"));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put("/api/equipamentos-pendentes", async (req, res, next) => {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await upsertEventos(client, "equipamentos_pendentes", req.body || []);
+    await client.query("COMMIT");
+    res.json(await getEventosFromTable("equipamentos_pendentes"));
   } catch (error) {
     await client.query("ROLLBACK");
     next(error);

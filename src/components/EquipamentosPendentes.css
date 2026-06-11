@@ -1,0 +1,265 @@
+.ep-page {
+  width: 100%;
+}
+
+.ep-loading {
+  padding: 3rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.ep-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: start;
+  margin-bottom: 2rem;
+}
+
+.ep-header-left {
+  display: flex;
+  align-items: flex-start;
+}
+
+.ep-header-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1.5rem;
+}
+
+.ep-header h2,
+.ep-header-center h2 {
+  color: var(--text);
+  font-size: 2.5rem;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ep-header-right {
+  /* equilibra o grid */
+}
+
+.ep-stat {
+  color: var(--text-muted);
+  font-size: 1rem;
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.ep-stat strong {
+  color: var(--blue);
+  font-size: 1.1rem;
+}
+
+/* ─── Tabela ─────────────────────────────────────────────── */
+.ep-tabela-container {
+  background: var(--surface-2);
+  border-radius: 6px;
+  box-shadow: 0 1px 8px var(--shadow);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  overflow-x: auto;
+}
+
+.ep-tabela {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ep-tabela thead {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  color: #ffffff;
+  border-bottom: 2px solid rgba(217, 119, 6, 0.5);
+}
+
+.ep-tabela th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 700;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.ep-tabela tbody tr {
+  border-bottom: 1px solid var(--border);
+  background-color: var(--surface-2);
+  transition: background-color 0.2s;
+}
+
+.ep-tabela tbody tr:hover {
+  background-color: var(--surface-3);
+}
+
+.ep-tabela tbody tr:last-child {
+  border-bottom: none;
+}
+
+.ep-tabela td {
+  padding: 1rem;
+  color: var(--text-subtle);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  word-break: break-word;
+  white-space: normal;
+}
+
+.ep-empty {
+  text-align: center;
+  padding: 3rem !important;
+  color: var(--text-muted) !important;
+  font-style: normal;
+  text-transform: none !important;
+  font-weight: 400 !important;
+}
+
+/* ─── Ações ──────────────────────────────────────────────── */
+.ep-acoes {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.ep-btn-devolver,
+.ep-btn-concluir {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 5px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  text-transform: none;
+}
+
+.ep-btn-devolver {
+  background: rgba(43, 143, 251, 0.1);
+  color: var(--text);
+  border-color: rgba(43, 143, 251, 0.4);
+}
+
+.ep-btn-devolver:hover {
+  background: rgba(43, 143, 251, 0.2);
+  border-color: rgba(43, 143, 251, 0.7);
+}
+
+.ep-btn-concluir {
+  background: rgba(22, 163, 74, 0.1);
+  color: var(--text);
+  border-color: rgba(22, 163, 74, 0.4);
+}
+
+.ep-btn-concluir:hover {
+  background: rgba(22, 163, 74, 0.2);
+  border-color: rgba(22, 163, 74, 0.7);
+}
+
+/* ─── Popups ─────────────────────────────────────────────── */
+.ep-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  z-index: 1000;
+}
+
+.ep-modal {
+  width: min(480px, 95vw);
+  background: var(--modal-gradient);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 28px var(--shadow);
+  overflow: hidden;
+  animation: epFadeIn 0.18s ease-out;
+}
+
+@keyframes epFadeIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.ep-modal-header {
+  padding: 1.25rem 1.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.ep-modal-header h3 {
+  color: var(--text-strong);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.ep-modal-body {
+  padding: 1rem 1.5rem 1.5rem;
+  color: var(--text-subtle);
+  line-height: 1.5;
+}
+
+.ep-modal-body strong {
+  color: var(--text-strong);
+}
+
+.ep-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 0 1.5rem 1.5rem;
+}
+
+.ep-btn-cancelar {
+  padding: 0.6rem 1.1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(43, 143, 251, 0.12);
+  color: var(--text);
+  border: 1px solid rgba(43, 143, 251, 0.45);
+  transition: background 0.2s;
+}
+
+.ep-btn-cancelar:hover {
+  background: rgba(43, 143, 251, 0.2);
+}
+
+.ep-btn-confirmar-devolver {
+  padding: 0.6rem 1.1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: #2b8ffb;
+  color: white;
+  border: 1px solid rgba(43, 143, 251, 0.6);
+  transition: background 0.2s;
+}
+
+.ep-btn-confirmar-devolver:hover {
+  background: #1a7ee0;
+}
+
+.ep-btn-confirmar-concluir {
+  padding: 0.6rem 1.1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: #16a34a;
+  color: white;
+  border: 1px solid rgba(22, 163, 74, 0.6);
+  transition: background 0.2s;
+}
+
+.ep-btn-confirmar-concluir:hover {
+  background: #15803d;
+}
