@@ -256,6 +256,12 @@
   border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+/* cabeçalho laranja — tela de equipamentos pendentes */
+.tv-tabela-equip th {
+  background: linear-gradient(135deg, rgba(251, 146, 43, 0.78) 0%, rgba(192, 100, 21, 0.78) 100%);
+  border-bottom: 2px solid rgba(251, 146, 43, 0.5);
+}
+
 /* ─── Linhas do corpo ────────────────────────────────────────────── */
 .tv-tabela tbody tr {
   background: rgba(15, 22, 41, 0.5);

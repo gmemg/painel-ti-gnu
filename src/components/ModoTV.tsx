@@ -171,7 +171,13 @@ export default function ModoTV() {
       <div className="tv-conteudo">
         <div className="tv-tabela-wrap">
           <div className="tv-tbody-wrap">
-            <table className="tv-tabela">
+            <table
+              className={
+                tela === "equipamentos"
+                  ? "tv-tabela tv-tabela-equip"
+                  : "tv-tabela"
+              }
+            >
               <Colgroup />
               <thead>
                 {isTarefas ? (
