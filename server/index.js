@@ -184,6 +184,11 @@ const initDatabase = async () => {
       amarelo INTEGER DEFAULT 0,
       updated_at TIMESTAMP NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS tv_config (
+      id TEXT PRIMARY KEY,
+      valor TEXT NOT NULL
+    );
   `);
 };
 
@@ -759,6 +764,36 @@ app.get("/api/historico-tarefas", async (_req, res, next) => {
       "SELECT * FROM historico_tarefas ORDER BY updated_at DESC",
     );
     res.json(result.rows.map(rowToTarefa));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/api/tv-config", async (_req, res, next) => {
+  try {
+    const result = await pool.query(
+      "SELECT valor FROM tv_config WHERE id = 'tv'",
+    );
+    if (result.rows.length === 0) {
+      res.json(null);
+      return;
+    }
+    res.json(JSON.parse(result.rows[0].valor));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put("/api/tv-config", async (req, res, next) => {
+  try {
+    const valor = JSON.stringify(req.body ?? {});
+    await pool.query(
+      `INSERT INTO tv_config (id, valor)
+       VALUES ('tv', $1)
+       ON CONFLICT (id) DO UPDATE SET valor = EXCLUDED.valor`,
+      [valor],
+    );
+    res.json(req.body ?? {});
   } catch (error) {
     next(error);
   }

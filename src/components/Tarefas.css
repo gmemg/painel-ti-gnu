@@ -206,23 +206,34 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   padding: 0;
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: var(--text-muted);
   cursor: pointer;
-  transition: color 0.15s, background 0.15s;
+  transition: color 0.15s, transform 0.15s;
   box-shadow: none;
+}
+
+.trf-btn-concluir {
+  color: #16a34a;
+}
+
+.trf-btn-editar {
+  color: #2b8ffb;
+}
+
+.trf-btn-remover {
+  color: #ef4444;
 }
 
 .trf-btn-editar:hover,
 .trf-btn-concluir:hover,
 .trf-btn-remover:hover {
-  color: var(--text);
-  background: var(--surface-3);
+  filter: brightness(1.25);
+  transform: scale(1.18);
 }
 
 .trf-btn-concluir-confirm {

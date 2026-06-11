@@ -178,41 +178,44 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   padding: 0;
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: var(--text-muted);
   cursor: pointer;
-  transition: color 0.15s, background 0.15s;
+  transition: color 0.15s, transform 0.15s;
   box-shadow: none;
 }
 
-.btn-editar:hover {
-  color: var(--text);
-  background: var(--surface-3);
+.btn-concluir {
+  color: #16a34a;
 }
 
+.btn-pendente {
+  color: #d97706;
+}
+
+.btn-editar {
+  color: #2b8ffb;
+}
+
+.btn-remover {
+  color: #ef4444;
+}
+
+.btn-editar:hover,
+.btn-pendente:hover,
+.btn-remover:hover,
 .btn-concluir:hover:not(:disabled) {
-  color: var(--text);
-  background: var(--surface-3);
-}
-
-.btn-remover:hover {
-  color: var(--text);
-  background: var(--surface-3);
+  filter: brightness(1.25);
+  transform: scale(1.18);
 }
 
 .btn-concluir:disabled {
   opacity: 0.35;
   cursor: default;
-}
-
-.btn-pendente:hover {
-  color: var(--text);
-  background: var(--surface-3);
 }
 
 .popup-overlay {

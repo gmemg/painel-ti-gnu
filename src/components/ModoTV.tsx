@@ -1,10 +1,17 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Evento, Tarefa } from "../types";
+import { Impressora, InventarioItem } from "../types";
 import {
   reconcileEventosAutomaticos,
   reconcileTarefasAutomaticas,
   getEquipamentosPendentes,
+  getHistorico,
+  getHistoricoTarefas,
+  getImpressoras,
+  getInventario,
+  getTvConfig,
+  saveTvConfig,
+  TvConfig,
 } from "../utils/storage";
 import { formatDateTime } from "../utils/dateUtils";
 import "./ModoTV.css";
@@ -17,103 +24,399 @@ function dentroDeVinteQuatroHoras(dataHora: string): boolean {
   return diff >= 0 && diff <= 24 * 60 * 60 * 1000;
 }
 
-type Tela = "montagens" | "tarefas" | "equipamentos";
-const TELAS: Tela[] = ["montagens", "tarefas", "equipamentos"];
-
-const TELA_LABEL: Record<Tela, string> = {
-  montagens: "MONTAGENS",
-  tarefas: "TAREFAS",
-  equipamentos: "EQUIPAMENTOS PENDENTES",
-};
-
-const STATUS_LABEL: Record<string, string> = {
+/* ─── Status ──────────────────────────────────────────────────────── */
+const TAREFA_STATUS_LABEL: Record<string, string> = {
   pendente: "Pendente",
   em_andamento: "Em andamento",
   concluida: "Concluído",
   cancelada: "Cancelada",
 };
 
-const STATUS_COR: Record<string, string> = {
+const TAREFA_STATUS_COR: Record<string, string> = {
   pendente: "#9ca3af",
   em_andamento: "#2b8ffb",
   concluida: "#22c55e",
   cancelada: "#ef4444",
 };
 
-/* colunas com largura igual — table-layout:fixed distribui automaticamente */
-const ColgroupEvento = () => (
-  <colgroup>
-    {/* Nome  DataHora  Dia    Local  PlantãoTI  PlantãoEv  Equipamentos  Chamado  Requerente */}
-    <col style={{ width: "13%" }} />
-    <col style={{ width: "9%" }} />
-    <col style={{ width: "7%" }} />
-    <col style={{ width: "11%" }} />
-    <col style={{ width: "8%" }} />
-    <col style={{ width: "8%" }} />
-    <col style={{ width: "24%" }} />
-    <col style={{ width: "8%" }} />
-    <col style={{ width: "12%" }} />
-  </colgroup>
-);
+const INV_STATUS_LABEL: Record<string, string> = {
+  disponivel: "Disponível",
+  em_uso: "Em uso",
+  manutencao: "Manutenção",
+  reservado: "Reservado",
+};
 
-const ColgroupTarefa = () => (
-  <colgroup>
-    <col /><col /><col /><col /><col /><col /><col />
-  </colgroup>
-);
+const INV_STATUS_COR: Record<string, string> = {
+  disponivel: "#22c55e",
+  em_uso: "#2b8ffb",
+  manutencao: "#f97316",
+  reservado: "#a855f7",
+};
+
+function StatusBadge({ label, cor }: { label: string; cor: string }) {
+  return (
+    <span
+      className="tv-status-badge"
+      style={{
+        backgroundColor: cor + "26",
+        color: cor,
+        borderColor: cor + "77",
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
+const TONERS_MINI: Array<{ key: keyof Impressora; label: string; cor: string }> =
+  [
+    { key: "tonerPreto", label: "P", cor: "#d1d5db" },
+    { key: "tonerCiano", label: "C", cor: "#22d3ee" },
+    { key: "tonerMagenta", label: "M", cor: "#f0138a" },
+    { key: "tonerAmarelo", label: "A", cor: "#f5c200" },
+  ];
+
+function TonerMini({ imp }: { imp: Impressora }) {
+  return (
+    <span className="tv-toner-mini">
+      {TONERS_MINI.map(({ key, label, cor }) => (
+        <span key={label} className="tv-toner-chip" style={{ color: cor }}>
+          {label} {imp[key] as number}%
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/* ─── Definição de uma coluna ─────────────────────────────────────── */
+interface Coluna {
+  titulo: string;
+  largura?: string;
+  classe?: string;
+  render: (row: Record<string, unknown>) => React.ReactNode;
+}
+
+type Accent = "azul" | "laranja" | "ciano" | "verde" | "roxo" | "indigo";
+
+interface TelaDef {
+  id: string;
+  label: string;
+  accent: Accent;
+  colunas: Coluna[];
+  load: () => Promise<Record<string, unknown>[]>;
+  isUrgent?: (row: Record<string, unknown>) => boolean;
+  vazioMsg: string;
+}
+
+const txt = (v: unknown) => (v ? String(v) : "—");
+
+/* Colunas compartilhadas para telas baseadas em Evento */
+const COLUNAS_EVENTO: Coluna[] = [
+  {
+    titulo: "Nome do Evento",
+    largura: "13%",
+    classe: "tv-td-destaque",
+    render: (r) => txt(r.nomeEvento),
+  },
+  {
+    titulo: "Data e Hora",
+    largura: "9%",
+    render: (r) => (r.dataHora ? formatDateTime(String(r.dataHora)) : "—"),
+  },
+  { titulo: "Dia", largura: "7%", render: (r) => txt(r.diaSemana) },
+  { titulo: "Local", largura: "11%", render: (r) => txt(r.localEvento) },
+  { titulo: "Plantão TI", largura: "8%", render: (r) => txt(r.funcionarioPlantao) },
+  { titulo: "Plantão Eventos", largura: "8%", render: (r) => txt(r.plantaoEventos) },
+  {
+    titulo: "Equipamentos",
+    largura: "24%",
+    classe: "tv-td-desc",
+    render: (r) => txt(r.equipamentosNecessarios),
+  },
+  { titulo: "Chamado", largura: "8%", render: (r) => txt(r.numeroChamado) },
+  { titulo: "Requerente", largura: "12%", render: (r) => txt(r.requerente) },
+];
+
+/* Colunas compartilhadas para telas baseadas em Tarefa */
+const COLUNAS_TAREFA: Coluna[] = [
+  { titulo: "Tarefa", classe: "tv-td-destaque", render: (r) => txt(r.tarefa) },
+  { titulo: "Descrição", classe: "tv-td-desc", render: (r) => txt(r.descricao) },
+  {
+    titulo: "Status",
+    render: (r) => (
+      <StatusBadge
+        label={TAREFA_STATUS_LABEL[String(r.status)] ?? String(r.status)}
+        cor={TAREFA_STATUS_COR[String(r.status)] ?? "#9ca3af"}
+      />
+    ),
+  },
+  { titulo: "Responsável", render: (r) => txt(r.responsavel) },
+  {
+    titulo: "Prazo",
+    render: (r) => (r.prazo ? formatDateTime(String(r.prazo)) : "—"),
+  },
+  { titulo: "Chamado", render: (r) => txt(r.chamado) },
+  {
+    titulo: "Criado em",
+    render: (r) => (r.dataCriacao ? formatDateTime(String(r.dataCriacao)) : "—"),
+  },
+];
+
+const asRows = <T,>(arr: T[]) => arr as unknown as Record<string, unknown>[];
+
+/* ─── Catálogo de telas disponíveis ───────────────────────────────── */
+const CATALOGO: TelaDef[] = [
+  {
+    id: "montagens",
+    label: "MONTAGENS",
+    accent: "azul",
+    colunas: COLUNAS_EVENTO,
+    vazioMsg: "Nenhuma montagem cadastrada.",
+    isUrgent: (r) => dentroDeVinteQuatroHoras(String(r.dataHora ?? "")),
+    load: async () => {
+      const eventos = await reconcileEventosAutomaticos();
+      return asRows(eventos.filter((e) => !e.removido));
+    },
+  },
+  {
+    id: "tarefas",
+    label: "TAREFAS",
+    accent: "azul",
+    colunas: COLUNAS_TAREFA,
+    vazioMsg: "Nenhuma tarefa pendente.",
+    isUrgent: (r) => dentroDeVinteQuatroHoras(String(r.prazo ?? "")),
+    load: async () => asRows(await reconcileTarefasAutomaticas()),
+  },
+  {
+    id: "equipamentos",
+    label: "EQUIPAMENTOS PENDENTES",
+    accent: "laranja",
+    colunas: COLUNAS_EVENTO,
+    vazioMsg: "Nenhum equipamento pendente.",
+    load: async () => asRows(await getEquipamentosPendentes()),
+  },
+  {
+    id: "impressoras",
+    label: "IMPRESSORAS",
+    accent: "azul",
+    vazioMsg: "Nenhuma impressora cadastrada.",
+    colunas: [
+      { titulo: "Local", largura: "16%", classe: "tv-td-destaque", render: (r) => txt(r.local) },
+      { titulo: "Sede", largura: "12%", render: (r) => txt(r.sede) },
+      { titulo: "Marca", largura: "10%", render: (r) => txt(r.marca) },
+      { titulo: "Modelo", largura: "14%", render: (r) => txt(r.modelo) },
+      { titulo: "Nº Série", largura: "12%", render: (r) => txt(r.numeroSerie) },
+      { titulo: "IP", largura: "11%", render: (r) => txt(r.ip) },
+      { titulo: "MAC", largura: "12%", render: (r) => txt(r.mac) },
+      {
+        titulo: "Toner",
+        largura: "13%",
+        render: (r) => <TonerMini imp={r as unknown as Impressora} />,
+      },
+    ],
+    load: async () => asRows(await getImpressoras()),
+  },
+  {
+    id: "historico-montagens",
+    label: "HISTÓRICO DE MONTAGENS",
+    accent: "azul",
+    colunas: COLUNAS_EVENTO,
+    vazioMsg: "Nenhuma montagem no histórico.",
+    load: async () => asRows(await getHistorico()),
+  },
+  {
+    id: "historico-tarefas",
+    label: "HISTÓRICO DE TAREFAS",
+    accent: "azul",
+    colunas: COLUNAS_TAREFA,
+    vazioMsg: "Nenhuma tarefa no histórico.",
+    load: async () => asRows(await getHistoricoTarefas()),
+  },
+  {
+    id: "inventario",
+    label: "INVENTÁRIO",
+    accent: "azul",
+    vazioMsg: "Nenhum item no inventário.",
+    colunas: [
+      { titulo: "Item", largura: "18%", classe: "tv-td-destaque", render: (r) => txt(r.item) },
+      { titulo: "Modelo", largura: "14%", render: (r) => txt(r.modelo) },
+      { titulo: "Patrimônio", largura: "12%", render: (r) => txt(r.patrimonio) },
+      { titulo: "Localização", largura: "14%", render: (r) => txt(r.localizacao) },
+      { titulo: "Requerente", largura: "13%", render: (r) => txt(r.requerente) },
+      { titulo: "Montado por", largura: "13%", render: (r) => txt(r.montadoPor) },
+      {
+        titulo: "Status",
+        largura: "12%",
+        render: (r) =>
+          r.status ? (
+            <StatusBadge
+              label={INV_STATUS_LABEL[String(r.status)] ?? String(r.status)}
+              cor={INV_STATUS_COR[String(r.status)] ?? "#9ca3af"}
+            />
+          ) : (
+            "—"
+          ),
+      },
+    ],
+    load: async () => {
+      const itens: InventarioItem[] = await getInventario();
+      return itens.flatMap((item) =>
+        item.unidades.length > 0
+          ? item.unidades.map((u) => ({ item: item.item, ...u }))
+          : [{ item: item.item }],
+      ) as Record<string, unknown>[];
+    },
+  },
+];
+
+const ACCENT_CLASSE: Record<Accent, string> = {
+  azul: "",
+  laranja: "tv-head-laranja",
+  ciano: "tv-head-ciano",
+  verde: "tv-head-verde",
+  roxo: "tv-head-roxo",
+  indigo: "tv-head-indigo",
+};
+
+/* Telas ativas por padrão (preserva o comportamento original). */
+const PADRAO_ATIVAS = new Set(["montagens", "tarefas", "equipamentos"]);
+
+function configPadrao(): { id: string; ativo: boolean }[] {
+  return CATALOGO.map((t) => ({ id: t.id, ativo: PADRAO_ATIVAS.has(t.id) }));
+}
+
+/* Mescla a config salva com o catálogo: mantém ordem salva, descarta ids
+   desconhecidos e acrescenta telas novas (inativas) ao final. */
+function normalizarConfig(
+  salva: TvConfig | null,
+): { id: string; ativo: boolean }[] {
+  if (!salva || !Array.isArray(salva.telas)) return configPadrao();
+  const validas = salva.telas.filter((t) =>
+    CATALOGO.some((c) => c.id === t.id),
+  );
+  const presentes = new Set(validas.map((t) => t.id));
+  const faltantes = CATALOGO.filter((c) => !presentes.has(c.id)).map((c) => ({
+    id: c.id,
+    ativo: false,
+  }));
+  return [...validas, ...faltantes];
+}
 
 export default function ModoTV() {
-  const [tela, setTela] = useState<Tela>("montagens");
+  const [config, setConfig] = useState(configPadrao);
+  const [tela, setTela] = useState<string>("montagens");
   const [segundos, setSegundos] = useState(INTERVALO);
-  const [tarefas, setTarefas] = useState<Tarefa[]>([]);
-  const [eventos, setEventos] = useState<Evento[]>([]);
-  const [equipamentos, setEquipamentos] = useState<Evento[]>([]);
+  const [dadosPorTela, setDadosPorTela] = useState<
+    Record<string, Record<string, unknown>[]>
+  >({});
+  const [configAberta, setConfigAberta] = useState(false);
 
-  const carregarDados = useCallback(async () => {
-    const [ativas, todosEventos, pendentes] = await Promise.all([
-      reconcileTarefasAutomaticas(),
-      reconcileEventosAutomaticos(),
-      getEquipamentosPendentes(),
-    ]);
-    setTarefas(ativas);
-    setEventos(todosEventos.filter((e) => !e.removido));
-    setEquipamentos(pendentes);
+  const telasAtivas = config.filter((c) => c.ativo).map((c) => c.id);
+  const telasAtivasRef = useRef(telasAtivas);
+  telasAtivasRef.current = telasAtivas;
+
+  const defAtual = CATALOGO.find((t) => t.id === tela);
+
+  /* Carrega a config persistida no backend. */
+  useEffect(() => {
+    getTvConfig()
+      .then((salva) => setConfig(normalizarConfig(salva)))
+      .catch(console.error);
   }, []);
 
+  const carregarTela = useCallback(async (id: string) => {
+    const def = CATALOGO.find((t) => t.id === id);
+    if (!def) return;
+    try {
+      const rows = await def.load();
+      setDadosPorTela((prev) => ({ ...prev, [id]: rows }));
+    } catch (error) {
+      console.error(error);
+    }
+  }, []);
+
+  /* Garante que a tela atual esteja entre as ativas. */
   useEffect(() => {
-    carregarDados().catch(console.error);
-  }, [carregarDados]);
+    if (telasAtivas.length === 0) return;
+    if (!telasAtivas.includes(tela)) {
+      setTela(telasAtivas[0]);
+      setSegundos(INTERVALO);
+    }
+  }, [telasAtivas, tela]);
+
+  /* Carrega os dados sempre que a tela ativa muda. */
+  useEffect(() => {
+    if (tela) carregarTela(tela);
+  }, [tela, carregarTela]);
+
+  const avancarTela = useCallback(() => {
+    const ativas = telasAtivasRef.current;
+    if (ativas.length === 0) return;
+    setTela((atual) => {
+      const idx = ativas.indexOf(atual);
+      const proxima = ativas[(idx + 1) % ativas.length];
+      carregarTela(proxima);
+      return proxima;
+    });
+  }, [carregarTela]);
 
   useEffect(() => {
     const id = window.setInterval(() => {
       setSegundos((prev) => {
         if (prev <= 1) {
-          setTela((t) => TELAS[(TELAS.indexOf(t) + 1) % TELAS.length]);
-          carregarDados().catch(console.error);
+          avancarTela();
           return INTERVALO;
         }
         return prev - 1;
       });
     }, 1000);
     return () => window.clearInterval(id);
-  }, [carregarDados]);
+  }, [avancarTela]);
 
   const handleSkip = useCallback(() => {
-    setTela((t) => TELAS[(TELAS.indexOf(t) + 1) % TELAS.length]);
+    avancarTela();
     setSegundos(INTERVALO);
-    carregarDados().catch(console.error);
-  }, [carregarDados]);
+  }, [avancarTela]);
+
+  /* ─── Painel de configuração ───────────────────────────────────── */
+  const toggleTela = (id: string) => {
+    setConfig((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, ativo: !c.ativo } : c)),
+    );
+  };
+
+  const moverTela = (id: string, direcao: -1 | 1) => {
+    setConfig((prev) => {
+      const idx = prev.findIndex((c) => c.id === id);
+      const alvo = idx + direcao;
+      if (idx < 0 || alvo < 0 || alvo >= prev.length) return prev;
+      const copia = [...prev];
+      [copia[idx], copia[alvo]] = [copia[alvo], copia[idx]];
+      return copia;
+    });
+  };
+
+  const [salvandoConfig, setSalvandoConfig] = useState(false);
+
+  const salvarConfig = async () => {
+    setSalvandoConfig(true);
+    try {
+      await saveTvConfig({ telas: config });
+      setConfigAberta(false);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setSalvandoConfig(false);
+    }
+  };
 
   const progresso = ((INTERVALO - segundos) / (INTERVALO - 1)) * 100;
-  const isTarefas = tela === "tarefas";
-  const Colgroup = isTarefas ? ColgroupTarefa : ColgroupEvento;
+  const linhas = defAtual ? dadosPorTela[tela] ?? [] : [];
+  const totalTela = linhas.length;
+  const colunas = defAtual?.colunas ?? [];
 
-  const totalTela =
-    tela === "montagens"
-      ? eventos.length
-      : tela === "tarefas"
-      ? tarefas.length
-      : equipamentos.length;
+  const nomeTela = (id: string) =>
+    CATALOGO.find((c) => c.id === id)?.label ?? id;
 
   return (
     <div className="tv-page">
@@ -133,9 +436,9 @@ export default function ModoTV() {
 
         {/* centro: título + dots */}
         <div className="tv-topbar-center">
-          <span className="tv-titulo">{TELA_LABEL[tela]}</span>
+          <span className="tv-titulo">{defAtual?.label ?? "MODO TV"}</span>
           <div className="tv-dots">
-            {TELAS.map((t) => (
+            {telasAtivas.map((t) => (
               <span
                 key={t}
                 className={t === tela ? "tv-dot tv-dot-active" : "tv-dot"}
@@ -144,8 +447,22 @@ export default function ModoTV() {
           </div>
         </div>
 
-        {/* direita: countdown + skip */}
+        {/* direita: config + countdown + skip */}
         <div className="tv-topbar-right">
+          <button
+            className="tv-config-btn"
+            onClick={() => setConfigAberta(true)}
+            title="Configurar abas"
+            aria-label="Configurar abas"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" width="17" height="17">
+              <path
+                fillRule="evenodd"
+                d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.53 1.53 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
           <span className="tv-countdown">{segundos}s</span>
           <button
             className="tv-skip"
@@ -171,137 +488,145 @@ export default function ModoTV() {
       <div className="tv-conteudo">
         <div className="tv-tabela-wrap">
           <div className="tv-tbody-wrap">
-            <table
-              className={
-                tela === "equipamentos"
-                  ? "tv-tabela tv-tabela-equip"
-                  : "tv-tabela"
-              }
-            >
-              <Colgroup />
-              <thead>
-                {isTarefas ? (
+            {telasAtivas.length === 0 ? (
+              <div className="tv-sem-abas">
+                Nenhuma aba ativa. Clique na engrenagem para configurar.
+              </div>
+            ) : (
+              <table
+                className={`tv-tabela ${
+                  defAtual ? ACCENT_CLASSE[defAtual.accent] : ""
+                }`}
+              >
+                <colgroup>
+                  {colunas.map((c, i) => (
+                    <col
+                      key={i}
+                      style={c.largura ? { width: c.largura } : undefined}
+                    />
+                  ))}
+                </colgroup>
+                <thead>
                   <tr>
-                    <th>Tarefa</th>
-                    <th>Descrição</th>
-                    <th>Status</th>
-                    <th>Responsável</th>
-                    <th>Prazo</th>
-                    <th>Chamado</th>
-                    <th>Criado em</th>
+                    {colunas.map((c, i) => (
+                      <th key={i}>{c.titulo}</th>
+                    ))}
                   </tr>
-                ) : (
-                  <tr>
-                    <th>Nome do Evento</th>
-                    <th>Data e Hora</th>
-                    <th>Dia</th>
-                    <th>Local</th>
-                    <th>Plantão TI</th>
-                    <th>Plantão Eventos</th>
-                    <th>Equipamentos</th>
-                    <th>Chamado</th>
-                    <th>Requerente</th>
-                  </tr>
-                )}
-              </thead>
-              <tbody>
-                {tela === "equipamentos" ? (
-                  equipamentos.length === 0 ? (
+                </thead>
+                <tbody>
+                  {linhas.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="tv-empty">
-                        Nenhum equipamento pendente.
+                      <td colSpan={colunas.length} className="tv-empty">
+                        {defAtual?.vazioMsg ?? "Sem dados."}
                       </td>
                     </tr>
                   ) : (
-                    equipamentos.map((e) => (
-                      <tr key={e.id}>
-                        <td className="tv-td-destaque">{e.nomeEvento}</td>
-                        <td>{formatDateTime(e.dataHora)}</td>
-                        <td>{e.diaSemana || "—"}</td>
-                        <td>{e.localEvento || "—"}</td>
-                        <td>{e.funcionarioPlantao || "—"}</td>
-                        <td>{e.plantaoEventos || "—"}</td>
-                        <td className="tv-td-desc">{e.equipamentosNecessarios || "—"}</td>
-                        <td>{e.numeroChamado || "—"}</td>
-                        <td>{e.requerente || "—"}</td>
-                      </tr>
-                    ))
-                  )
-                ) : tela === "montagens" ? (
-                  eventos.length === 0 ? (
-                    <tr>
-                      <td colSpan={9} className="tv-empty">
-                        Nenhuma montagem cadastrada.
-                      </td>
-                    </tr>
-                  ) : (
-                    eventos.map((e) => (
+                    linhas.map((row, ri) => (
                       <tr
-                        key={e.id}
+                        key={(row.id as string) ?? ri}
                         className={
-                          dentroDeVinteQuatroHoras(e.dataHora)
+                          defAtual?.isUrgent?.(row)
                             ? "tv-linha-urgente"
                             : undefined
                         }
                       >
-                        <td className="tv-td-destaque">{e.nomeEvento}</td>
-                        <td>{formatDateTime(e.dataHora)}</td>
-                        <td>{e.diaSemana || "—"}</td>
-                        <td>{e.localEvento || "—"}</td>
-                        <td>{e.funcionarioPlantao || "—"}</td>
-                        <td>{e.plantaoEventos || "—"}</td>
-                        <td className="tv-td-desc">{e.equipamentosNecessarios || "—"}</td>
-                        <td>{e.numeroChamado || "—"}</td>
-                        <td>{e.requerente || "—"}</td>
+                        {colunas.map((c, ci) => (
+                          <td key={ci} className={c.classe}>
+                            {c.render(row)}
+                          </td>
+                        ))}
                       </tr>
                     ))
-                  )
-                ) : (
-                  tarefas.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="tv-empty">
-                        Nenhuma tarefa pendente.
-                      </td>
-                    </tr>
-                  ) : (
-                    tarefas.map((t) => (
-                      <tr
-                        key={t.id}
-                        className={
-                          dentroDeVinteQuatroHoras(t.prazo)
-                            ? "tv-linha-urgente"
-                            : undefined
-                        }
-                      >
-                        <td className="tv-td-destaque">{t.tarefa}</td>
-                        <td className="tv-td-desc">{t.descricao || "—"}</td>
-                        <td>
-                          <span
-                            className="tv-status-badge"
-                            style={{
-                              backgroundColor:
-                                (STATUS_COR[t.status] ?? "#9ca3af") + "26",
-                              color: STATUS_COR[t.status] ?? "#9ca3af",
-                              borderColor:
-                                (STATUS_COR[t.status] ?? "#9ca3af") + "77",
-                            }}
-                          >
-                            {STATUS_LABEL[t.status] ?? t.status}
-                          </span>
-                        </td>
-                        <td>{t.responsavel || "—"}</td>
-                        <td>{t.prazo ? formatDateTime(t.prazo) : "—"}</td>
-                        <td>{t.chamado || "—"}</td>
-                        <td>{t.dataCriacao ? formatDateTime(t.dataCriacao) : "—"}</td>
-                      </tr>
-                    ))
-                  )
-                )}
-              </tbody>
-            </table>
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       </div>
+
+      {/* ─── Painel de configuração ────────────────────────────────── */}
+      {configAberta && (
+        <div className="tv-cfg-overlay" onClick={() => setConfigAberta(false)}>
+          <div
+            className="tv-cfg-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Configurar abas do Modo TV"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="tv-cfg-header">
+              <h3>Configurar abas</h3>
+              <button
+                className="tv-cfg-close"
+                onClick={() => setConfigAberta(false)}
+                aria-label="Fechar"
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+                  <path
+                    fillRule="evenodd"
+                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <p className="tv-cfg-desc">
+              Escolha quais abas aparecem na rotação do Modo TV e em que ordem.
+            </p>
+
+            <ul className="tv-cfg-lista">
+              {config.map((c, i) => (
+                <li key={c.id} className="tv-cfg-item">
+                  <label className="tv-cfg-toggle">
+                    <input
+                      type="checkbox"
+                      checked={c.ativo}
+                      onChange={() => toggleTela(c.id)}
+                    />
+                    <span className="tv-cfg-nome">{nomeTela(c.id)}</span>
+                  </label>
+                  <div className="tv-cfg-ordem">
+                    <button
+                      className="tv-cfg-mover"
+                      onClick={() => moverTela(c.id, -1)}
+                      disabled={i === 0}
+                      aria-label="Mover para cima"
+                    >
+                      ▲
+                    </button>
+                    <button
+                      className="tv-cfg-mover"
+                      onClick={() => moverTela(c.id, 1)}
+                      disabled={i === config.length - 1}
+                      aria-label="Mover para baixo"
+                    >
+                      ▼
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            <div className="tv-cfg-footer">
+              <button
+                className="tv-cfg-cancel"
+                onClick={() => setConfigAberta(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                className="tv-cfg-save"
+                onClick={salvarConfig}
+                disabled={salvandoConfig}
+              >
+                {salvandoConfig ? "Salvando…" : "Salvar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

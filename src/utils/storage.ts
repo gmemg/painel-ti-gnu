@@ -177,6 +177,20 @@ export const reconcileTarefasAutomaticas = async (): Promise<Tarefa[]> => {
   return saveTarefas(tarefasAtualizadas);
 };
 
+/** Configuração das abas exibidas no Modo TV (quais aparecem e em que ordem). */
+export interface TvConfig {
+  telas: Array<{ id: string; ativo: boolean }>;
+}
+
+export const getTvConfig = (): Promise<TvConfig | null> =>
+  requestJson<TvConfig | null>("/tv-config");
+
+export const saveTvConfig = (config: TvConfig): Promise<TvConfig> =>
+  requestJson<TvConfig>("/tv-config", {
+    method: "PUT",
+    body: JSON.stringify(config),
+  });
+
 export const getToners = (): Promise<TonerRegistro[]> =>
   requestJson<TonerRegistro[]>("/toners");
 

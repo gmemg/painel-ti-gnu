@@ -141,6 +141,42 @@
   color: #ffffff;
 }
 
+/* botão de configuração — mesmo estilo do skip */
+.tv-config-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.65);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.4s;
+  touch-action: auto;
+}
+
+.tv-config-btn:hover {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.45);
+  color: #ffffff;
+  transform: rotate(45deg);
+}
+
+/* estado sem abas ativas */
+.tv-sem-abas {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 2rem;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 1.15rem;
+  font-weight: 500;
+}
+
 .tv-sair {
   font-size: 0.78rem;
   color: rgba(255, 255, 255, 0.55);
@@ -256,10 +292,44 @@
   border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-/* cabeçalho laranja — tela de equipamentos pendentes */
-.tv-tabela-equip th {
+/* variações de cor do cabeçalho — mesmo estilo, hues diferentes por aba */
+.tv-head-laranja th {
   background: linear-gradient(135deg, rgba(251, 146, 43, 0.78) 0%, rgba(192, 100, 21, 0.78) 100%);
   border-bottom: 2px solid rgba(251, 146, 43, 0.5);
+}
+
+.tv-head-ciano th {
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.78) 0%, rgba(14, 116, 144, 0.78) 100%);
+  border-bottom: 2px solid rgba(34, 211, 238, 0.5);
+}
+
+.tv-head-verde th {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.78) 0%, rgba(21, 128, 61, 0.78) 100%);
+  border-bottom: 2px solid rgba(34, 197, 94, 0.5);
+}
+
+.tv-head-roxo th {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.78) 0%, rgba(109, 40, 217, 0.78) 100%);
+  border-bottom: 2px solid rgba(168, 85, 247, 0.5);
+}
+
+.tv-head-indigo th {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.78) 0%, rgba(55, 48, 163, 0.78) 100%);
+  border-bottom: 2px solid rgba(99, 102, 241, 0.5);
+}
+
+/* toner compacto na aba de impressoras */
+.tv-toner-mini {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.5rem;
+}
+
+.tv-toner-chip {
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ─── Linhas do corpo ────────────────────────────────────────────── */
@@ -344,4 +414,193 @@
   text-transform: none !important;
   font-weight: 400 !important;
   letter-spacing: 0.02em;
+}
+
+/* ─── Painel de configuração ─────────────────────────────────────── */
+.tv-cfg-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+  padding: 1.5rem;
+}
+
+.tv-cfg-panel {
+  width: 100%;
+  max-width: 460px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  background: rgba(15, 22, 41, 0.97);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+}
+
+.tv-cfg-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 1.35rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tv-cfg-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 0.02em;
+}
+
+.tv-cfg-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.tv-cfg-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.tv-cfg-desc {
+  margin: 0;
+  padding: 0.9rem 1.35rem 0.3rem;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.4;
+}
+
+.tv-cfg-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem 1.35rem 0.8rem;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(59, 130, 246, 0.25) transparent;
+}
+
+.tv-cfg-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  margin-bottom: 0.45rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.tv-cfg-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+}
+
+.tv-cfg-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: #3b82f6;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.tv-cfg-nome {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tv-cfg-ordem {
+  display: flex;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
+
+.tv-cfg-mover {
+  width: 28px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.tv-cfg-mover:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.18);
+  border-color: rgba(59, 130, 246, 0.45);
+  color: #ffffff;
+}
+
+.tv-cfg-mover:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.tv-cfg-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  padding: 1rem 1.35rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tv-cfg-cancel,
+.tv-cfg-save {
+  padding: 0.5rem 1.2rem;
+  border-radius: 7px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.tv-cfg-cancel {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.tv-cfg-cancel:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.tv-cfg-save {
+  background: linear-gradient(135deg, #2b8ffb 0%, #1564c0 100%);
+  border: 1px solid rgba(59, 130, 246, 0.6);
+  color: #ffffff;
+}
+
+.tv-cfg-save:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.tv-cfg-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
