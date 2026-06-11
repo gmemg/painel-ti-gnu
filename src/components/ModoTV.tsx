@@ -43,7 +43,16 @@ const STATUS_COR: Record<string, string> = {
 /* colunas com largura igual — table-layout:fixed distribui automaticamente */
 const ColgroupEvento = () => (
   <colgroup>
-    <col /><col /><col /><col /><col /><col /><col /><col /><col />
+    {/* Nome  DataHora  Dia    Local  PlantãoTI  PlantãoEv  Equipamentos  Chamado  Requerente */}
+    <col style={{ width: "13%" }} />
+    <col style={{ width: "9%" }} />
+    <col style={{ width: "7%" }} />
+    <col style={{ width: "11%" }} />
+    <col style={{ width: "8%" }} />
+    <col style={{ width: "8%" }} />
+    <col style={{ width: "24%" }} />
+    <col style={{ width: "8%" }} />
+    <col style={{ width: "12%" }} />
   </colgroup>
 );
 

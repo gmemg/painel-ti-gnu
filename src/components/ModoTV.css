@@ -189,6 +189,7 @@
   border-radius: 10px;
   overflow: hidden;
   border: 1px solid rgba(59, 130, 246, 0.18);
+  background: #0f1629;
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.02) inset,
     0 8px 48px rgba(0, 0, 0, 0.6),
@@ -235,15 +236,15 @@
 }
 
 .tv-tabela th {
-  padding: 0.9rem 1.1rem;
+  padding: 0.65rem 0.85rem;
   text-align: left;
   font-weight: 700;
-  font-size: 0.88rem;
-  letter-spacing: 0.07em;
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.9);
-  background: #1e3a8a;
-  border-bottom: 2px solid rgba(59, 130, 246, 0.4);
+  color: #ffffff;
+  background: linear-gradient(135deg, #2b8ffb 0%, #1564c0 100%);
+  border-bottom: 2px solid rgba(43, 143, 251, 0.5);
   white-space: normal;
   word-break: break-word;
   overflow-wrap: anywhere;
@@ -268,16 +269,16 @@
 
 /* ─── Células ────────────────────────────────────────────────────── */
 .tv-tabela td {
-  padding: 0.95rem 1.1rem;
-  font-size: 1.05rem;
+  padding: 0.65rem 0.85rem;
+  font-size: 1rem;
   color: rgba(255, 255, 255, 0.88);
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   white-space: normal;
   word-break: break-word;
   overflow-wrap: anywhere;
   vertical-align: middle;
-  line-height: 1.4;
+  line-height: 1.3;
   border-bottom: 1px solid rgba(59, 130, 246, 0.07);
 }
 
@@ -288,17 +289,17 @@
 /* coluna de destaque (nome do evento / nome da tarefa) */
 .tv-td-destaque {
   color: #ffffff !important;
-  font-size: 1.1rem !important;
+  font-size: 1.05rem !important;
   font-weight: 700 !important;
 }
 
 /* coluna de texto longo (equipamentos / descrição) */
 .tv-td-desc {
   text-transform: none !important;
-  font-weight: 400 !important;
+  font-weight: 700 !important;
   font-size: 0.95rem !important;
   color: rgba(255, 255, 255, 0.6) !important;
-  line-height: 1.5 !important;
+  line-height: 1.35 !important;
 }
 
 /* ─── Badge de status ────────────────────────────────────────────── */
@@ -306,28 +307,24 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.28rem 0.85rem;
+  padding: 0.18rem 0.65rem;
   border-radius: 999px;
   border: 1px solid;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
   white-space: nowrap;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
 }
 
 /* ─── Linha urgente (evento dentro de 24h) ───────────────────────── */
-.tv-linha-urgente td:first-child {
-  border-left: 3px solid #ef4444;
-}
-
 .tv-linha-urgente td {
-  animation: tvPiscarFundo 1.4s ease-in-out infinite;
+  animation: tvPiscarFundo 0.9s ease-in-out infinite;
 }
 
 @keyframes tvPiscarFundo {
-  0%, 100% { background-color: rgba(239, 68, 68, 0.04); }
-  50%       { background-color: rgba(239, 68, 68, 0.16); }
+  0%, 100% { background-color: rgba(255, 0, 0, 0.18); }
+  50%       { background-color: rgba(255, 0, 0, 0.50); }
 }
 
 /* ─── Estado vazio ───────────────────────────────────────────────── */
