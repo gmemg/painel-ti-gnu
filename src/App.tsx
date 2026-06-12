@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -15,6 +15,8 @@ import Tarefas from "./components/Tarefas";
 import HistoricoTarefas from "./components/HistoricoTarefas";
 import ModoTV from "./components/ModoTV";
 import EquipamentosPendentes from "./components/EquipamentosPendentes";
+import Login from "./components/Login";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import "./App.css";
 
 /**
@@ -24,9 +26,24 @@ import "./App.css";
  */
 function AppLayout() {
   const location = useLocation();
+  const { user, logout } = useAuth();
   const [tema, setTema] = useState<"dark" | "light">("dark");
   const [menuAberto, setMenuAberto] = useState(true);
+  const [menuUsuarioAberto, setMenuUsuarioAberto] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const isTVMode = location.pathname === "/tv";
+
+  // Fecha o menu do usuário ao clicar fora dele.
+  useEffect(() => {
+    if (!menuUsuarioAberto) return;
+    const aoClicarFora = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setMenuUsuarioAberto(false);
+      }
+    };
+    document.addEventListener("mousedown", aoClicarFora);
+    return () => document.removeEventListener("mousedown", aoClicarFora);
+  }, [menuUsuarioAberto]);
 
   useEffect(() => {
     const salvo = localStorage.getItem("tema_app");
@@ -120,6 +137,48 @@ function AppLayout() {
                   )}
                 </span>
               </button>
+              {user && (
+                <div className="user-menu" ref={userMenuRef}>
+                  <button
+                    type="button"
+                    className={`user-avatar role-${user.role}`}
+                    onClick={() => setMenuUsuarioAberto((prev) => !prev)}
+                    aria-haspopup="true"
+                    aria-expanded={menuUsuarioAberto}
+                    title={user.username}
+                    aria-label={`Conta de ${user.username}`}
+                  >
+                    {user.role === "admin" ? "A" : "V"}
+                  </button>
+                  {menuUsuarioAberto && (
+                    <div className="user-dropdown" role="menu">
+                      <div className="user-dropdown-header">
+                        <span className={`user-avatar user-avatar-lg role-${user.role}`}>
+                          {user.role === "admin" ? "A" : "V"}
+                        </span>
+                        <div className="user-dropdown-info">
+                          <span className="user-dropdown-name">{user.username}</span>
+                          <span className="user-dropdown-role">
+                            {user.role === "admin"
+                              ? "Admin · Gerenciamento"
+                              : "Viewer · Apenas visualização"}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="user-dropdown-logout"
+                        onClick={() => {
+                          setMenuUsuarioAberto(false);
+                          logout();
+                        }}
+                      >
+                        Sair
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </header>
@@ -207,11 +266,22 @@ function AppLayout() {
   );
 }
 
+/** Decide entre tela de login e a aplicação conforme a sessão. */
+function AppGate() {
+  const { user } = useAuth();
+  if (!user) {
+    return <Login />;
+  }
+  return <AppLayout />;
+}
+
 function App() {
   return (
-    <Router>
-      <AppLayout />
-    </Router>
+    <AuthProvider>
+      <Router>
+        <AppGate />
+      </Router>
+    </AuthProvider>
   );
 }
 

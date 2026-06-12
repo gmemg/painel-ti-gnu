@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Tarefa, TarefaPrioridade, TarefaStatus } from "../types";
 import { saveTarefas, reconcileTarefasAutomaticas } from "../utils/storage";
 import { formatDateTime } from "../utils/dateUtils";
+import { useAuth } from "../context/AuthContext";
 import "./Tarefas.css";
 
 const PRIORIDADES: Array<{ value: TarefaPrioridade; label: string; cor: string }> = [
@@ -52,6 +53,7 @@ function toLocalInput(iso: string): string {
 }
 
 export default function Tarefas() {
+  const { isAdmin } = useAuth();
   const [tarefas, setTarefas] = useState<Tarefa[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [modalAberto, setModalAberto] = useState(false);
@@ -222,21 +224,25 @@ export default function Tarefas() {
     <div className="trf-page">
       <div className="trf-header">
         <div className="trf-header-left">
-          <button type="button" className="trf-btn-add" onClick={abrirModalNovo}>
-            + Adicionar
-          </button>
-          <button type="button" className="trf-btn-teste" onClick={adicionarTarefaTeste}>
-            + Adicionar Teste
-          </button>
+          {isAdmin && (
+            <>
+              <button type="button" className="trf-btn-add" onClick={abrirModalNovo}>
+                + Adicionar
+              </button>
+              <button type="button" className="trf-btn-teste" onClick={adicionarTarefaTeste}>
+                + Adicionar Teste
+              </button>
+            </>
+          )}
+        </div>
+        <div className="trf-header-center">
+          <h2>TAREFAS</h2>
           <div className="trf-stat">
             Tarefas pendentes:{" "}
             <strong>
               {tarefas.filter((t) => t.status === "pendente" || t.status === "em_andamento").length}
             </strong>
           </div>
-        </div>
-        <div className="trf-header-center">
-          <h2>TAREFAS</h2>
         </div>
         <div className="trf-header-right" />
       </div>
@@ -252,13 +258,13 @@ export default function Tarefas() {
               <th>Prazo</th>
               <th>Chamado</th>
               <th>Criado em</th>
-              <th>Ações</th>
+              {isAdmin && <th>Ações</th>}
             </tr>
           </thead>
           <tbody>
             {tarefasView.length === 0 ? (
               <tr>
-                <td colSpan={8} className="trf-empty">
+                <td colSpan={isAdmin ? 8 : 7} className="trf-empty">
                   Nenhuma tarefa cadastrada.
                 </td>
               </tr>
@@ -286,6 +292,7 @@ export default function Tarefas() {
                   <td className="trf-td-prazo">{t.prazoFormatado}</td>
                   <td>{t.chamado || "—"}</td>
                   <td>{t.dataCriacaoFormatada}</td>
+                  {isAdmin && (
                   <td className="trf-td-acoes">
                     <div className="trf-acoes-inner">
                       <button
@@ -312,6 +319,7 @@ export default function Tarefas() {
                       </button>
                     </div>
                   </td>
+                  )}
                 </tr>
               ))
             )}

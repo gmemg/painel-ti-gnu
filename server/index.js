@@ -3,6 +3,9 @@ require("dotenv").config();
 const cors = require("cors");
 const express = require("express");
 const path = require("path");
+const crypto = require("crypto");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const { Pool, types } = require("pg");
 // TIMESTAMP WITHOUT TIME ZONE (OID 1114) é armazenado sem info de fuso.
 // O driver pg interpreta o valor bruto no fuso local do servidor, causando
@@ -17,6 +20,9 @@ const port = Number(process.env.PORT || 3000);
 const isProduction = process.env.NODE_ENV === "production";
 const distPath = path.join(__dirname, "..", "dist");
 
+const JWT_SECRET = process.env.JWT_SECRET;
+const TOKEN_EXPIRACAO = "12h";
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
@@ -24,9 +30,78 @@ const pool = new Pool({
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 
+// Autenticação/autorização para toda a API.
+// - /login e /health são públicos.
+// - Demais rotas exigem token válido.
+// - Métodos mutantes (não-GET) exigem role 'admin'.
+app.use("/api", (req, res, next) => {
+  if (req.path === "/login" || req.path === "/health") {
+    return next();
+  }
+
+  const header = req.headers.authorization || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7) : "";
+
+  try {
+    req.user = jwt.verify(token, JWT_SECRET);
+  } catch {
+    return res.status(401).json({ error: "Não autenticado" });
+  }
+
+  if (req.method !== "GET" && req.user.role !== "admin") {
+    return res.status(403).json({ error: "Sem permissão para esta ação" });
+  }
+
+  next();
+});
+
+app.post("/api/login", async (req, res, next) => {
+  try {
+    const { username, password } = req.body || {};
+    if (!username || !password) {
+      return res
+        .status(400)
+        .json({ error: "Informe usuário e senha." });
+    }
+
+    const result = await pool.query(
+      "SELECT * FROM usuarios WHERE username = $1",
+      [username],
+    );
+    const usuario = result.rows[0];
+
+    if (!usuario || !bcrypt.compareSync(password, usuario.password_hash)) {
+      return res.status(401).json({ error: "Usuário ou senha inválidos." });
+    }
+
+    const token = jwt.sign(
+      { sub: usuario.id, username: usuario.username, role: usuario.role },
+      JWT_SECRET,
+      { expiresIn: TOKEN_EXPIRACAO },
+    );
+
+    res.json({
+      token,
+      user: { username: usuario.username, role: usuario.role },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/api/me", (req, res) => {
+  res.json({ username: req.user.username, role: req.user.role });
+});
+
 const assertDatabaseUrl = () => {
   if (!process.env.DATABASE_URL) {
     throw new Error("Configure DATABASE_URL no arquivo .env antes de iniciar.");
+  }
+};
+
+const assertJwtSecret = () => {
+  if (!JWT_SECRET) {
+    throw new Error("Configure JWT_SECRET no arquivo .env antes de iniciar.");
   }
 };
 
@@ -189,7 +264,51 @@ const initDatabase = async () => {
       id TEXT PRIMARY KEY,
       valor TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS usuarios (
+      id TEXT PRIMARY KEY,
+      username TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      role TEXT NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
   `);
+};
+
+// Cria/atualiza os usuários admin e viewer a partir do .env.
+// O .env é a fonte de verdade: ao reiniciar, a senha e o role do usuário
+// existente são sincronizados com o que está configurado.
+const seedUsuarios = async () => {
+  const semente = [
+    {
+      username: process.env.ADMIN_USER || "admin",
+      password: process.env.ADMIN_PASSWORD,
+      role: "admin",
+    },
+    {
+      username: process.env.VIEWER_USER || "viewer",
+      password: process.env.VIEWER_PASSWORD,
+      role: "viewer",
+    },
+  ];
+
+  for (const { username, password, role } of semente) {
+    if (!password) {
+      console.warn(
+        `Senha do usuário "${username}" (${role}) não definida no .env — pulando seed.`,
+      );
+      continue;
+    }
+    const hash = bcrypt.hashSync(password, 10);
+    await pool.query(
+      `INSERT INTO usuarios (id, username, password_hash, role)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (username) DO UPDATE SET
+         password_hash = EXCLUDED.password_hash,
+         role = EXCLUDED.role`,
+      [crypto.randomUUID(), username, hash, role],
+    );
+  }
 };
 
 const rowToTarefa = (row) => ({
@@ -823,7 +942,9 @@ app.use((error, _req, res, _next) => {
 });
 
 assertDatabaseUrl();
+assertJwtSecret();
 initDatabase()
+  .then(seedUsuarios)
   .then(setupFrontend)
   .then(() => {
     app.listen(port, "0.0.0.0", () => {

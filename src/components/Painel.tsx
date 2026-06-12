@@ -14,6 +14,7 @@ import {
   faltamDoisDiasOuMenos,
 } from "../utils/dateUtils";
 import FormularioEvento from "./FormularioEvento";
+import { useAuth } from "../context/AuthContext";
 import "./Painel.css";
 
 /**
@@ -22,6 +23,7 @@ import "./Painel.css";
  * simples e sem dependência de backend.
  */
 const Painel = () => {
+  const { isAdmin } = useAuth();
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [eventoEditando, setEventoEditando] = useState<Evento | null>(null);
@@ -208,18 +210,22 @@ const Painel = () => {
     <div className="painel">
       <div className="painel-header">
         <div className="painel-header-left">
-          <button className="btn-adicionar" onClick={handleAdicionar}>
-            + Adicionar Evento
-          </button>
-          <button className="btn-teste" onClick={adicionarEventoTeste}>
-            + Adicionar Teste
-          </button>
-          <span className="painel-stat">
-            Montagens pendentes: <strong>{eventos.length}</strong>
-          </span>
+          {isAdmin && (
+            <>
+              <button className="btn-adicionar" onClick={handleAdicionar}>
+                + Adicionar Evento
+              </button>
+              <button className="btn-teste" onClick={adicionarEventoTeste}>
+                + Adicionar Teste
+              </button>
+            </>
+          )}
         </div>
         <div className="painel-header-center">
           <h2>MONTAGENS</h2>
+          <span className="painel-stat">
+            Montagens pendentes: <strong>{eventos.length}</strong>
+          </span>
         </div>
         <div className="painel-header-right" />
       </div>
@@ -245,13 +251,13 @@ const Painel = () => {
               <th>Equipamentos Necessários</th>
               <th>Número do Chamado</th>
               <th>Requerente</th>
-              <th>Ações</th>
+              {isAdmin && <th>Ações</th>}
             </tr>
           </thead>
           <tbody>
             {eventosView.length === 0 ? (
               <tr>
-                <td colSpan={10} className="empty-state">
+                <td colSpan={isAdmin ? 10 : 9} className="empty-state">
                   Nenhum evento cadastrado.
                 </td>
               </tr>
@@ -270,6 +276,7 @@ const Painel = () => {
                   <td>{evento.equipamentosNecessarios}</td>
                   <td className="chamado-cell">{evento.numeroChamado}</td>
                   <td>{evento.requerente || "-"}</td>
+                  {isAdmin && (
                   <td>
                     <div className="acoes-buttons">
                       <button
@@ -304,6 +311,7 @@ const Painel = () => {
                       </button>
                     </div>
                   </td>
+                  )}
                 </tr>
               ))
             )}

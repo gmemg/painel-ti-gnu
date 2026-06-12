@@ -6,6 +6,7 @@ import {
   InventarioUnidade,
 } from "../types";
 import { getInventario, saveInventario } from "../utils/storage";
+import { useAuth } from "../context/AuthContext";
 import "./InventarioMontagem.css";
 
 const createId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -166,6 +167,7 @@ const normalizeText = (value: string) =>
     .replace(/[\u0300-\u036f]/g, "");
 
 const InventarioMontagem = () => {
+  const { isAdmin } = useAuth();
   const [itens, setItens] = useState<InventarioItem[]>([]);
   const [mostrarFormularioItem, setMostrarFormularioItem] = useState(false);
   const [novoItemNome, setNovoItemNome] = useState("");
@@ -772,7 +774,7 @@ const InventarioMontagem = () => {
         key={item.id}
         data-flip-id={item.id}
         draggable={
-          canDragId === item.id && !estaEditando && sortBy === "manual"
+          isAdmin && canDragId === item.id && !estaEditando && sortBy === "manual"
         }
         onDragStart={(e) => handleDragStart(e, item.id)}
         onDragOver={(e) => handleDragOver(e, item.id)}
@@ -835,7 +837,7 @@ const InventarioMontagem = () => {
                     }`}
                     title="Clique e segure para arrastar"
                     aria-label="Arrastar item"
-                    disabled={sortBy !== "manual"}
+                    disabled={!isAdmin || sortBy !== "manual"}
                     onClick={(e) => e.stopPropagation()}
                     onMouseDown={(e) => {
                       e.stopPropagation();
@@ -878,44 +880,46 @@ const InventarioMontagem = () => {
               </>
             )}
           </div>
-          <div className="inventario-card-buttons">
-            <button
-              type="button"
-              className="btn-editar-item"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleIniciarEdicaoItem(item);
-              }}
-              onMouseDown={(e) => e.stopPropagation()}
-              onTouchStart={(e) => e.stopPropagation()}
-            >
-              Editar
-            </button>
-            <button
-              type="button"
-              className="btn-add-unit-header"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleAddUnit(item.id);
-              }}
-              onMouseDown={(e) => e.stopPropagation()}
-              onTouchStart={(e) => e.stopPropagation()}
-            >
-              + Unidade
-            </button>
-            <button
-              type="button"
-              className="btn-remover-item"
-              onClick={(e) => {
-                e.stopPropagation();
-                handlePedirRemocaoItem(item.id);
-              }}
-              onMouseDown={(e) => e.stopPropagation()}
-              onTouchStart={(e) => e.stopPropagation()}
-            >
-              Remover
-            </button>
-          </div>
+          {isAdmin && (
+            <div className="inventario-card-buttons">
+              <button
+                type="button"
+                className="btn-editar-item"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleIniciarEdicaoItem(item);
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+              >
+                Editar
+              </button>
+              <button
+                type="button"
+                className="btn-add-unit-header"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleAddUnit(item.id);
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+              >
+                + Unidade
+              </button>
+              <button
+                type="button"
+                className="btn-remover-item"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePedirRemocaoItem(item.id);
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+              >
+                Remover
+              </button>
+            </div>
+          )}
         </div>
 
         <div
@@ -944,6 +948,7 @@ const InventarioMontagem = () => {
                     <select
                       className={`unit-editor status-select status-${unidade.status}`}
                       value={unidade.status}
+                      disabled={!isAdmin}
                       onChange={(e) =>
                         handleStatusChange(
                           item.id,
@@ -968,6 +973,7 @@ const InventarioMontagem = () => {
                   <input
                     className="unit-editor ut-input"
                     type="text"
+                    readOnly={!isAdmin}
                     placeholder="Modelo"
                     value={unidade.modelo}
                     onFocus={() =>
@@ -989,6 +995,7 @@ const InventarioMontagem = () => {
                   <input
                     className="unit-editor ut-input"
                     type="text"
+                    readOnly={!isAdmin}
                     placeholder="Patrimônio"
                     value={unidade.patrimonio}
                     onFocus={() =>
@@ -1010,6 +1017,7 @@ const InventarioMontagem = () => {
                   <input
                     className="unit-editor ut-input"
                     type="text"
+                    readOnly={!isAdmin}
                     placeholder="Localização"
                     value={unidade.localizacao}
                     onFocus={() =>
@@ -1031,6 +1039,7 @@ const InventarioMontagem = () => {
                   <input
                     className="unit-editor ut-input"
                     type="text"
+                    readOnly={!isAdmin}
                     placeholder="Requerente"
                     value={unidade.requerente}
                     onFocus={() =>
@@ -1052,6 +1061,7 @@ const InventarioMontagem = () => {
                   <input
                     className="unit-editor ut-input"
                     type="text"
+                    readOnly={!isAdmin}
                     placeholder="Montado por"
                     value={unidade.montadoPor}
                     onFocus={() =>
@@ -1084,13 +1094,15 @@ const InventarioMontagem = () => {
                     >
                       Hist.
                     </button>
-                    <button
-                      type="button"
-                      className="btn-remover-unidade"
-                      onClick={() => handleRemoveUnit(item.id, unidade.id)}
-                    >
-                      ✕
-                    </button>
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        className="btn-remover-unidade"
+                        onClick={() => handleRemoveUnit(item.id, unidade.id)}
+                      >
+                        ✕
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -1121,15 +1133,17 @@ const InventarioMontagem = () => {
             </span>
           </div>
         </div>
-        <div className="inventario-actions">
-          <button
-            type="button"
-            className="btn-add-item"
-            onClick={handleAbrirFormularioItem}
-          >
-            + Adicionar item
-          </button>
-        </div>
+        {isAdmin && (
+          <div className="inventario-actions">
+            <button
+              type="button"
+              className="btn-add-item"
+              onClick={handleAbrirFormularioItem}
+            >
+              + Adicionar item
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="inventario-toolbar">

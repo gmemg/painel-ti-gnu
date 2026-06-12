@@ -2,13 +2,62 @@ import { Evento, Impressora, InventarioItem, Tarefa, TonerRegistro } from "../ty
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "/api";
 
+export type UserRole = "admin" | "viewer";
+export interface AuthUser {
+  username: string;
+  role: UserRole;
+}
+
+const TOKEN_KEY = "auth_token";
+const USER_KEY = "auth_user";
+
+export const getToken = (): string | null => localStorage.getItem(TOKEN_KEY);
+
+export const getStoredUser = (): AuthUser | null => {
+  const raw = localStorage.getItem(USER_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as AuthUser;
+  } catch {
+    return null;
+  }
+};
+
+export const setAuth = (token: string, user: AuthUser): void => {
+  localStorage.setItem(TOKEN_KEY, token);
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+};
+
+export const clearAuth = (): void => {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+};
+
+/** Erro de requisição que carrega o status HTTP para tratamento fino (401/403). */
+export class ApiError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+    this.name = "ApiError";
+  }
+}
+
+/** Disparado quando uma requisição retorna 401 — o AuthContext escuta e desloga. */
+const notifyUnauthorized = () => {
+  clearAuth();
+  window.dispatchEvent(new Event("auth:unauthorized"));
+};
+
 const requestJson = async <T>(
   path: string,
   options?: RequestInit,
 ): Promise<T> => {
+  const token = getToken();
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options?.headers,
     },
     ...options,
@@ -16,11 +65,25 @@ const requestJson = async <T>(
 
   if (!response.ok) {
     const message = await response.text();
-    throw new Error(message || `Erro na API: ${response.status}`);
+    if (response.status === 401) {
+      notifyUnauthorized();
+    }
+    throw new ApiError(response.status, message || `Erro na API: ${response.status}`);
   }
 
   return response.json() as Promise<T>;
 };
+
+export const login = (
+  username: string,
+  password: string,
+): Promise<{ token: string; user: AuthUser }> =>
+  requestJson<{ token: string; user: AuthUser }>("/login", {
+    method: "POST",
+    body: JSON.stringify({ username, password }),
+  });
+
+export const getMe = (): Promise<AuthUser> => requestJson<AuthUser>("/me");
 
 export const getEventos = (): Promise<Evento[]> =>
   requestJson<Evento[]>("/eventos");
@@ -80,6 +143,11 @@ export const reconcileEventosAutomaticos = async (): Promise<Evento[]> => {
 
   if (!houveMudanca) {
     return eventos;
+  }
+
+  // Viewer não tem permissão de escrita: mantém a atualização só na UI.
+  if (getStoredUser()?.role !== "admin") {
+    return eventosAtualizados;
   }
 
   await saveEventos(eventosAtualizados);
@@ -172,6 +240,11 @@ export const reconcileTarefasAutomaticas = async (): Promise<Tarefa[]> => {
 
   if (!houveMudanca) {
     return tarefas;
+  }
+
+  // Viewer não tem permissão de escrita: mantém a atualização só na UI.
+  if (getStoredUser()?.role !== "admin") {
+    return tarefasAtualizadas;
   }
 
   return saveTarefas(tarefasAtualizadas);

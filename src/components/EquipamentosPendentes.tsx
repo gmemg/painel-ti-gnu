@@ -8,9 +8,11 @@ import {
   addToHistorico,
 } from "../utils/storage";
 import { formatDateTime, getDiaSemana } from "../utils/dateUtils";
+import { useAuth } from "../context/AuthContext";
 import "./EquipamentosPendentes.css";
 
 export default function EquipamentosPendentes() {
+  const { isAdmin } = useAuth();
   const [itens, setItens] = useState<Evento[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [confirmarDevolucao, setConfirmarDevolucao] = useState<Evento | null>(
@@ -131,13 +133,13 @@ export default function EquipamentosPendentes() {
               <th>Equipamentos</th>
               <th>Chamado</th>
               <th>Requerente</th>
-              <th>Ações</th>
+              {isAdmin && <th>Ações</th>}
             </tr>
           </thead>
           <tbody>
             {itensView.length === 0 ? (
               <tr>
-                <td colSpan={10} className="ep-empty">
+                <td colSpan={isAdmin ? 10 : 9} className="ep-empty">
                   Nenhum equipamento pendente.
                 </td>
               </tr>
@@ -153,6 +155,7 @@ export default function EquipamentosPendentes() {
                   <td>{e.equipamentosNecessarios || "—"}</td>
                   <td>{e.numeroChamado || "—"}</td>
                   <td>{e.requerente || "—"}</td>
+                  {isAdmin && (
                   <td>
                     <div className="ep-acoes">
                       <button
@@ -193,6 +196,7 @@ export default function EquipamentosPendentes() {
                       </button>
                     </div>
                   </td>
+                  )}
                 </tr>
               ))
             )}

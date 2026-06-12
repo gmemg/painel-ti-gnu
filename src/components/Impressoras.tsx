@@ -6,6 +6,7 @@ import {
   getToners,
   saveToners,
 } from "../utils/storage";
+import { useAuth } from "../context/AuthContext";
 import "./Impressoras.css";
 
 type TonerKey = "tonerPreto" | "tonerCiano" | "tonerMagenta" | "tonerAmarelo";
@@ -40,6 +41,7 @@ function TonerPanel({
   onAdd,
   onChange,
   onRemove,
+  podeEditar,
 }: {
   tipo: TonerTipo;
   titulo: string;
@@ -48,6 +50,7 @@ function TonerPanel({
   onAdd: (tipo: TonerTipo) => void;
   onChange: (id: string, field: string, value: string | number) => void;
   onRemove: (id: string) => void;
+  podeEditar: boolean;
 }) {
   return (
     <div className="toner-panel">
@@ -55,13 +58,15 @@ function TonerPanel({
         <span className="toner-panel-titulo" style={{ color: cor }}>
           {titulo}
         </span>
-        <button
-          type="button"
-          className="toner-btn-add"
-          onClick={() => onAdd(tipo)}
-        >
-          + Adicionar
-        </button>
+        {podeEditar && (
+          <button
+            type="button"
+            className="toner-btn-add"
+            onClick={() => onAdd(tipo)}
+          >
+            + Adicionar
+          </button>
+        )}
       </div>
       {registros.length === 0 ? (
         <div className="toner-empty">Nenhum registro.</div>
@@ -80,7 +85,7 @@ function TonerPanel({
                     {c.label}
                   </th>
                 ))}
-                <th className="toner-th-acoes" />
+                {podeEditar && <th className="toner-th-acoes" />}
               </tr>
             </thead>
             <tbody>
@@ -92,6 +97,7 @@ function TonerPanel({
                       type="text"
                       value={r.modelo}
                       placeholder="Modelo"
+                      readOnly={!podeEditar}
                       onChange={(e) => onChange(r.id, "modelo", e.target.value)}
                     />
                   </td>
@@ -103,6 +109,7 @@ function TonerPanel({
                         min="0"
                         value={r[c.key] === 0 ? "" : r[c.key]}
                         placeholder="0"
+                        readOnly={!podeEditar}
                         onChange={(e) =>
                           onChange(
                             r.id,
@@ -113,16 +120,18 @@ function TonerPanel({
                       />
                     </td>
                   ))}
-                  <td className="toner-td-acoes">
-                    <button
-                      type="button"
-                      className="toner-btn-remove"
-                      onClick={() => onRemove(r.id)}
-                      aria-label="Remover"
-                    >
-                      ✕
-                    </button>
-                  </td>
+                  {podeEditar && (
+                    <td className="toner-td-acoes">
+                      <button
+                        type="button"
+                        className="toner-btn-remove"
+                        onClick={() => onRemove(r.id)}
+                        aria-label="Remover"
+                      >
+                        ✕
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -180,10 +189,12 @@ function ImpressoraCard({
   impressora,
   onEdit,
   onDelete,
+  podeEditar,
 }: {
   impressora: Impressora;
   onEdit: (imp: Impressora) => void;
   onDelete: (id: string) => void;
+  podeEditar: boolean;
 }) {
   return (
     <div className="imp-card">
@@ -226,32 +237,36 @@ function ImpressoraCard({
               </svg>
             </a>
           )}
-          <button
-            type="button"
-            className="imp-btn-icon"
-            onClick={() => onEdit(impressora)}
-            title="Editar impressora"
-            aria-label="Editar impressora"
-          >
-            <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15">
-              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            className="imp-btn-icon imp-btn-icon-danger"
-            onClick={() => onDelete(impressora.id)}
-            title="Remover impressora"
-            aria-label="Remover impressora"
-          >
-            <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15">
-              <path
-                fillRule="evenodd"
-                d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </button>
+          {podeEditar && (
+            <>
+              <button
+                type="button"
+                className="imp-btn-icon"
+                onClick={() => onEdit(impressora)}
+                title="Editar impressora"
+                aria-label="Editar impressora"
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15">
+                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="imp-btn-icon imp-btn-icon-danger"
+                onClick={() => onDelete(impressora.id)}
+                title="Remover impressora"
+                aria-label="Remover impressora"
+              >
+                <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15">
+                  <path
+                    fillRule="evenodd"
+                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            </>
+          )}
         </div>
       </div>
       <div className="imp-card-body">
@@ -296,6 +311,7 @@ function ImpressoraCard({
 }
 
 export default function Impressoras() {
+  const { isAdmin } = useAuth();
   const [impressoras, setImpressoras] = useState<Impressora[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -490,7 +506,7 @@ export default function Impressoras() {
           )}
         </div>
         <div className="imp-toolbar-right">
-          {view === "impressoras" && (
+          {view === "impressoras" && isAdmin && (
             <button
               type="button"
               className="imp-btn-add"
@@ -523,6 +539,7 @@ export default function Impressoras() {
               onAdd={handleTonerAdd}
               onChange={handleTonerChange}
               onRemove={handleTonerRemove}
+              podeEditar={isAdmin}
             />
           ))}
         </div>
@@ -544,13 +561,15 @@ export default function Impressoras() {
             />
           </svg>
           <p>Nenhuma impressora cadastrada.</p>
-          <button
-            type="button"
-            className="imp-btn-add"
-            onClick={abrirModalNovo}
-          >
-            Adicionar impressora
-          </button>
+          {isAdmin && (
+            <button
+              type="button"
+              className="imp-btn-add"
+              onClick={abrirModalNovo}
+            >
+              Adicionar impressora
+            </button>
+          )}
         </div>
       ) : (
         <div className="imp-grid">
@@ -560,6 +579,7 @@ export default function Impressoras() {
               impressora={imp}
               onEdit={abrirModalEditar}
               onDelete={(id) => setConfirmarRemocao(id)}
+              podeEditar={isAdmin}
             />
           ))}
         </div>
