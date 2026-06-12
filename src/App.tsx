@@ -11,6 +11,7 @@ import Painel from "./components/Painel";
 import Historico from "./components/Historico";
 import InventarioMontagem from "./components/InventarioMontagem";
 import Impressoras from "./components/Impressoras";
+import EscalaPlantao from "./components/EscalaPlantao";
 import Tarefas from "./components/Tarefas";
 import HistoricoTarefas from "./components/HistoricoTarefas";
 import ModoTV from "./components/ModoTV";
@@ -273,6 +274,14 @@ function AppLayout() {
               >
                 Impressoras
               </NavLink>
+              <NavLink
+                to="/escala-plantao"
+                className={({ isActive }) =>
+                  `side-nav-link${isActive ? " active" : ""}`
+                }
+              >
+                Escala Plantão
+              </NavLink>
             </nav>
           </div>
         </aside>
@@ -287,6 +296,7 @@ function AppLayout() {
             <Route path="/historico" element={<Historico />} />
             <Route path="/inventario" element={<InventarioMontagem />} />
             <Route path="/impressoras" element={<Impressoras />} />
+            <Route path="/escala-plantao" element={<EscalaPlantao />} />
             <Route path="/tarefas" element={<Tarefas />} />
             <Route path="/historico-tarefas" element={<HistoricoTarefas />} />
           </Routes>

@@ -14,6 +14,7 @@ import {
   TvConfig,
 } from "../utils/storage";
 import { formatDateTime } from "../utils/dateUtils";
+import { EscalaCards, escalasVisiveis } from "./EscalaPlantao";
 import "./ModoTV.css";
 
 const INTERVALO = 30;
@@ -106,6 +107,8 @@ interface TelaDef {
   load: () => Promise<Record<string, unknown>[]>;
   isUrgent?: (row: Record<string, unknown>) => boolean;
   vazioMsg: string;
+  /* Quando definido, renderiza conteúdo livre em vez da tabela. */
+  renderCustom?: (rows: Record<string, unknown>[]) => React.ReactNode;
 }
 
 const txt = (v: unknown) => (v ? String(v) : "—");
@@ -215,6 +218,15 @@ const CATALOGO: TelaDef[] = [
       },
     ],
     load: async () => asRows(await getImpressoras()),
+  },
+  {
+    id: "escala-plantao",
+    label: "ESCALA DE PLANTÃO",
+    accent: "azul",
+    colunas: [],
+    vazioMsg: "Nenhuma escala cadastrada.",
+    load: async () => asRows(escalasVisiveis()),
+    renderCustom: () => <EscalaCards escalas={escalasVisiveis()} />,
   },
   {
     id: "historico-montagens",
@@ -491,6 +503,10 @@ export default function ModoTV() {
             {telasAtivas.length === 0 ? (
               <div className="tv-sem-abas">
                 Nenhuma aba ativa. Clique na engrenagem para configurar.
+              </div>
+            ) : defAtual?.renderCustom ? (
+              <div className="tv-escala-wrap">
+                {defAtual.renderCustom(linhas)}
               </div>
             ) : (
               <table

@@ -258,6 +258,42 @@
   border-radius: 2px;
 }
 
+/* ─── Escala de Plantão (cards no Modo TV) ───────────────────────── */
+.tv-escala-wrap {
+  padding: 1.4rem;
+}
+
+.tv-escala-wrap .esc-grid {
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1.4rem;
+}
+
+.tv-escala-wrap .esc-card {
+  background: rgba(15, 22, 41, 0.55);
+  border-color: rgba(59, 130, 246, 0.18);
+}
+
+.tv-escala-wrap .esc-card-header {
+  font-size: 1.3rem;
+  padding: 0.85rem;
+  background: rgba(59, 130, 246, 0.14);
+  border-bottom-color: rgba(59, 130, 246, 0.18);
+}
+
+.tv-escala-wrap .esc-row {
+  font-size: 1.15rem;
+  padding: 0.28rem 0;
+  grid-template-columns: 4.6rem 1fr auto;
+}
+
+.tv-escala-wrap .esc-card-body {
+  padding: 0.8rem 1.1rem 1rem;
+}
+
+.tv-escala-wrap .esc-grupo + .esc-grupo {
+  border-top-color: rgba(59, 130, 246, 0.16);
+}
+
 /* ─── Tabela ─────────────────────────────────────────────────────── */
 .tv-tabela {
   width: 100%;
