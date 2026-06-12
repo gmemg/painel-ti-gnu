@@ -109,13 +109,12 @@ export default function EquipamentosPendentes() {
   return (
     <div className="ep-page">
       <div className="ep-header">
-        <div className="ep-header-left">
+        <div className="ep-header-left" />
+        <div className="ep-header-center">
+          <h2>EQUIPAMENTOS PENDENTES</h2>
           <span className="ep-stat">
             Pendentes: <strong>{itens.length}</strong>
           </span>
-        </div>
-        <div className="ep-header-center">
-          <h2>EQUIPAMENTOS PENDENTES</h2>
         </div>
         <div className="ep-header-right" />
       </div>

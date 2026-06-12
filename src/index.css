@@ -10,6 +10,12 @@ html {
   font-size: clamp(16px, 0.45vw + 12px, 19px);
 }
 
+html,
+body {
+  overflow-x: clip;
+  max-width: 100%;
+}
+
 :root {
   color-scheme: dark;
   --blue: #2b8ffb;

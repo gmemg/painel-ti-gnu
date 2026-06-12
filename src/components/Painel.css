@@ -321,6 +321,16 @@
   background: #b45309;
 }
 
+.popup-btn-remover {
+  background: var(--red);
+  color: white;
+  border: 1px solid rgba(211, 47, 47, 0.6);
+}
+
+.popup-btn-remover:hover {
+  background: var(--red-2);
+}
+
 html[data-theme="light"] .btn-teste {
   background: rgba(43, 143, 251, 0.18);
   color: #1c2333;

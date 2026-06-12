@@ -29,6 +29,7 @@ const Painel = () => {
   const [eventoEditando, setEventoEditando] = useState<Evento | null>(null);
   const [confirmarConclusao, setConfirmarConclusao] = useState<Evento | null>(null);
   const [confirmarPendente, setConfirmarPendente] = useState<Evento | null>(null);
+  const [confirmarRemocao, setConfirmarRemocao] = useState<Evento | null>(null);
   const salvandoRef = useRef(false);
 
   useEffect(() => {
@@ -145,6 +146,33 @@ const Painel = () => {
         await addToHistorico(eventoConcluido);
         refreshEventosAtivos();
         setConfirmarConclusao(null);
+      } finally {
+        salvandoRef.current = false;
+      }
+    },
+    [refreshEventosAtivos],
+  );
+
+  const handleRemoverEvento = useCallback(
+    async (evento: Evento) => {
+      if (salvandoRef.current) return;
+      salvandoRef.current = true;
+      try {
+        const agora = new Date().toISOString();
+        const eventoRemovido: Evento = {
+          ...evento,
+          removido: true,
+          concluido: false,
+          dataRemocao: agora,
+        };
+        const todosEventos = await getEventos();
+        const eventosAtualizados = todosEventos.map((e) =>
+          e.id === evento.id ? eventoRemovido : e,
+        );
+        await saveEventos(eventosAtualizados);
+        await addToHistorico(eventoRemovido);
+        refreshEventosAtivos();
+        setConfirmarRemocao(null);
       } finally {
         salvandoRef.current = false;
       }
@@ -272,6 +300,16 @@ const Painel = () => {
                         </svg>
                       </button>
                       <button
+                        className="btn-remover"
+                        onClick={() => setConfirmarRemocao(evento)}
+                        title="Remover evento"
+                        aria-label="Remover evento"
+                      >
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="21" height="21">
+                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                      <button
                         className="btn-pendente"
                         onClick={() => setConfirmarPendente(evento)}
                         title="Marcar como equipamento pendente"
@@ -328,6 +366,28 @@ const Painel = () => {
               </button>
               <button className="popup-btn popup-btn-pendente" onClick={() => handleMarcarPendente(confirmarPendente)}>
                 Mover
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmarRemocao && (
+        <div className="popup-overlay" onClick={() => setConfirmarRemocao(null)}>
+          <div className="popup-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <div className="popup-header">
+              <h3>Remover montagem</h3>
+            </div>
+            <div className="popup-body">
+              Remover <strong>{confirmarRemocao.nomeEvento}</strong>? O evento
+              sairá da lista e será registrado no histórico como removido.
+            </div>
+            <div className="popup-actions">
+              <button className="popup-btn popup-btn-cancelar" onClick={() => setConfirmarRemocao(null)}>
+                Cancelar
+              </button>
+              <button className="popup-btn popup-btn-remover" onClick={() => handleRemoverEvento(confirmarRemocao)}>
+                Remover
               </button>
             </div>
           </div>

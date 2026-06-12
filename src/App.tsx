@@ -28,8 +28,16 @@ function AppLayout() {
   const location = useLocation();
   const { user, logout } = useAuth();
   const [tema, setTema] = useState<"dark" | "light">("dark");
-  const [menuAberto, setMenuAberto] = useState(true);
+  // Em telas grandes o menu começa aberto; em mobile, fechado (vira drawer).
+  const [menuAberto, setMenuAberto] = useState(
+    () => typeof window === "undefined" || window.innerWidth > 1024,
+  );
   const [menuUsuarioAberto, setMenuUsuarioAberto] = useState(false);
+
+  // No mobile, selecionar um item fecha o drawer.
+  const fecharMenuSeMobile = () => {
+    if (window.innerWidth <= 1024) setMenuAberto(false);
+  };
   const userMenuRef = useRef<HTMLDivElement>(null);
   const isTVMode = location.pathname === "/tv";
 
@@ -195,13 +203,20 @@ function AppLayout() {
         </div>
       </header>
       <div className={`app-body${menuAberto ? " nav-open" : ""}`}>
+        {menuAberto && (
+          <div
+            className="side-nav-backdrop"
+            onClick={() => setMenuAberto(false)}
+            aria-hidden="true"
+          />
+        )}
         <aside
           id="side-nav"
           className={`side-nav${menuAberto ? " is-open" : ""}`}
         >
           <div className="side-nav-inner">
             <div className="side-nav-title">Navegação</div>
-            <nav className="side-nav-links">
+            <nav className="side-nav-links" onClick={fecharMenuSeMobile}>
               <NavLink
                 to="/"
                 className={({ isActive }) =>

@@ -48,7 +48,7 @@ const INV_STATUS_LABEL: Record<string, string> = {
 
 const INV_STATUS_COR: Record<string, string> = {
   disponivel: "#22c55e",
-  em_uso: "#2b8ffb",
+  em_uso: "#dc2626",
   manutencao: "#f97316",
   reservado: "#a855f7",
 };
@@ -431,7 +431,7 @@ export default function ModoTV() {
         {/* esquerda: sair + contador */}
         <div className="tv-topbar-left">
           <Link to="/" className="tv-sair">Sair</Link>
-          <span className="tv-contador">{totalTela} item{totalTela !== 1 ? "s" : ""}</span>
+          <span className="tv-contador">{totalTela} {totalTela === 1 ? "item" : "itens"}</span>
         </div>
 
         {/* centro: título + dots */}
