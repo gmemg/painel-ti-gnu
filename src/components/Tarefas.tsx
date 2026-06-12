@@ -93,24 +93,6 @@ export default function Tarefas() {
     setTarefas(atualizado);
   };
 
-  const adicionarTarefaTeste = async () => {
-    const agora = new Date();
-    const emDozeHoras = new Date(agora.getTime() + 12 * 60 * 60 * 1000);
-    const tarefaTeste: Tarefa = {
-      id: gerarId(),
-      tarefa: "Tarefa de Teste",
-      descricao: "Descrição da tarefa de teste",
-      prioridade: "media",
-      status: "pendente",
-      responsavel: "Responsável Teste",
-      prazo: emDozeHoras.toISOString(),
-      chamado: "00001",
-      dataCriacao: agora.toISOString(),
-      updatedAt: agora.toISOString(),
-    };
-    await salvarLista([...tarefas, tarefaTeste]);
-  };
-
   const abrirModalNovo = () => {
     setEditando(null);
     setForm({
@@ -225,14 +207,9 @@ export default function Tarefas() {
       <div className="trf-header">
         <div className="trf-header-left">
           {isAdmin && (
-            <>
-              <button type="button" className="trf-btn-add" onClick={abrirModalNovo}>
-                + Adicionar
-              </button>
-              <button type="button" className="trf-btn-teste" onClick={adicionarTarefaTeste}>
-                + Adicionar Teste
-              </button>
-            </>
+            <button type="button" className="trf-btn-add" onClick={abrirModalNovo}>
+              + Adicionar
+            </button>
           )}
         </div>
         <div className="trf-header-center">

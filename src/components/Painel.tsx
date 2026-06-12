@@ -172,29 +172,6 @@ const Painel = () => {
     [refreshEventosAtivos],
   );
 
-  const adicionarEventoTeste = useCallback(async () => {
-    const agora = new Date();
-    const amanha = new Date(agora.getTime() + 24 * 60 * 60 * 1000);
-    const eventoTeste: Evento = {
-      id: `evt_teste_${Date.now()}`,
-      nomeEvento: "Evento de Teste",
-      adicionadoPor: "Sistema",
-      dataHora: amanha.toISOString(),
-      diaSemana: getDiaSemana(amanha.toISOString()),
-      localEvento: "Sala de Reunião 1",
-      funcionarioPlantao: "TI Teste",
-      plantaoEventos: "Eventos Teste",
-      equipamentosNecessarios: "Notebook, Projetor",
-      numeroChamado: "00001",
-      requerente: "Requerente Teste",
-      removido: false,
-      concluido: false,
-    };
-    const todosEventos = await getEventos();
-    await saveEventos([...todosEventos, eventoTeste]);
-    refreshEventosAtivos();
-  }, [refreshEventosAtivos]);
-
   const eventosView = useMemo(
     () =>
       eventos.map((evento) => ({
@@ -211,14 +188,9 @@ const Painel = () => {
       <div className="painel-header">
         <div className="painel-header-left">
           {isAdmin && (
-            <>
-              <button className="btn-adicionar" onClick={handleAdicionar}>
-                + Adicionar Evento
-              </button>
-              <button className="btn-teste" onClick={adicionarEventoTeste}>
-                + Adicionar Teste
-              </button>
-            </>
+            <button className="btn-adicionar" onClick={handleAdicionar}>
+              + Adicionar Evento
+            </button>
           )}
         </div>
         <div className="painel-header-center">
@@ -290,16 +262,6 @@ const Painel = () => {
                         </svg>
                       </button>
                       <button
-                        className="btn-pendente"
-                        onClick={() => setConfirmarPendente(evento)}
-                        title="Marcar como equipamento pendente"
-                        aria-label="Marcar como pendente"
-                      >
-                        <svg viewBox="0 0 20 20" fill="currentColor" width="21" height="21">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                        </svg>
-                      </button>
-                      <button
                         className="btn-editar"
                         onClick={() => handleEditar(evento)}
                         title="Editar evento"
@@ -307,6 +269,16 @@ const Painel = () => {
                       >
                         <svg viewBox="0 0 20 20" fill="currentColor" width="21" height="21">
                           <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                        </svg>
+                      </button>
+                      <button
+                        className="btn-pendente"
+                        onClick={() => setConfirmarPendente(evento)}
+                        title="Marcar como equipamento pendente"
+                        aria-label="Marcar como pendente"
+                      >
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="21" height="21">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
                         </svg>
                       </button>
                     </div>
