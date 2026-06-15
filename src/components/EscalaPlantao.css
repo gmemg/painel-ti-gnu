@@ -496,7 +496,7 @@
 
 .esc-row {
   display: grid;
-  grid-template-columns: 3.4rem 1fr auto;
+  grid-template-columns: 3.4rem 2.6rem 1fr auto;
   align-items: baseline;
   gap: 0.4rem;
   padding: 0.18rem 0.3rem;
@@ -518,6 +518,19 @@
 .esc-row-hoje .esc-dia {
   color: var(--blue);
   font-weight: 600;
+}
+
+.esc-diasemana {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.esc-row-hoje .esc-diasemana {
+  color: var(--blue);
 }
 
 .esc-nome {

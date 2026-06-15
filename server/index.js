@@ -66,7 +66,7 @@ app.post("/api/login", async (req, res, next) => {
 
     const result = await pool.query(
       "SELECT * FROM usuarios WHERE username = $1",
-      [username],
+      [username.trim().toLowerCase()],
     );
     const usuario = result.rows[0];
 
@@ -311,12 +311,12 @@ const initDatabase = async () => {
 const seedUsuarios = async () => {
   const semente = [
     {
-      username: process.env.ADMIN_USER || "admin",
+      username: (process.env.ADMIN_USER || "admin").toLowerCase(),
       password: process.env.ADMIN_PASSWORD,
       role: "admin",
     },
     {
-      username: process.env.VIEWER_USER || "viewer",
+      username: (process.env.VIEWER_USER || "viewer").toLowerCase(),
       password: process.env.VIEWER_PASSWORD,
       role: "viewer",
     },

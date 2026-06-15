@@ -33,6 +33,16 @@ function hojeISO(): string {
   return `${d.getFullYear()}-${mes}-${dia}`;
 }
 
+const DIAS_SEMANA_ABREV = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
+
+/** "2026-06-04" → "QUI". Datas inválidas retornam string vazia. */
+function diaDaSemana(iso: string): string {
+  if (!iso) return "";
+  const [ano, mes, dia] = iso.split("-").map(Number);
+  if (!ano || !mes || !dia) return "";
+  return DIAS_SEMANA_ABREV[new Date(ano, mes - 1, dia).getDay()];
+}
+
 /** "2026-06-04" → "04/jun". Datas inválidas/vazias retornam string vazia. */
 function formatDiaCurto(iso: string): string {
   if (!iso) return "";
@@ -329,6 +339,7 @@ export function EscalaCard({ escala }: { escala: Escala }) {
                   }
                 >
                   <span className="esc-dia">{formatDiaCurto(p.data)}</span>
+                  <span className="esc-diasemana">{diaDaSemana(p.data)}</span>
                   <span className="esc-nome">{p.nome}</span>
                   <span className="esc-matricula">{p.matricula}</span>
                 </div>

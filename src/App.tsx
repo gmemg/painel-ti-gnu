@@ -162,8 +162,8 @@ function AppLayout() {
                   onClick={() => setMenuUsuarioAberto((prev) => !prev)}
                   aria-haspopup="true"
                   aria-expanded={menuUsuarioAberto}
-                  title={user.username}
-                  aria-label={`Conta de ${user.username}`}
+                  title={user.username.toUpperCase()}
+                  aria-label={`Conta de ${user.username.toUpperCase()}`}
                 >
                   {user.role === "admin" ? "A" : "V"}
                 </button>
@@ -177,12 +177,12 @@ function AppLayout() {
                       </span>
                       <div className="user-dropdown-info">
                         <span className="user-dropdown-name">
-                          {user.username}
+                          {user.username.toUpperCase()}
                         </span>
                         <span className="user-dropdown-role">
                           {user.role === "admin"
-                            ? "Admin · Gerenciamento"
-                            : "Viewer · Apenas visualização"}
+                            ? "Gerenciamento"
+                            : "Monitoramento"}
                         </span>
                       </div>
                     </div>
