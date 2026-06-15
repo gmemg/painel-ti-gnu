@@ -122,7 +122,9 @@ export interface MembroEquipe {
   id: string;
   nome: string;
   matricula: string;
-  ferias: boolean;
+  cargo: string;
+  feriasInicio: string; // ISO "YYYY-MM-DD" ou ""
+  feriasFim: string;    // ISO "YYYY-MM-DD" ou ""
   ordem: number;
   updatedAt: string;
 }

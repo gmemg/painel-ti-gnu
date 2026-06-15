@@ -278,6 +278,10 @@ const initDatabase = async () => {
       updated_at TIMESTAMP NOT NULL
     );
 
+    ALTER TABLE equipe_ti ADD COLUMN IF NOT EXISTS ferias_inicio TEXT DEFAULT '';
+    ALTER TABLE equipe_ti ADD COLUMN IF NOT EXISTS ferias_fim TEXT DEFAULT '';
+    ALTER TABLE equipe_ti ADD COLUMN IF NOT EXISTS cargo TEXT DEFAULT '';
+
     CREATE TABLE IF NOT EXISTS feriados (
       id TEXT PRIMARY KEY,
       data TEXT NOT NULL,
@@ -382,7 +386,9 @@ const rowToMembro = (row) => ({
   id: row.id,
   nome: row.nome || "",
   matricula: row.matricula || "",
-  ferias: !!row.ferias,
+  cargo: row.cargo || "",
+  feriasInicio: row.ferias_inicio || "",
+  feriasFim: row.ferias_fim || "",
   ordem: row.ordem ?? 0,
   updatedAt: new Date(row.updated_at).toISOString(),
 });
@@ -874,19 +880,23 @@ app.put("/api/equipe", async (req, res, next) => {
     }
     for (const m of membros) {
       await client.query(
-        `INSERT INTO equipe_ti (id, nome, matricula, ferias, ordem, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6)
+        `INSERT INTO equipe_ti (id, nome, matricula, cargo, ferias_inicio, ferias_fim, ordem, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          ON CONFLICT (id) DO UPDATE SET
            nome = EXCLUDED.nome,
            matricula = EXCLUDED.matricula,
-           ferias = EXCLUDED.ferias,
+           cargo = EXCLUDED.cargo,
+           ferias_inicio = EXCLUDED.ferias_inicio,
+           ferias_fim = EXCLUDED.ferias_fim,
            ordem = EXCLUDED.ordem,
            updated_at = EXCLUDED.updated_at`,
         [
           m.id,
           m.nome || "",
           m.matricula || "",
-          !!m.ferias,
+          m.cargo || "",
+          m.feriasInicio || "",
+          m.feriasFim || "",
           Number(m.ordem) || 0,
           m.updatedAt,
         ],
