@@ -1145,7 +1145,22 @@ export default function EscalaPlantao() {
                     <option value="Gerente de TI">Gerente de TI</option>
                   </select>
                 </div>
-                <div className="esc-ferias-titulo">Período de férias</div>
+                <div className="esc-ferias-titulo-row">
+                  <span className="esc-ferias-titulo">Período de férias</span>
+                  {(pessoaModal.feriasInicio || pessoaModal.feriasFim) && (
+                    <button
+                      type="button"
+                      className="esc-btn-remover-ferias"
+                      onClick={() =>
+                        setPessoaModal((p) =>
+                          p ? { ...p, feriasInicio: "", feriasFim: "" } : p,
+                        )
+                      }
+                    >
+                      Remover férias
+                    </button>
+                  )}
+                </div>
                 <div className="esc-ferias-row">
                   <div className="esc-form-field">
                     <label htmlFor="esc-ferias-inicio">Início</label>

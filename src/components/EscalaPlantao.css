@@ -276,14 +276,36 @@
   gap: 0.8rem;
 }
 
+.esc-ferias-titulo-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--border);
+}
+
 .esc-ferias-titulo {
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding-top: 0.25rem;
-  border-top: 1px solid var(--border);
+}
+
+.esc-btn-remover-ferias {
+  background: none;
+  border: none;
+  color: #ef4444;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  white-space: nowrap;
+}
+
+.esc-btn-remover-ferias:hover {
+  text-decoration: underline;
 }
 
 .esc-ferias-row {
