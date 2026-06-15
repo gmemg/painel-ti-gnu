@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Impressora, InventarioItem } from "../types";
+import { Escala, Impressora, InventarioItem } from "../types";
 import {
   reconcileEventosAutomaticos,
   reconcileTarefasAutomaticas,
   getEquipamentosPendentes,
+  getEscalas,
   getHistorico,
   getHistoricoTarefas,
   getImpressoras,
@@ -14,7 +15,7 @@ import {
   TvConfig,
 } from "../utils/storage";
 import { formatDateTime } from "../utils/dateUtils";
-import { EscalaCards, escalasVisiveis } from "./EscalaPlantao";
+import { EscalaCard } from "./EscalaPlantao";
 import "./ModoTV.css";
 
 const INTERVALO = 30;
@@ -225,8 +226,14 @@ const CATALOGO: TelaDef[] = [
     accent: "azul",
     colunas: [],
     vazioMsg: "Nenhuma escala cadastrada.",
-    load: async () => asRows(escalasVisiveis()),
-    renderCustom: () => <EscalaCards escalas={escalasVisiveis()} />,
+    load: async () => {
+      const todas = await getEscalas();
+      return asRows(
+        todas.sort((a, b) =>
+          a.ano !== b.ano ? a.ano - b.ano : a.mes - b.mes,
+        ),
+      );
+    },
   },
   {
     id: "historico-montagens",
@@ -322,6 +329,7 @@ export default function ModoTV() {
     Record<string, Record<string, unknown>[]>
   >({});
   const [configAberta, setConfigAberta] = useState(false);
+  const [escalaIdx, setEscalaIdx] = useState(0);
 
   const telasAtivas = config.filter((c) => c.ativo).map((c) => c.id);
   const telasAtivasRef = useRef(telasAtivas);
@@ -360,6 +368,22 @@ export default function ModoTV() {
   useEffect(() => {
     if (tela) carregarTela(tela);
   }, [tela, carregarTela]);
+
+  /* Reseta para o mês atual ao entrar na tela de escala. */
+  useEffect(() => {
+    if (tela !== "escala-plantao") return;
+    const escalas = dadosPorTela["escala-plantao"] ?? [];
+    if (escalas.length === 0) return;
+    const agora = new Date();
+    const mes = agora.getMonth() + 1;
+    const ano = agora.getFullYear();
+    const idx = escalas.findIndex(
+      (e) =>
+        (e as unknown as Escala).mes === mes &&
+        (e as unknown as Escala).ano === ano,
+    );
+    setEscalaIdx(idx >= 0 ? idx : Math.max(0, escalas.length - 1));
+  }, [tela, dadosPorTela]);
 
   const avancarTela = useCallback(() => {
     const ativas = telasAtivasRef.current;
@@ -426,6 +450,10 @@ export default function ModoTV() {
   const linhas = defAtual ? dadosPorTela[tela] ?? [] : [];
   const totalTela = linhas.length;
   const colunas = defAtual?.colunas ?? [];
+  const contadorEscala =
+    tela === "escala-plantao" && totalTela > 0
+      ? `${escalaIdx + 1} / ${totalTela}`
+      : null;
 
   const nomeTela = (id: string) =>
     CATALOGO.find((c) => c.id === id)?.label ?? id;
@@ -443,7 +471,9 @@ export default function ModoTV() {
         {/* esquerda: sair + contador */}
         <div className="tv-topbar-left">
           <Link to="/" className="tv-sair">Sair</Link>
-          <span className="tv-contador">{totalTela} {totalTela === 1 ? "item" : "itens"}</span>
+          <span className="tv-contador">
+            {contadorEscala ?? `${totalTela} ${totalTela === 1 ? "item" : "itens"}`}
+          </span>
         </div>
 
         {/* centro: título + dots */}
@@ -503,6 +533,34 @@ export default function ModoTV() {
             {telasAtivas.length === 0 ? (
               <div className="tv-sem-abas">
                 Nenhuma aba ativa. Clique na engrenagem para configurar.
+              </div>
+            ) : tela === "escala-plantao" ? (
+              <div className="tv-escala-wrap">
+                {linhas.length === 0 ? (
+                  <div className="tv-escala-vazio">Nenhuma escala cadastrada.</div>
+                ) : (
+                  <div className="tv-escala-nav">
+                    <button
+                      className="tv-escala-arrow"
+                      onClick={() => setEscalaIdx((i) => Math.max(0, i - 1))}
+                      disabled={escalaIdx <= 0}
+                      aria-label="Escala anterior"
+                    >
+                      ‹
+                    </button>
+                    <EscalaCard escala={linhas[escalaIdx] as unknown as Escala} />
+                    <button
+                      className="tv-escala-arrow"
+                      onClick={() =>
+                        setEscalaIdx((i) => Math.min(linhas.length - 1, i + 1))
+                      }
+                      disabled={escalaIdx >= linhas.length - 1}
+                      aria-label="Próxima escala"
+                    >
+                      ›
+                    </button>
+                  </div>
+                )}
               </div>
             ) : defAtual?.renderCustom ? (
               <div className="tv-escala-wrap">

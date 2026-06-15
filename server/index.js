@@ -260,6 +260,32 @@ const initDatabase = async () => {
       updated_at TIMESTAMP NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS escalas_plantao (
+      id TEXT PRIMARY KEY,
+      titulo TEXT NOT NULL,
+      ano INTEGER NOT NULL,
+      mes INTEGER NOT NULL,
+      dias TEXT NOT NULL DEFAULT '[]',
+      updated_at TIMESTAMP NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS equipe_ti (
+      id TEXT PRIMARY KEY,
+      nome TEXT NOT NULL,
+      matricula TEXT NOT NULL DEFAULT '',
+      ferias BOOLEAN NOT NULL DEFAULT false,
+      ordem INTEGER NOT NULL DEFAULT 0,
+      updated_at TIMESTAMP NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS feriados (
+      id TEXT PRIMARY KEY,
+      data TEXT NOT NULL,
+      nome TEXT NOT NULL DEFAULT '',
+      com_plantao BOOLEAN NOT NULL DEFAULT false,
+      updated_at TIMESTAMP NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS tv_config (
       id TEXT PRIMARY KEY,
       valor TEXT NOT NULL
@@ -351,6 +377,40 @@ const rowToImpressora = (row) => ({
   tonerAmarelo: row.toner_amarelo ?? 100,
   updatedAt: new Date(row.updated_at).toISOString(),
 });
+
+const rowToMembro = (row) => ({
+  id: row.id,
+  nome: row.nome || "",
+  matricula: row.matricula || "",
+  ferias: !!row.ferias,
+  ordem: row.ordem ?? 0,
+  updatedAt: new Date(row.updated_at).toISOString(),
+});
+
+const rowToFeriado = (row) => ({
+  id: row.id,
+  data: row.data || "",
+  nome: row.nome || "",
+  comPlantao: !!row.com_plantao,
+  updatedAt: new Date(row.updated_at).toISOString(),
+});
+
+const rowToEscala = (row) => {
+  let dias = [];
+  try {
+    dias = JSON.parse(row.dias || "[]");
+  } catch {
+    dias = [];
+  }
+  return {
+    id: row.id,
+    titulo: row.titulo || "",
+    ano: row.ano,
+    mes: row.mes,
+    dias: Array.isArray(dias) ? dias : [],
+    updatedAt: new Date(row.updated_at).toISOString(),
+  };
+};
 
 const rowToEvento = (row) => ({
   id: row.id,
@@ -721,6 +781,170 @@ app.put("/api/impressoras", async (req, res, next) => {
       "SELECT * FROM impressoras ORDER BY updated_at ASC",
     );
     res.json(result.rows.map(rowToImpressora));
+  } catch (error) {
+    await client.query("ROLLBACK");
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+
+app.get("/api/escalas", async (_req, res, next) => {
+  try {
+    const result = await pool.query(
+      "SELECT * FROM escalas_plantao ORDER BY ano ASC, mes ASC",
+    );
+    res.json(result.rows.map(rowToEscala));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put("/api/escalas", async (req, res, next) => {
+  const escalas = req.body || [];
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const ids = escalas.map((e) => e.id);
+    if (ids.length > 0) {
+      await client.query(
+        "DELETE FROM escalas_plantao WHERE NOT (id = ANY($1::text[]))",
+        [ids],
+      );
+    } else {
+      await client.query("DELETE FROM escalas_plantao");
+    }
+    for (const e of escalas) {
+      await client.query(
+        `INSERT INTO escalas_plantao (id, titulo, ano, mes, dias, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (id) DO UPDATE SET
+           titulo = EXCLUDED.titulo,
+           ano = EXCLUDED.ano,
+           mes = EXCLUDED.mes,
+           dias = EXCLUDED.dias,
+           updated_at = EXCLUDED.updated_at`,
+        [
+          e.id,
+          e.titulo || "",
+          Number(e.ano) || 0,
+          Number(e.mes) || 0,
+          JSON.stringify(Array.isArray(e.dias) ? e.dias : []),
+          e.updatedAt,
+        ],
+      );
+    }
+    await client.query("COMMIT");
+    const result = await pool.query(
+      "SELECT * FROM escalas_plantao ORDER BY ano ASC, mes ASC",
+    );
+    res.json(result.rows.map(rowToEscala));
+  } catch (error) {
+    await client.query("ROLLBACK");
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+
+app.get("/api/equipe", async (_req, res, next) => {
+  try {
+    const result = await pool.query(
+      "SELECT * FROM equipe_ti ORDER BY ordem ASC",
+    );
+    res.json(result.rows.map(rowToMembro));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put("/api/equipe", async (req, res, next) => {
+  const membros = req.body || [];
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const ids = membros.map((m) => m.id);
+    if (ids.length > 0) {
+      await client.query(
+        "DELETE FROM equipe_ti WHERE NOT (id = ANY($1::text[]))",
+        [ids],
+      );
+    } else {
+      await client.query("DELETE FROM equipe_ti");
+    }
+    for (const m of membros) {
+      await client.query(
+        `INSERT INTO equipe_ti (id, nome, matricula, ferias, ordem, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (id) DO UPDATE SET
+           nome = EXCLUDED.nome,
+           matricula = EXCLUDED.matricula,
+           ferias = EXCLUDED.ferias,
+           ordem = EXCLUDED.ordem,
+           updated_at = EXCLUDED.updated_at`,
+        [
+          m.id,
+          m.nome || "",
+          m.matricula || "",
+          !!m.ferias,
+          Number(m.ordem) || 0,
+          m.updatedAt,
+        ],
+      );
+    }
+    await client.query("COMMIT");
+    const result = await pool.query(
+      "SELECT * FROM equipe_ti ORDER BY ordem ASC",
+    );
+    res.json(result.rows.map(rowToMembro));
+  } catch (error) {
+    await client.query("ROLLBACK");
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+
+app.get("/api/feriados", async (_req, res, next) => {
+  try {
+    const result = await pool.query(
+      "SELECT * FROM feriados ORDER BY data ASC",
+    );
+    res.json(result.rows.map(rowToFeriado));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put("/api/feriados", async (req, res, next) => {
+  const feriados = req.body || [];
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const ids = feriados.map((f) => f.id);
+    if (ids.length > 0) {
+      await client.query(
+        "DELETE FROM feriados WHERE NOT (id = ANY($1::text[]))",
+        [ids],
+      );
+    } else {
+      await client.query("DELETE FROM feriados");
+    }
+    for (const f of feriados) {
+      await client.query(
+        `INSERT INTO feriados (id, data, nome, com_plantao, updated_at)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (id) DO UPDATE SET
+           data = EXCLUDED.data,
+           nome = EXCLUDED.nome,
+           com_plantao = EXCLUDED.com_plantao,
+           updated_at = EXCLUDED.updated_at`,
+        [f.id, f.data || "", f.nome || "", !!f.comPlantao, f.updatedAt],
+      );
+    }
+    await client.query("COMMIT");
+    const result = await pool.query("SELECT * FROM feriados ORDER BY data ASC");
+    res.json(result.rows.map(rowToFeriado));
   } catch (error) {
     await client.query("ROLLBACK");
     next(error);

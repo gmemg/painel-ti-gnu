@@ -261,6 +261,9 @@
 /* ─── Escala de Plantão (cards no Modo TV) ───────────────────────── */
 .tv-escala-wrap {
   padding: 1.4rem;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
 }
 
 .tv-escala-wrap .esc-grid {
@@ -271,6 +274,59 @@
 .tv-escala-wrap .esc-card {
   background: rgba(15, 22, 41, 0.55);
   border-color: rgba(59, 130, 246, 0.18);
+  width: 100%;
+  max-width: 560px;
+}
+
+.tv-escala-wrap .esc-row-hoje {
+  background: rgba(59, 130, 246, 0.22);
+  box-shadow: inset 4px 0 0 #3b82f6;
+}
+
+.tv-escala-vazio {
+  text-align: center;
+  padding: 5rem 2rem;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 1.1rem;
+  width: 100%;
+}
+
+.tv-escala-nav {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.tv-escala-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  margin-top: 0.6rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(59, 130, 246, 0.28);
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 2rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+  touch-action: auto;
+}
+
+.tv-escala-arrow:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.6);
+  color: #ffffff;
+}
+
+.tv-escala-arrow:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
 }
 
 .tv-escala-wrap .esc-card-header {

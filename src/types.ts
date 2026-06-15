@@ -92,6 +92,54 @@ export interface Tarefa {
   updatedAt: string;
 }
 
+/**
+ * Escala de plantão: cada `Escala` representa um mês (titulo + mes/ano) e contém
+ * os dias de plantão com data, funcionário e matrícula. O Modo TV exibe apenas a
+ * escala cujo mês/ano corresponde à data atual.
+ */
+export interface EscalaDia {
+  id: string;
+  data: string; // ISO "YYYY-MM-DD"
+  nome: string;
+  matricula: string;
+}
+
+export interface Escala {
+  id: string;
+  titulo: string;
+  ano: number;
+  mes: number; // 1-12
+  dias: EscalaDia[];
+  updatedAt: string;
+}
+
+/**
+ * Membro da Equipe de T.I. usado para montar a escala de plantão de forma
+ * automatizada. `ferias` marca quem deve ser ignorado na simulação; `ordem`
+ * mantém a ordem de exibição no painel.
+ */
+export interface MembroEquipe {
+  id: string;
+  nome: string;
+  matricula: string;
+  ferias: boolean;
+  ordem: number;
+  updatedAt: string;
+}
+
+/**
+ * Feriado configurável usado pela simulação da escala. `comPlantao` indica se o
+ * dia precisa de alguém de plantão (entra no rodízio) ou não (é removido dos
+ * dias a escalar, mesmo caindo num fim de semana).
+ */
+export interface Feriado {
+  id: string;
+  data: string; // ISO "YYYY-MM-DD"
+  nome: string;
+  comPlantao: boolean;
+  updatedAt: string;
+}
+
 export type TonerTipo = "solicitado" | "cheio" | "vazio";
 
 export interface TonerRegistro {

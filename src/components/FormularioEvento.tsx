@@ -152,18 +152,6 @@ const FormularioEvento = ({
           </div>
 
           <div className="form-group">
-            <label htmlFor="adicionadoPor">Adicionado por</label>
-            <input
-              type="text"
-              id="adicionadoPor"
-              name="adicionadoPor"
-              value={formData.adicionadoPor}
-              onChange={handleChange}
-              placeholder="Ex: Maria Souza"
-            />
-          </div>
-
-          <div className="form-group">
             <label htmlFor="dataHora">Data e Hora *</label>
             <input
               type="datetime-local"

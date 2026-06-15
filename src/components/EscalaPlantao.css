@@ -5,9 +5,17 @@
 /* ─── Toolbar ─────────────────────────────────────────────────── */
 .esc-toolbar {
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  justify-content: space-between;
   gap: 0.75rem;
   margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.esc-toolbar-title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
   flex-wrap: wrap;
 }
 
@@ -24,11 +32,261 @@
   color: var(--text-muted);
 }
 
+/* ─── Botões ──────────────────────────────────────────────────── */
+.esc-btn-add {
+  background: var(--blue);
+  color: #fff;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.esc-btn-add:hover {
+  filter: brightness(1.08);
+}
+
+.esc-toolbar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.esc-btn-sim {
+  background: transparent;
+  color: var(--blue);
+  border: 1px solid var(--blue);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.esc-btn-sim:hover {
+  background: color-mix(in srgb, var(--blue) 12%, transparent);
+}
+
+/* ─── Layout: conteúdo + painel da equipe ─────────────────────── */
+.esc-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+}
+
+.esc-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* ─── Painel Equipe T.I ───────────────────────────────────────── */
+.esc-equipe {
+  flex: 0 0 210px;
+  position: sticky;
+  top: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.7rem;
+  padding: 0.7rem;
+  box-shadow: 0 1px 3px var(--shadow);
+}
+
+.esc-equipe-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+  padding: 0 0.1rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.esc-equipe-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.esc-equipe-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 1px solid var(--blue);
+  border-radius: 0.4rem;
+  background: transparent;
+  color: var(--blue);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.esc-equipe-add:hover {
+  background: color-mix(in srgb, var(--blue) 12%, transparent);
+}
+
+.esc-equipe-vazio {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  text-align: center;
+  padding: 0.8rem 0.2rem;
+}
+
+.esc-equipe-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.esc-membro-wrap {
+  position: relative;
+}
+
+.esc-membro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+  background: var(--bg);
+  color: var(--text-strong);
+  font-size: 0.83rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.esc-membro:hover:not(:disabled) {
+  border-color: var(--blue);
+}
+
+.esc-membro:disabled {
+  cursor: default;
+}
+
+.esc-membro-nome {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.esc-membro-ferias {
+  opacity: 0.55;
+}
+
+.esc-membro-badge {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #f59e0b;
+  border: 1px solid color-mix(in srgb, #f59e0b 50%, transparent);
+  border-radius: 0.35rem;
+  padding: 0.05rem 0.3rem;
+}
+
+.esc-membro-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border-strong, var(--border));
+  border-radius: 0.5rem;
+  box-shadow: 0 6px 20px var(--shadow);
+  overflow: hidden;
+}
+
+.esc-membro-menu button {
+  text-align: left;
+  padding: 0.5rem 0.65rem;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.esc-membro-menu button:hover {
+  background: color-mix(in srgb, var(--blue) 12%, transparent);
+}
+
+.esc-membro-menu-danger {
+  color: #ef4444 !important;
+}
+
+.esc-pessoa-campos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+@media (max-width: 720px) {
+  .esc-layout {
+    flex-direction: column;
+  }
+  .esc-equipe {
+    position: static;
+    width: 100%;
+    flex-basis: auto;
+  }
+}
+
 /* ─── Grid de meses ───────────────────────────────────────────── */
 .esc-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(290px, 340px));
   gap: 1.1rem;
+}
+
+.esc-card-wrap {
+  position: relative;
+}
+
+.esc-card-actions {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  gap: 0.3rem;
+}
+
+.esc-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.esc-btn-icon:hover {
+  color: var(--text-strong);
+  border-color: var(--text-muted);
+}
+
+.esc-btn-icon-danger:hover {
+  color: #ef4444;
+  border-color: #ef4444;
 }
 
 /* ─── Card ────────────────────────────────────────────────────── */
@@ -58,6 +316,13 @@
   flex-direction: column;
 }
 
+.esc-card-vazio {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  padding: 0.8rem 0;
+}
+
 /* ─── Grupo de fim de semana ──────────────────────────────────── */
 .esc-grupo {
   display: flex;
@@ -74,14 +339,25 @@
   grid-template-columns: 3.4rem 1fr auto;
   align-items: baseline;
   gap: 0.4rem;
-  padding: 0.18rem 0;
+  padding: 0.18rem 0.3rem;
   font-size: 0.82rem;
+  border-radius: 0.35rem;
+}
+
+.esc-row-hoje {
+  background: color-mix(in srgb, var(--blue) 14%, transparent);
+  box-shadow: inset 3px 0 0 var(--blue);
 }
 
 .esc-dia {
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+.esc-row-hoje .esc-dia {
+  color: var(--blue);
+  font-weight: 600;
 }
 
 .esc-nome {
@@ -95,4 +371,365 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+/* ─── Estados ─────────────────────────────────────────────────── */
+.esc-loading,
+.esc-erro,
+.esc-vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  padding: 3rem 1rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.esc-loading-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--border);
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: esc-spin 0.8s linear infinite;
+}
+
+@keyframes esc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ─── Modal ───────────────────────────────────────────────────── */
+.esc-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1000;
+}
+
+.esc-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.8rem;
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.esc-modal-confirm {
+  max-width: 420px;
+}
+
+.esc-modal-wide {
+  max-width: 680px;
+}
+
+.esc-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.2rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.esc-modal-header h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.esc-modal-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  padding: 0.2rem;
+  border-radius: 0.3rem;
+}
+
+.esc-modal-close:hover {
+  color: var(--text-strong);
+}
+
+.esc-modal-body {
+  padding: 1.2rem;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.esc-modal-form {
+  padding: 1.2rem;
+}
+
+.esc-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.esc-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.esc-form-field-full {
+  grid-column: 1 / -1;
+}
+
+.esc-form-field label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.esc-form-field input {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+  background: var(--bg);
+  color: var(--text-strong);
+  font-size: 0.88rem;
+}
+
+.esc-form-field select {
+  padding: 0.5rem 2rem 0.5rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+  background: var(--bg);
+  color: var(--text-strong);
+  font-size: 0.88rem;
+}
+
+.esc-form-field input:focus,
+.esc-form-field select:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+
+/* ─── Lista dinâmica de dias ──────────────────────────────────── */
+.esc-form-dias {
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+}
+
+.esc-form-dias-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+}
+
+.esc-form-dias-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.esc-form-dias-acoes {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.esc-btn-add-dia,
+.esc-btn-sim-dias {
+  background: none;
+  border: 1px solid var(--blue);
+  color: var(--blue);
+  border-radius: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.esc-btn-add-dia:hover,
+.esc-btn-sim-dias:hover {
+  background: color-mix(in srgb, var(--blue) 10%, transparent);
+}
+
+.esc-btn-sim-dias {
+  border-style: dashed;
+}
+
+.esc-form-dias-vazio {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  padding: 0.6rem 0;
+}
+
+.esc-form-dias-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.esc-form-dia-row {
+  display: grid;
+  grid-template-columns: 9.5rem 1fr 6rem 1.8rem;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.esc-form-dia-head {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  padding: 0 0.1rem;
+}
+
+.esc-form-dia-row input {
+  padding: 0.45rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+  background: var(--bg);
+  color: var(--text-strong);
+  font-size: 0.83rem;
+  min-width: 0;
+}
+
+.esc-form-dia-row input:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+
+.esc-form-dia-row input[type="date"] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Linha de feriado ────────────────────────────────────────── */
+.esc-form-fer-row {
+  display: grid;
+  grid-template-columns: 9rem minmax(11rem, 1fr) 7.5rem 1.8rem;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.esc-form-fer-row input,
+.esc-form-fer-row select {
+  padding: 0.45rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+  background: var(--bg);
+  color: var(--text-strong);
+  font-size: 0.83rem;
+  min-width: 0;
+}
+
+.esc-form-fer-row input:focus,
+.esc-form-fer-row select:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+
+.esc-feriados-dica {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 0.9rem;
+  line-height: 1.4;
+}
+
+@media (max-width: 520px) {
+  .esc-form-fer-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .esc-form-fer-row.esc-form-dia-head {
+    display: none;
+  }
+}
+
+.esc-btn-remove-dia {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0.3rem;
+  border-radius: 0.3rem;
+}
+
+.esc-btn-remove-dia:hover {
+  color: #ef4444;
+}
+
+/* ─── Footer / ações do modal ─────────────────────────────────── */
+.esc-modal-erro {
+  color: #ef4444;
+  font-size: 0.82rem;
+  margin-top: 0.8rem;
+}
+
+.esc-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1.2rem;
+}
+
+.esc-modal-confirm .esc-modal-footer {
+  padding: 0 1.2rem 1.2rem;
+}
+
+.esc-btn-cancel,
+.esc-btn-save,
+.esc-btn-delete {
+  padding: 0.55rem 1.1rem;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border);
+}
+
+.esc-btn-cancel {
+  background: var(--surface);
+  color: var(--text-muted);
+}
+
+.esc-btn-cancel:hover {
+  color: var(--text-strong);
+}
+
+.esc-btn-save {
+  background: var(--blue);
+  color: #fff;
+  border-color: var(--blue);
+}
+
+.esc-btn-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.esc-btn-delete {
+  background: #ef4444;
+  color: #fff;
+  border-color: #ef4444;
+}
+
+.esc-btn-delete:hover {
+  filter: brightness(1.08);
+}
+
+@media (max-width: 520px) {
+  .esc-form-dia-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.35rem;
+  }
+  .esc-form-dia-head {
+    display: none;
+  }
 }

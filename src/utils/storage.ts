@@ -1,4 +1,13 @@
-import { Evento, Impressora, InventarioItem, Tarefa, TonerRegistro } from "../types";
+import {
+  Escala,
+  Evento,
+  Feriado,
+  Impressora,
+  InventarioItem,
+  MembroEquipe,
+  Tarefa,
+  TonerRegistro,
+} from "../types";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "/api";
 
@@ -262,6 +271,33 @@ export const saveTvConfig = (config: TvConfig): Promise<TvConfig> =>
   requestJson<TvConfig>("/tv-config", {
     method: "PUT",
     body: JSON.stringify(config),
+  });
+
+export const getEscalas = (): Promise<Escala[]> =>
+  requestJson<Escala[]>("/escalas");
+
+export const saveEscalas = (escalas: Escala[]): Promise<Escala[]> =>
+  requestJson<Escala[]>("/escalas", {
+    method: "PUT",
+    body: JSON.stringify(escalas),
+  });
+
+export const getEquipe = (): Promise<MembroEquipe[]> =>
+  requestJson<MembroEquipe[]>("/equipe");
+
+export const saveEquipe = (lista: MembroEquipe[]): Promise<MembroEquipe[]> =>
+  requestJson<MembroEquipe[]>("/equipe", {
+    method: "PUT",
+    body: JSON.stringify(lista),
+  });
+
+export const getFeriados = (): Promise<Feriado[]> =>
+  requestJson<Feriado[]>("/feriados");
+
+export const saveFeriados = (lista: Feriado[]): Promise<Feriado[]> =>
+  requestJson<Feriado[]>("/feriados", {
+    method: "PUT",
+    body: JSON.stringify(lista),
   });
 
 export const getToners = (): Promise<TonerRegistro[]> =>
