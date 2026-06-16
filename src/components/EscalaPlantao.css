@@ -425,6 +425,14 @@
   gap: 0.3rem;
 }
 
+.esc-card-actions-left {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  display: flex;
+  gap: 0.3rem;
+}
+
 .esc-btn-icon {
   display: inline-flex;
   align-items: center;
@@ -447,6 +455,19 @@
 .esc-btn-icon-danger:hover {
   color: #ef4444;
   border-color: #ef4444;
+}
+
+.esc-btn-icon-ferias {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #f59e0b;
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.esc-btn-icon-ferias:hover {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.22);
 }
 
 /* ─── Card ────────────────────────────────────────────────────── */

@@ -12,14 +12,39 @@ import { useAuth } from "../context/AuthContext";
 import "./EscalaPlantao.css";
 
 const MESES = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
 ];
 
 const MESES_ABREV = [
-  "jan", "fev", "mar", "abr", "mai", "jun",
-  "jul", "ago", "set", "out", "nov", "dez",
+  "jan",
+  "fev",
+  "mar",
+  "abr",
+  "mai",
+  "jun",
+  "jul",
+  "ago",
+  "set",
+  "out",
+  "nov",
+  "dez",
 ];
+
+/** Título padrão sugerido para um mês (ex.: 7 → "Plantão Julho"). */
+function tituloAutomatico(mes: number): string {
+  return `Plantão ${MESES[mes - 1]}`;
+}
 
 function gerarId(prefixo: string): string {
   return `${prefixo}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
@@ -98,18 +123,10 @@ const STATUS_FERIAS_ORDEM: Record<StatusFerias, number> = {
 function membroEmFeriasHoje(m: MembroEquipe): boolean {
   if (!m.feriasInicio && !m.feriasFim) return false;
   const hoje = hojeISO();
-  return hoje >= (m.feriasInicio || "0000-01-01") && hoje <= (m.feriasFim || "9999-12-31");
-}
-
-/**
- * Retorna true se o período de férias do membro sobrepõe ao mês simulado.
- * Usado apenas para normalização cross-month (ver simularDias).
- */
-function membroEmFeriasNoMes(m: MembroEquipe, ano: number, mes: number): boolean {
-  if (!m.feriasInicio && !m.feriasFim) return false;
-  const inicio = m.feriasInicio || "0000-01-01";
-  const fim = m.feriasFim || "9999-12-31";
-  return inicio <= ultimoDiaISO(ano, mes) && fim >= primeiroDiaISO(ano, mes);
+  return (
+    hoje >= (m.feriasInicio || "0000-01-01") &&
+    hoje <= (m.feriasFim || "9999-12-31")
+  );
 }
 
 const CARGOS_SEM_ESCALA = new Set(["Estagiário", "Aprendiz", "Gerente de TI"]);
@@ -130,7 +147,10 @@ function ordemDot(m: MembroEquipe): number {
 /** Verifica se o membro está de férias em uma data ISO específica. */
 function membroEmFeriasNoDia(m: MembroEquipe, data: string): boolean {
   if (!m.feriasInicio && !m.feriasFim) return false;
-  return data >= (m.feriasInicio || "0000-01-01") && data <= (m.feriasFim || "9999-12-31");
+  return (
+    data >= (m.feriasInicio || "0000-01-01") &&
+    data <= (m.feriasFim || "9999-12-31")
+  );
 }
 
 /** Todos os sábados e domingos do mês, em ISO, ordenados cronologicamente. */
@@ -149,10 +169,7 @@ function fimDeSemanaDoMes(ano: number, mes: number): string[] {
 }
 
 /** Identifica o membro da equipe correspondente a um dia já cadastrado. */
-function acharMembroId(
-  equipe: MembroEquipe[],
-  dia: EscalaDia,
-): string | null {
+function acharMembroId(equipe: MembroEquipe[], dia: EscalaDia): string | null {
   const mat = dia.matricula?.trim();
   if (mat) {
     const porMat = equipe.find((m) => m.matricula.trim() === mat);
@@ -167,28 +184,125 @@ function acharMembroId(
 }
 
 /**
- * Gera os dias de plantão de um mês distribuindo a equipe em rodízio justo:
- * 1 pessoa por dia de fim de semana, priorizando quem tem menos plantões e
- * evitando a mesma pessoa em dias consecutivos. Ignora quem está de férias.
+ * Membros escaláveis cujas férias cruzam o mês da escala mas que não aparecem
+ * em nenhum dia já cadastrado dela — usado para avisar no card que alguém
+ * ficou de fora da escala por estar de férias.
+ */
+function membrosDeFeriasSemEscala(
+  equipe: MembroEquipe[],
+  escala: Escala,
+): MembroEquipe[] {
+  const inicioMes = primeiroDiaISO(escala.ano, escala.mes);
+  const fimMes = ultimoDiaISO(escala.ano, escala.mes);
+  const idsNaEscala = new Set(
+    escala.dias
+      .map((d) => acharMembroId(equipe, d))
+      .filter((id): id is string => id != null),
+  );
+  return equipe.filter((m) => {
+    if (membroNaoEscalavel(m) || idsNaEscala.has(m.id)) return false;
+    if (!m.feriasInicio && !m.feriasFim) return false;
+    const inicio = m.feriasInicio || "0000-01-01";
+    const fim = m.feriasFim || "9999-12-31";
+    return inicio <= fimMes && fim >= inicioMes;
+  });
+}
+
+/** Diferença em dias entre duas datas ISO (positivo quando isoB > isoA). */
+function diffDias(isoA: string, isoB: string): number {
+  const [aA, mA, dA] = isoA.split("-").map(Number);
+  const [aB, mB, dB] = isoB.split("-").map(Number);
+  return Math.round(
+    (new Date(aB, mB - 1, dB).getTime() - new Date(aA, mA - 1, dA).getTime()) /
+      (24 * 60 * 60 * 1000),
+  );
+}
+
+/** true se a data ISO cair num sábado ou domingo. */
+function ehFimDeSemana(data: string): boolean {
+  const [ano, mes, dia] = data.split("-").map(Number);
+  const diaSemana = new Date(ano, mes - 1, dia).getDay();
+  return diaSemana === 0 || diaSemana === 6;
+}
+
+/**
+ * Para uma data de fim de semana, retorna o sábado daquele mesmo fim de semana
+ * (chave estável para comparar "o mesmo fim de semana" entre meses/anos
+ * diferentes). Para qualquer outra data, retorna a própria data sem alteração.
+ */
+function ancoraFimDeSemana(data: string): string {
+  const [ano, mes, dia] = data.split("-").map(Number);
+  const d = new Date(ano, mes - 1, dia);
+  if (d.getDay() === 0) d.setDate(d.getDate() - 1); // domingo → sábado anterior
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/**
+ * Se `data` for sábado ou domingo, retorna a outra data do mesmo fim de semana
+ * (dentro do mesmo mês). Para qualquer outro dia (ex.: feriado em dia de semana),
+ * retorna null — não há "parceiro" de fim de semana a considerar.
+ */
+function parceiroFimDeSemana(
+  ano: number,
+  mes: number,
+  data: string,
+): string | null {
+  const dia = Number(data.slice(-2));
+  const diaSemana = new Date(ano, mes - 1, dia).getDay();
+  const prefixo = `${ano}-${String(mes).padStart(2, "0")}-`;
+  if (diaSemana === 6) {
+    const total = diasNoMes(ano, mes);
+    return dia + 1 <= total
+      ? `${prefixo}${String(dia + 1).padStart(2, "0")}`
+      : null;
+  }
+  if (diaSemana === 0) {
+    return dia - 1 >= 1
+      ? `${prefixo}${String(dia - 1).padStart(2, "0")}`
+      : null;
+  }
+  return null;
+}
+
+/**
+ * Gera os dias de plantão de um mês usando uma fila rotativa (round-robin):
+ * cada pessoa escalada vai para o final da fila. A fila não reinicia a cada
+ * mês — ela é reconstruída replayando, em ordem cronológica desde o primeiro
+ * mês cadastrado, quem foi REALMENTE escalado em cada mês salvo. Se um mês
+ * não fizer a fila progredir nenhuma posição (ex.: número de plantões múltiplo
+ * exato do tamanho da equipe, fechando um ciclo completo e voltando ao ponto
+ * de partida), um passo extra é forçado — garantindo que nenhum mês comece
+ * exatamente como o anterior.
  *
- * Quando `escalaAnterior` é informada, o rodízio começa considerando a carga do
- * mês anterior: quem já fez mais plantões (inclusive dias extras como feriados)
- * entra por último, e quem fechou o mês anterior não é escalado logo no início.
+ * Regras de férias:
+ * - Pessoa de férias num dia específico é pulada nesse dia (sem perder a vez —
+ *   ela continua na mesma posição da fila, só não é escalada "fora de ordem").
+ * - Um fim de semana (sábado+domingo) é tratado como bloco: se a pessoa ainda
+ *   estiver de férias em QUALQUER um dos dois dias, ela fica de fora do fim de
+ *   semana inteiro (mesmo que já tenha voltado para o outro dia) e a vez dela
+ *   passa para o próximo fim de semana. Se as férias terminam antes do fim de
+ *   semana (ex.: terminam na sexta), ela já está disponível normalmente.
+ *
+ * Intervalo mínimo entre plantões (quem não está de férias):
+ * - Entre dois plantões em dia de semana (feriado), exige no mínimo 7 dias de
+ *   diferença em relação à data do último plantão da pessoa.
+ * - Entre dois fins de semana, a pessoa não pode pegar o fim de semana
+ *   imediatamente seguinte ao do último plantão dela — precisa pular ao menos
+ *   um fim de semana (comparando os sábados de referência, exige >= 14 dias).
+ * - Quando a regra bloqueia a pessoa, ela é pulada nessa data (sem perder a
+ *   vez) e passa o próximo da fila.
  *
  * Os `feriados` do mês ajustam os dias a escalar: um feriado "sem plantão" sai
  * da lista (mesmo num fim de semana) e um feriado "com plantão" entra (mesmo num
  * dia de semana).
  */
-function simularDias(
+function gerarEscalaRoundRobin(
   equipe: MembroEquipe[],
   ano: number,
   mes: number,
-  escalaAnterior?: Escala,
-  feriados: Feriado[] = [],
+  escalas: Escala[],
+  feriados: Feriado[],
 ): EscalaDia[] {
-  // Sai cedo se nenhum membro escalável tem disponibilidade no mês
-  if (equipe.every((m) => membroNaoEscalavel(m) || membroEmFeriasNoMes(m, ano, mes))) return [];
-
   const prefixoMes = `${ano}-${String(mes).padStart(2, "0")}-`;
   const feriadosMes = feriados.filter((f) => f.data.startsWith(prefixoMes));
   const semPlantao = new Set(
@@ -202,72 +316,72 @@ function simularDias(
   dias.sort();
   if (dias.length === 0) return [];
 
-  // Contagem para TODOS os membros: o filtro de férias é feito por dia,
-  // não por mês, para que um membro que entra ou sai de férias no meio do
-  // mês trabalhe normalmente nos dias em que está disponível.
-  const contagem = new Map<string, number>(equipe.map((m) => [m.id, 0]));
-  let ultimoId: string | null = null;
+  const ordenada = [...equipe]
+    .filter((m) => !membroNaoEscalavel(m))
+    .sort((a, b) => a.ordem - b.ordem);
+  if (ordenada.length === 0) return [];
 
-  if (escalaAnterior) {
-    const anoAnterior = mes > 1 ? ano : ano - 1;
-    const mesAnterior = mes > 1 ? mes - 1 : 12;
+  const historico = escalas
+    .filter((e) => e.ano < ano || (e.ano === ano && e.mes < mes))
+    .sort((a, b) => a.ano - b.ano || a.mes - b.mes);
 
-    const anteriores = [...escalaAnterior.dias]
+  // Reconstrói a fila replayando o que de fato aconteceu em cada mês anterior
+  // (quem foi realmente escalado vai para o final). Se um mês não fizer a
+  // fila progredir nem 1 posição (ex.: número de plantões múltiplo exato do
+  // tamanho da equipe, fazendo a fila voltar ao ponto de partida), força um
+  // passo extra — garante que nenhum mês comece exatamente como o anterior.
+  const fila = [...ordenada];
+  const ultimoPlantao = new Map<string, string>();
+  for (const esc of historico) {
+    const frenteAntes = fila[0]?.id;
+    const diasEsc = [...esc.dias]
       .filter((d) => d.data)
       .sort((a, b) => a.data.localeCompare(b.data));
-    for (const d of anteriores) {
+    for (const d of diasEsc) {
       const id = acharMembroId(equipe, d);
       if (id == null) continue;
-      if (contagem.has(id)) contagem.set(id, (contagem.get(id) ?? 0) + 1);
-      ultimoId = id;
+      const atual = ultimoPlantao.get(id);
+      if (!atual || d.data > atual) ultimoPlantao.set(id, d.data);
+      const idx = fila.findIndex((m) => m.id === id);
+      if (idx === -1) continue;
+      const [pessoa] = fila.splice(idx, 1);
+      fila.push(pessoa);
     }
-
-    // Funcionários que voltam de férias este mês recebem a média dos que
-    // trabalharam no mês anterior para não serem escalados seguido.
-    const retornando = equipe.filter(
-      (m) =>
-        !membroNaoEscalavel(m) &&
-        membroEmFeriasNoMes(m, anoAnterior, mesAnterior) &&
-        !membroEmFeriasNoMes(m, ano, mes),
-    );
-    if (retornando.length > 0) {
-      const ativos = equipe.filter(
-        (m) =>
-          !membroNaoEscalavel(m) &&
-          !membroEmFeriasNoMes(m, anoAnterior, mesAnterior),
-      );
-      if (ativos.length > 0) {
-        const media =
-          ativos.reduce((s, m) => s + (contagem.get(m.id) ?? 0), 0) /
-          ativos.length;
-        for (const m of retornando) {
-          contagem.set(m.id, Math.round(media));
-        }
-      }
+    if (fila.length > 0 && fila[0].id === frenteAntes) {
+      const [pessoa] = fila.splice(0, 1);
+      fila.push(pessoa);
     }
   }
 
   const resultado: EscalaDia[] = [];
 
   for (const data of dias) {
-    // Filtra quem está disponível NESTA DATA ESPECÍFICA (excluindo não-escaláveis)
-    const disponivelNoDia = equipe.filter(
-      (m) => !membroNaoEscalavel(m) && !membroEmFeriasNoDia(m, data),
-    );
-    if (disponivelNoDia.length === 0) continue;
-
-    const ordenados = [...disponivelNoDia].sort(
-      (a, b) =>
-        (contagem.get(a.id) ?? 0) - (contagem.get(b.id) ?? 0) ||
-        a.ordem - b.ordem,
-    );
-    // Evita repetir a mesma pessoa em dias consecutivos quando há alternativa.
-    let escolhido = ordenados[0];
-    if (ordenados.length > 1 && escolhido.id === ultimoId) {
-      escolhido = ordenados[1];
+    const parceiro = parceiroFimDeSemana(ano, mes, data);
+    let escolhidoIdx = -1;
+    for (let i = 0; i < fila.length; i++) {
+      const m = fila[i];
+      if (membroEmFeriasNoDia(m, data)) continue;
+      if (parceiro && membroEmFeriasNoDia(m, parceiro)) continue;
+      const ultima = ultimoPlantao.get(m.id);
+      if (ultima) {
+        // Entre dois fins de semana, exige pular pelo menos um (>=14 dias entre
+        // os sábados de referência) — 7 dias seria o fim de semana imediatamente
+        // seguinte, o que não é permitido.
+        if (ehFimDeSemana(data) && ehFimDeSemana(ultima)) {
+          if (diffDias(ancoraFimDeSemana(ultima), ancoraFimDeSemana(data)) < 14)
+            continue;
+        } else if (diffDias(ultima, data) < 7) {
+          continue;
+        }
+      }
+      escolhidoIdx = i;
+      break;
     }
-    contagem.set(escolhido.id, (contagem.get(escolhido.id) ?? 0) + 1);
-    ultimoId = escolhido.id;
+    if (escolhidoIdx === -1) continue;
+
+    const [escolhido] = fila.splice(escolhidoIdx, 1);
+    fila.push(escolhido);
+    ultimoPlantao.set(escolhido.id, data);
     resultado.push({
       id: gerarId("dia"),
       data,
@@ -374,7 +488,7 @@ function formVazio(): FormState {
   const agora = new Date();
   const mes = agora.getMonth() + 1;
   return {
-    titulo: `Plantão ${MESES[mes - 1]}`,
+    titulo: tituloAutomatico(mes),
     ano: agora.getFullYear(),
     mes,
     dias: [],
@@ -414,6 +528,9 @@ export default function EscalaPlantao() {
   const [feriasResumoAberto, setFeriasResumoAberto] = useState(false);
   const [feriadosForm, setFeriadosForm] = useState<Feriado[]>([]);
   const [salvandoFeriados, setSalvandoFeriados] = useState(false);
+  const [avisoFeriasEscala, setAvisoFeriasEscala] = useState<Escala | null>(
+    null,
+  );
 
   useEffect(() => {
     Promise.all([getEscalas(), getEquipe(), getFeriados()])
@@ -478,6 +595,23 @@ export default function EscalaPlantao() {
     setForm((f) => ({ ...f, [key]: value }));
   };
 
+  /**
+   * Troca o mês selecionado. Se o título ainda for o padrão automático do mês
+   * atual (ou estiver vazio), atualiza-o junto para o novo mês; se o usuário já
+   * personalizou o título, mantém o texto digitado.
+   */
+  const selecionarMes = (novoMes: number) => {
+    setForm((f) => {
+      const eraAutomatico =
+        !f.titulo.trim() || f.titulo === tituloAutomatico(f.mes);
+      return {
+        ...f,
+        mes: novoMes,
+        titulo: eraAutomatico ? tituloAutomatico(novoMes) : f.titulo,
+      };
+    });
+  };
+
   const adicionarDia = () => {
     setForm((f) => ({
       ...f,
@@ -492,6 +626,28 @@ export default function EscalaPlantao() {
     setForm((f) => ({
       ...f,
       dias: f.dias.map((d) => (d.id === id ? { ...d, [campo]: valor } : d)),
+    }));
+  };
+
+  /**
+   * Atualiza o nome do dia e, se o texto digitado bater com alguém da Equipe
+   * T.I (seleção via datalist), já preenche a matrícula automaticamente.
+   */
+  const alterarNomeDia = (id: string, valor: string) => {
+    const membro = equipe.find(
+      (m) => m.nome.trim().toLowerCase() === valor.trim().toLowerCase(),
+    );
+    setForm((f) => ({
+      ...f,
+      dias: f.dias.map((d) =>
+        d.id === id
+          ? {
+              ...d,
+              nome: valor,
+              matricula: membro ? membro.matricula : d.matricula,
+            }
+          : d,
+      ),
     }));
   };
 
@@ -532,7 +688,7 @@ export default function EscalaPlantao() {
     try {
       const agora = new Date().toISOString();
       const base = {
-        titulo: form.titulo.trim() || `Plantão ${MESES[form.mes - 1]}`,
+        titulo: form.titulo.trim() || tituloAutomatico(form.mes),
         ano,
         mes,
         dias,
@@ -576,7 +732,14 @@ export default function EscalaPlantao() {
   };
 
   const abrirNovaPessoa = () =>
-    setPessoaModal({ id: null, nome: "", matricula: "", cargo: "", feriasInicio: "", feriasFim: "" });
+    setPessoaModal({
+      id: null,
+      nome: "",
+      matricula: "",
+      cargo: "",
+      feriasInicio: "",
+      feriasFim: "",
+    });
 
   const abrirEditarPessoa = (m: MembroEquipe) => {
     setMembroMenuId(null);
@@ -603,7 +766,15 @@ export default function EscalaPlantao() {
     const lista = pessoaModal.id
       ? equipe.map((m) =>
           m.id === pessoaModal.id
-            ? { ...m, nome, matricula, cargo, feriasInicio, feriasFim, updatedAt: agora }
+            ? {
+                ...m,
+                nome,
+                matricula,
+                cargo,
+                feriasInicio,
+                feriasFim,
+                updatedAt: agora,
+              }
             : m,
         )
       : [
@@ -639,7 +810,13 @@ export default function EscalaPlantao() {
   const adicionarFeriado = () => {
     setFeriadosForm((l) => [
       ...l,
-      { id: gerarId("fer"), data: "", nome: "", comPlantao: false, updatedAt: "" },
+      {
+        id: gerarId("fer"),
+        data: "",
+        nome: "",
+        comPlantao: false,
+        updatedAt: "",
+      },
     ]);
   };
 
@@ -684,8 +861,7 @@ export default function EscalaPlantao() {
   const simularDiasNoModal = () => {
     const ano = Number(form.ano);
     const mes = Number(form.mes);
-    const anterior = escalaDoMes(escalas, new Date(ano, mes - 2, 1));
-    const dias = simularDias(equipe, ano, mes, anterior, feriados);
+    const dias = gerarEscalaRoundRobin(equipe, ano, mes, escalas, feriados);
     if (dias.length === 0) {
       setErroSalvar(
         "Cadastre pessoas na Equipe T.I (e tire alguém de férias) para simular.",
@@ -717,8 +893,8 @@ export default function EscalaPlantao() {
             <div className="esc-toolbar-title-group">
               <h2 className="esc-toolbar-title">Escala de Plantão</h2>
               <span className="esc-toolbar-sub">
-                {escalas.length}{" "}
-                {escalas.length === 1 ? "mês" : "meses"} cadastrados
+                {escalas.length} {escalas.length === 1 ? "mês" : "meses"}{" "}
+                cadastrados
               </span>
             </div>
             {isAdmin && (
@@ -754,41 +930,67 @@ export default function EscalaPlantao() {
             </div>
           ) : (
             <div className="esc-grid">
-              {escalas.map((escala) => (
-                <div key={escala.id} className="esc-card-wrap">
-              <EscalaCard escala={escala} />
-              {isAdmin && (
-                <div className="esc-card-actions">
-                  <button
-                    type="button"
-                    className="esc-btn-icon"
-                    onClick={() => abrirModalEditar(escala)}
-                    title="Editar escala"
-                    aria-label="Editar escala"
-                  >
-                    <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
-                      <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    className="esc-btn-icon esc-btn-icon-danger"
-                    onClick={() => setConfirmarRemocao(escala.id)}
-                    title="Remover escala"
-                    aria-label="Remover escala"
-                  >
-                    <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14">
-                      <path
-                        fillRule="evenodd"
-                        d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
+              {escalas.map((escala) => {
+                const deFerias = membrosDeFeriasSemEscala(equipe, escala);
+                return (
+                  <div key={escala.id} className="esc-card-wrap">
+                    <EscalaCard escala={escala} />
+                    {deFerias.length > 0 && (
+                      <div className="esc-card-actions-left">
+                        <button
+                          type="button"
+                          className="esc-btn-icon esc-btn-icon-ferias"
+                          onClick={() => setAvisoFeriasEscala(escala)}
+                          title={`De férias neste mês (sem plantão): ${deFerias.map((m) => m.nome).join(", ")}`}
+                          aria-label="Funcionário de férias neste mês"
+                        >
+                          !
+                        </button>
+                      </div>
+                    )}
+                    {isAdmin && (
+                      <div className="esc-card-actions">
+                        <button
+                          type="button"
+                          className="esc-btn-icon"
+                          onClick={() => abrirModalEditar(escala)}
+                          title="Editar escala"
+                          aria-label="Editar escala"
+                        >
+                          <svg
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            width="14"
+                            height="14"
+                          >
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          className="esc-btn-icon esc-btn-icon-danger"
+                          onClick={() => setConfirmarRemocao(escala.id)}
+                          title="Remover escala"
+                          aria-label="Remover escala"
+                        >
+                          <svg
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            width="14"
+                            height="14"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -813,70 +1015,75 @@ export default function EscalaPlantao() {
             <div className="esc-equipe-vazio">Nenhuma pessoa cadastrada.</div>
           ) : (
             <ul className="esc-equipe-lista">
-              {[...equipe].sort((a, b) => ordemDot(a) - ordemDot(b)).map((m) => (
-                <li key={m.id} className="esc-membro-wrap">
-                  <button
-                    type="button"
-                    className={[
-                      "esc-membro",
-                      membroEmFeriasHoje(m) || membroNaoEscalavel(m)
-                        ? "esc-membro-ferias"
-                        : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                    onClick={() =>
-                      isAdmin &&
-                      setMembroMenuId((id) => (id === m.id ? null : m.id))
-                    }
-                    disabled={!isAdmin}
-                  >
-                    <span
-                      className={
-                        membroEmFeriasHoje(m)
-                          ? "esc-membro-dot esc-membro-dot-em-ferias"
-                          : membroNaoEscalavel(m)
-                            ? "esc-membro-dot esc-membro-dot-sem-escala"
-                            : m.feriasInicio || m.feriasFim
-                              ? "esc-membro-dot esc-membro-dot-ferias"
-                              : "esc-membro-dot esc-membro-dot-ativo"
+              {[...equipe]
+                .sort((a, b) => ordemDot(a) - ordemDot(b))
+                .map((m) => (
+                  <li key={m.id} className="esc-membro-wrap">
+                    <button
+                      type="button"
+                      className={[
+                        "esc-membro",
+                        membroEmFeriasHoje(m) || membroNaoEscalavel(m)
+                          ? "esc-membro-ferias"
+                          : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                      onClick={() =>
+                        isAdmin &&
+                        setMembroMenuId((id) => (id === m.id ? null : m.id))
                       }
-                    />
-                    <span className="esc-membro-info">
-                      <span className="esc-membro-nome">{m.nome}</span>
-                      {m.cargo && (
-                        <span className="esc-membro-cargo">{m.cargo}</span>
-                      )}
-                    </span>
-                    {membroEmFeriasHoje(m) && (
+                      disabled={!isAdmin}
+                    >
                       <span
-                        className="esc-membro-badge"
-                        title={
-                          m.feriasInicio
-                            ? `${formatDiaCurto(m.feriasInicio)} – ${formatDiaCurto(m.feriasFim)}`
-                            : ""
+                        className={
+                          membroEmFeriasHoje(m)
+                            ? "esc-membro-dot esc-membro-dot-em-ferias"
+                            : membroNaoEscalavel(m)
+                              ? "esc-membro-dot esc-membro-dot-sem-escala"
+                              : m.feriasInicio || m.feriasFim
+                                ? "esc-membro-dot esc-membro-dot-ferias"
+                                : "esc-membro-dot esc-membro-dot-ativo"
                         }
-                      >
-                        Férias
+                      />
+                      <span className="esc-membro-info">
+                        <span className="esc-membro-nome">{m.nome}</span>
+                        {m.cargo && (
+                          <span className="esc-membro-cargo">{m.cargo}</span>
+                        )}
                       </span>
+                      {membroEmFeriasHoje(m) && (
+                        <span
+                          className="esc-membro-badge"
+                          title={
+                            m.feriasInicio
+                              ? `${formatDiaCurto(m.feriasInicio)} – ${formatDiaCurto(m.feriasFim)}`
+                              : ""
+                          }
+                        >
+                          Férias
+                        </span>
+                      )}
+                    </button>
+                    {isAdmin && membroMenuId === m.id && (
+                      <div className="esc-membro-menu">
+                        <button
+                          type="button"
+                          onClick={() => abrirEditarPessoa(m)}
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          className="esc-membro-menu-danger"
+                          onClick={() => removerMembro(m)}
+                        >
+                          Remover
+                        </button>
+                      </div>
                     )}
-                  </button>
-                  {isAdmin && membroMenuId === m.id && (
-                    <div className="esc-membro-menu">
-                      <button type="button" onClick={() => abrirEditarPessoa(m)}>
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        className="esc-membro-menu-danger"
-                        onClick={() => removerMembro(m)}
-                      >
-                        Remover
-                      </button>
-                    </div>
-                  )}
-                </li>
-              ))}
+                  </li>
+                ))}
             </ul>
           )}
         </aside>
@@ -904,7 +1111,12 @@ export default function EscalaPlantao() {
                 onClick={fecharModal}
                 aria-label="Fechar"
               >
-                <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  width="18"
+                  height="18"
+                >
                   <path
                     fillRule="evenodd"
                     d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
@@ -932,7 +1144,7 @@ export default function EscalaPlantao() {
                   <select
                     id="esc-mes"
                     value={form.mes}
-                    onChange={(e) => setField("mes", Number(e.target.value))}
+                    onChange={(e) => selecionarMes(Number(e.target.value))}
                   >
                     {MESES.map((nome, i) => (
                       <option key={nome} value={i + 1}>
@@ -950,7 +1162,10 @@ export default function EscalaPlantao() {
                     min={1000}
                     max={9999}
                     onChange={(e) => {
-                      const val = Math.min(9999, Math.max(0, Number(e.target.value)));
+                      const val = Math.min(
+                        9999,
+                        Math.max(0, Number(e.target.value)),
+                      );
                       setField("ano", val);
                     }}
                     placeholder="2026"
@@ -1016,8 +1231,9 @@ export default function EscalaPlantao() {
                           type="text"
                           value={dia.nome}
                           placeholder="Nome"
+                          list="esc-dia-equipe-nomes"
                           onChange={(e) =>
-                            alterarDia(dia.id, "nome", e.target.value)
+                            alterarNomeDia(dia.id, e.target.value)
                           }
                         />
                         <input
@@ -1040,6 +1256,11 @@ export default function EscalaPlantao() {
                     ))}
                   </div>
                 )}
+                <datalist id="esc-dia-equipe-nomes">
+                  {equipe.map((m) => (
+                    <option key={m.id} value={m.nome} />
+                  ))}
+                </datalist>
               </div>
 
               {erroSalvar && <p className="esc-modal-erro">{erroSalvar}</p>}
@@ -1070,10 +1291,7 @@ export default function EscalaPlantao() {
 
       {/* Modal: Nova / Editar pessoa */}
       {pessoaModal && (
-        <div
-          className="esc-modal-overlay"
-          onClick={() => setPessoaModal(null)}
-        >
+        <div className="esc-modal-overlay" onClick={() => setPessoaModal(null)}>
           <div
             className="esc-modal esc-modal-confirm"
             role="dialog"
@@ -1089,7 +1307,12 @@ export default function EscalaPlantao() {
                 onClick={() => setPessoaModal(null)}
                 aria-label="Fechar"
               >
-                <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  width="18"
+                  height="18"
+                >
                   <path
                     fillRule="evenodd"
                     d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
@@ -1142,16 +1365,26 @@ export default function EscalaPlantao() {
                   >
                     <option value="">Selecione um cargo</option>
                     <optgroup label="Assistente de TI">
-                      <option value="Assistente de TI I">Assistente de TI I</option>
-                      <option value="Assistente de TI II">Assistente de TI II</option>
-                      <option value="Assistente de TI III">Assistente de TI III</option>
+                      <option value="Assistente de TI I">
+                        Assistente de TI I
+                      </option>
+                      <option value="Assistente de TI II">
+                        Assistente de TI II
+                      </option>
+                      <option value="Assistente de TI III">
+                        Assistente de TI III
+                      </option>
                     </optgroup>
                     <optgroup label="Analista de TI">
                       <option value="Analista de TI I">Analista de TI I</option>
-                      <option value="Analista de TI II">Analista de TI II</option>
-                      <option value="Analista de TI III">Analista de TI III</option>
+                      <option value="Analista de TI II">
+                        Analista de TI II
+                      </option>
+                      <option value="Analista de TI III">
+                        Analista de TI III
+                      </option>
                     </optgroup>
-<option value="Estagiário">Estagiário</option>
+                    <option value="Estagiário">Estagiário</option>
                     <option value="Aprendiz">Aprendiz</option>
                     <option value="Gerente de TI">Gerente de TI</option>
                   </select>
@@ -1202,7 +1435,8 @@ export default function EscalaPlantao() {
                   </div>
                 </div>
                 <p className="esc-feriados-dica">
-                  Deixe em branco se não estiver de férias. A simulação exclui automaticamente quem estiver de férias no mês escalado.
+                  Deixe em branco se não estiver de férias. A simulação exclui
+                  automaticamente quem estiver de férias no mês escalado.
                 </p>
               </div>
               <div className="esc-modal-footer">
@@ -1247,7 +1481,12 @@ export default function EscalaPlantao() {
                 onClick={() => setFeriadosAberto(false)}
                 aria-label="Fechar"
               >
-                <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  width="18"
+                  height="18"
+                >
                   <path
                     fillRule="evenodd"
                     d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
@@ -1310,7 +1549,10 @@ export default function EscalaPlantao() {
                         <select
                           value={f.comPlantao ? "com" : "sem"}
                           onChange={(e) =>
-                            alterarFeriadoPlantao(f.id, e.target.value === "com")
+                            alterarFeriadoPlantao(
+                              f.id,
+                              e.target.value === "com",
+                            )
                           }
                         >
                           <option value="sem">Sem plantão</option>
@@ -1379,7 +1621,12 @@ export default function EscalaPlantao() {
                 onClick={() => setFeriasResumoAberto(false)}
                 aria-label="Fechar"
               >
-                <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  width="18"
+                  height="18"
+                >
                   <path
                     fillRule="evenodd"
                     d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
@@ -1473,6 +1720,43 @@ export default function EscalaPlantao() {
                 onClick={confirmarDelete}
               >
                 Remover
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Aviso de funcionário(s) de férias fora da escala */}
+      {avisoFeriasEscala && (
+        <div
+          className="esc-modal-overlay"
+          onClick={() => setAvisoFeriasEscala(null)}
+        >
+          <div
+            className="esc-modal esc-modal-confirm"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="esc-modal-header">
+              <h3>Aviso de férias</h3>
+            </div>
+            <div className="esc-modal-body">
+              {membrosDeFeriasSemEscala(equipe, avisoFeriasEscala).map((m) => (
+                <p key={m.id}>
+                  <strong>{m.nome}</strong> não está incluso(a) na escala deste
+                  mês pois está de férias de {formatDiaCurto(m.feriasInicio)}{" "}
+                  até {formatDiaCurto(m.feriasFim)}.
+                </p>
+              ))}
+            </div>
+            <div className="esc-modal-footer">
+              <button
+                type="button"
+                className="esc-btn-cancel"
+                onClick={() => setAvisoFeriasEscala(null)}
+              >
+                Fechar
               </button>
             </div>
           </div>
