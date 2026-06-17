@@ -14,17 +14,12 @@ import {
   saveTvConfig,
   TvConfig,
 } from "../utils/storage";
-import { formatDateTime } from "../utils/dateUtils";
+import { formatDateTime, faltamDoisDiasOuMenos } from "../utils/dateUtils";
 import { EscalaCard } from "./EscalaPlantao";
 import "./ModoTV.css";
 
 const INTERVALO = 30;
 
-function dentroDeVinteQuatroHoras(dataHora: string): boolean {
-  if (!dataHora) return false;
-  const diff = new Date(dataHora).getTime() - Date.now();
-  return diff >= 0 && diff <= 24 * 60 * 60 * 1000;
-}
 
 /* ─── Status ──────────────────────────────────────────────────────── */
 const TAREFA_STATUS_LABEL: Record<string, string> = {
@@ -70,13 +65,16 @@ function StatusBadge({ label, cor }: { label: string; cor: string }) {
   );
 }
 
-const TONERS_MINI: Array<{ key: keyof Impressora; label: string; cor: string }> =
-  [
-    { key: "tonerPreto", label: "P", cor: "#d1d5db" },
-    { key: "tonerCiano", label: "C", cor: "#22d3ee" },
-    { key: "tonerMagenta", label: "M", cor: "#f0138a" },
-    { key: "tonerAmarelo", label: "A", cor: "#f5c200" },
-  ];
+const TONERS_MINI: Array<{
+  key: keyof Impressora;
+  label: string;
+  cor: string;
+}> = [
+  { key: "tonerPreto", label: "P", cor: "#d1d5db" },
+  { key: "tonerCiano", label: "C", cor: "#22d3ee" },
+  { key: "tonerMagenta", label: "M", cor: "#f0138a" },
+  { key: "tonerAmarelo", label: "A", cor: "#f5c200" },
+];
 
 function TonerMini({ imp }: { imp: Impressora }) {
   return (
@@ -107,6 +105,7 @@ interface TelaDef {
   colunas: Coluna[];
   load: () => Promise<Record<string, unknown>[]>;
   isUrgent?: (row: Record<string, unknown>) => boolean;
+  rowClass?: (row: Record<string, unknown>) => string | undefined;
   vazioMsg: string;
   /* Quando definido, renderiza conteúdo livre em vez da tabela. */
   renderCustom?: (rows: Record<string, unknown>[]) => React.ReactNode;
@@ -118,33 +117,99 @@ const txt = (v: unknown) => (v ? String(v) : "—");
 const COLUNAS_EVENTO: Coluna[] = [
   {
     titulo: "Nome do Evento",
-    largura: "13%",
+    largura: "15%",
     classe: "tv-td-destaque",
     render: (r) => txt(r.nomeEvento),
   },
   {
     titulo: "Data e Hora",
-    largura: "9%",
-    render: (r) => (r.dataHora ? formatDateTime(String(r.dataHora)) : "—"),
+    largura: "10%",
+    render: (r) => {
+      if (!r.dataHora) return "—";
+      const DIAS = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
+      const abrev = DIAS[new Date(String(r.dataHora)).getDay()];
+      return `${formatDateTime(String(r.dataHora))} ${abrev}`;
+    },
   },
-  { titulo: "Dia", largura: "7%", render: (r) => txt(r.diaSemana) },
-  { titulo: "Local", largura: "11%", render: (r) => txt(r.localEvento) },
-  { titulo: "Plantão TI", largura: "8%", render: (r) => txt(r.funcionarioPlantao) },
-  { titulo: "Plantão Eventos", largura: "8%", render: (r) => txt(r.plantaoEventos) },
+  { titulo: "Local", largura: "10%", render: (r) => txt(r.localEvento) },
+  {
+    titulo: "Plantão TI",
+    largura: "10%",
+    render: (r) => txt(r.funcionarioPlantao),
+  },
+  {
+    titulo: "Plantão Eventos",
+    largura: "10%",
+    render: (r) => txt(r.plantaoEventos),
+  },
   {
     titulo: "Equipamentos",
-    largura: "24%",
+    largura: "15%",
     classe: "tv-td-desc",
     render: (r) => txt(r.equipamentosNecessarios),
   },
   { titulo: "Chamado", largura: "8%", render: (r) => txt(r.numeroChamado) },
-  { titulo: "Requerente", largura: "12%", render: (r) => txt(r.requerente) },
+  { titulo: "Requerente", largura: "10%", render: (r) => txt(r.requerente) },
+];
+
+const HIST_STATUS_LABEL: Record<string, string> = {
+  concluido: "Concluído",
+  removido: "Removido",
+};
+const HIST_STATUS_COR: Record<string, string> = {
+  concluido: "#22c55e",
+  removido: "#ef4444",
+};
+
+const COLUNAS_HISTORICO: Coluna[] = [
+  {
+    titulo: "Nome do Evento",
+    largura: "14%",
+    classe: "tv-td-destaque",
+    render: (r) => txt(r.nomeEvento),
+  },
+  {
+    titulo: "Data e Hora",
+    largura: "10%",
+    render: (r) => {
+      if (!r.dataHora) return "—";
+      const DIAS = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
+      const abrev = DIAS[new Date(String(r.dataHora)).getDay()];
+      return `${formatDateTime(String(r.dataHora))} ${abrev}`;
+    },
+  },
+  { titulo: "Local", largura: "10%", render: (r) => txt(r.localEvento) },
+  { titulo: "Plantão TI", largura: "9%", render: (r) => txt(r.funcionarioPlantao) },
+  { titulo: "Plantão Eventos", largura: "9%", render: (r) => txt(r.plantaoEventos) },
+  {
+    titulo: "Equipamentos",
+    largura: "13%",
+    classe: "tv-td-desc",
+    render: (r) => txt(r.equipamentosNecessarios),
+  },
+  { titulo: "Chamado", largura: "7%", render: (r) => txt(r.numeroChamado) },
+  { titulo: "Requerente", largura: "9%", render: (r) => txt(r.requerente) },
+  {
+    titulo: "Status",
+    largura: "9%",
+    render: (r) => {
+      const key = r.concluido ? "concluido" : r.removido ? "removido" : null;
+      if (!key) return "—";
+      return (
+        <StatusBadge label={HIST_STATUS_LABEL[key]} cor={HIST_STATUS_COR[key]} />
+      );
+    },
+  },
 ];
 
 /* Colunas compartilhadas para telas baseadas em Tarefa */
 const COLUNAS_TAREFA: Coluna[] = [
   { titulo: "Tarefa", classe: "tv-td-destaque", render: (r) => txt(r.tarefa) },
-  { titulo: "Descrição", classe: "tv-td-desc", render: (r) => txt(r.descricao) },
+  {
+    titulo: "Descrição",
+    classe: "tv-td-desc",
+    render: (r) => txt(r.descricao),
+  },
   {
     titulo: "Status",
     render: (r) => (
@@ -162,7 +227,8 @@ const COLUNAS_TAREFA: Coluna[] = [
   { titulo: "Chamado", render: (r) => txt(r.chamado) },
   {
     titulo: "Criado em",
-    render: (r) => (r.dataCriacao ? formatDateTime(String(r.dataCriacao)) : "—"),
+    render: (r) =>
+      r.dataCriacao ? formatDateTime(String(r.dataCriacao)) : "—",
   },
 ];
 
@@ -176,7 +242,7 @@ const CATALOGO: TelaDef[] = [
     accent: "azul",
     colunas: COLUNAS_EVENTO,
     vazioMsg: "Nenhuma montagem cadastrada.",
-    isUrgent: (r) => dentroDeVinteQuatroHoras(String(r.dataHora ?? "")),
+    isUrgent: (r) => faltamDoisDiasOuMenos(String(r.dataHora ?? "")),
     load: async () => {
       const eventos = await reconcileEventosAutomaticos();
       return asRows(eventos.filter((e) => !e.removido));
@@ -188,7 +254,7 @@ const CATALOGO: TelaDef[] = [
     accent: "azul",
     colunas: COLUNAS_TAREFA,
     vazioMsg: "Nenhuma tarefa pendente.",
-    isUrgent: (r) => dentroDeVinteQuatroHoras(String(r.prazo ?? "")),
+    isUrgent: (r) => faltamDoisDiasOuMenos(String(r.prazo ?? "")),
     load: async () => asRows(await reconcileTarefasAutomaticas()),
   },
   {
@@ -205,16 +271,21 @@ const CATALOGO: TelaDef[] = [
     accent: "azul",
     vazioMsg: "Nenhuma impressora cadastrada.",
     colunas: [
-      { titulo: "Local", largura: "16%", classe: "tv-td-destaque", render: (r) => txt(r.local) },
+      {
+        titulo: "Local",
+        largura: "16%",
+        classe: "tv-td-destaque",
+        render: (r) => txt(r.local),
+      },
       { titulo: "Sede", largura: "12%", render: (r) => txt(r.sede) },
       { titulo: "Marca", largura: "10%", render: (r) => txt(r.marca) },
       { titulo: "Modelo", largura: "14%", render: (r) => txt(r.modelo) },
       { titulo: "Nº Série", largura: "12%", render: (r) => txt(r.numeroSerie) },
-      { titulo: "IP", largura: "11%", render: (r) => txt(r.ip) },
-      { titulo: "MAC", largura: "12%", render: (r) => txt(r.mac) },
+      { titulo: "IP", largura: "15%", render: (r) => txt(r.ip) },
+      { titulo: "MAC", largura: "15%", render: (r) => txt(r.mac) },
       {
         titulo: "Toner",
-        largura: "13%",
+        largura: "20%",
         render: (r) => <TonerMini imp={r as unknown as Impressora} />,
       },
     ],
@@ -229,9 +300,7 @@ const CATALOGO: TelaDef[] = [
     load: async () => {
       const todas = await getEscalas();
       return asRows(
-        todas.sort((a, b) =>
-          a.ano !== b.ano ? a.ano - b.ano : a.mes - b.mes,
-        ),
+        todas.sort((a, b) => (a.ano !== b.ano ? a.ano - b.ano : a.mes - b.mes)),
       );
     },
   },
@@ -239,8 +308,10 @@ const CATALOGO: TelaDef[] = [
     id: "historico-montagens",
     label: "HISTÓRICO DE MONTAGENS",
     accent: "azul",
-    colunas: COLUNAS_EVENTO,
+    colunas: COLUNAS_HISTORICO,
     vazioMsg: "Nenhuma montagem no histórico.",
+    rowClass: (r) =>
+      r.concluido ? "tv-linha-concluida" : r.removido ? "tv-linha-removida" : undefined,
     load: async () => asRows(await getHistorico()),
   },
   {
@@ -257,12 +328,33 @@ const CATALOGO: TelaDef[] = [
     accent: "azul",
     vazioMsg: "Nenhum item no inventário.",
     colunas: [
-      { titulo: "Item", largura: "18%", classe: "tv-td-destaque", render: (r) => txt(r.item) },
+      {
+        titulo: "Item",
+        largura: "18%",
+        classe: "tv-td-destaque",
+        render: (r) => txt(r.item),
+      },
       { titulo: "Modelo", largura: "14%", render: (r) => txt(r.modelo) },
-      { titulo: "Patrimônio", largura: "12%", render: (r) => txt(r.patrimonio) },
-      { titulo: "Localização", largura: "14%", render: (r) => txt(r.localizacao) },
-      { titulo: "Requerente", largura: "13%", render: (r) => txt(r.requerente) },
-      { titulo: "Montado por", largura: "13%", render: (r) => txt(r.montadoPor) },
+      {
+        titulo: "Patrimônio",
+        largura: "12%",
+        render: (r) => txt(r.patrimonio),
+      },
+      {
+        titulo: "Localização",
+        largura: "14%",
+        render: (r) => txt(r.localizacao),
+      },
+      {
+        titulo: "Requerente",
+        largura: "13%",
+        render: (r) => txt(r.requerente),
+      },
+      {
+        titulo: "Montado por",
+        largura: "13%",
+        render: (r) => txt(r.montadoPor),
+      },
       {
         titulo: "Status",
         largura: "12%",
@@ -334,6 +426,8 @@ export default function ModoTV() {
   const telasAtivas = config.filter((c) => c.ativo).map((c) => c.id);
   const telasAtivasRef = useRef(telasAtivas);
   telasAtivasRef.current = telasAtivas;
+
+  const tbodyWrapRef = useRef<HTMLDivElement>(null);
 
   const defAtual = CATALOGO.find((t) => t.id === tela);
 
@@ -414,6 +508,37 @@ export default function ModoTV() {
     setSegundos(INTERVALO);
   }, [avancarTela]);
 
+  /* Auto-scroll lento: rola para baixo e volta ao topo ao trocar de tela */
+  useEffect(() => {
+    if (tbodyWrapRef.current) tbodyWrapRef.current.scrollTop = 0;
+
+    // pauseTicks > 0 significa que está aguardando no final antes de voltar ao topo
+    let pauseTicks = 0;
+    const PAUSE_TICKS = 62; // 62 × 40ms ≈ 2.5s de pausa no fim
+
+    const id = setInterval(() => {
+      const el = tbodyWrapRef.current;
+      if (!el) return;
+
+      if (pauseTicks > 0) {
+        pauseTicks--;
+        if (pauseTicks === 0) el.scrollTop = 0;
+        return;
+      }
+
+      const maxScroll = el.scrollHeight - el.clientHeight;
+      if (maxScroll <= 0) return;
+
+      if (el.scrollTop >= maxScroll - 1) {
+        pauseTicks = PAUSE_TICKS;
+      } else {
+        el.scrollTop += 1;
+      }
+    }, 40);
+
+    return () => clearInterval(id);
+  }, [tela]);
+
   /* ─── Painel de configuração ───────────────────────────────────── */
   const toggleTela = (id: string) => {
     setConfig((prev) =>
@@ -447,7 +572,7 @@ export default function ModoTV() {
   };
 
   const progresso = ((INTERVALO - segundos) / (INTERVALO - 1)) * 100;
-  const linhas = defAtual ? dadosPorTela[tela] ?? [] : [];
+  const linhas = defAtual ? (dadosPorTela[tela] ?? []) : [];
   const totalTela = linhas.length;
   const colunas = defAtual?.colunas ?? [];
   const contadorEscala =
@@ -470,9 +595,12 @@ export default function ModoTV() {
       <div className="tv-topbar">
         {/* esquerda: sair + contador */}
         <div className="tv-topbar-left">
-          <Link to="/" className="tv-sair">Sair</Link>
+          <Link to="/" className="tv-sair">
+            Sair
+          </Link>
           <span className="tv-contador">
-            {contadorEscala ?? `${totalTela} ${totalTela === 1 ? "item" : "itens"}`}
+            {contadorEscala ??
+              `${totalTela} ${totalTela === 1 ? "item" : "itens"}`}
           </span>
         </div>
 
@@ -529,7 +657,7 @@ export default function ModoTV() {
 
       <div className="tv-conteudo">
         <div className="tv-tabela-wrap">
-          <div className="tv-tbody-wrap">
+          <div className="tv-tbody-wrap" ref={tbodyWrapRef}>
             {telasAtivas.length === 0 ? (
               <div className="tv-sem-abas">
                 Nenhuma aba ativa. Clique na engrenagem para configurar.
@@ -537,7 +665,9 @@ export default function ModoTV() {
             ) : tela === "escala-plantao" ? (
               <div className="tv-escala-wrap">
                 {linhas.length === 0 ? (
-                  <div className="tv-escala-vazio">Nenhuma escala cadastrada.</div>
+                  <div className="tv-escala-vazio">
+                    Nenhuma escala cadastrada.
+                  </div>
                 ) : (
                   <div className="tv-escala-nav">
                     <button
@@ -548,7 +678,9 @@ export default function ModoTV() {
                     >
                       ‹
                     </button>
-                    <EscalaCard escala={linhas[escalaIdx] as unknown as Escala} />
+                    <EscalaCard
+                      escala={linhas[escalaIdx] as unknown as Escala}
+                    />
                     <button
                       className="tv-escala-arrow"
                       onClick={() =>
@@ -601,7 +733,7 @@ export default function ModoTV() {
                         className={
                           defAtual?.isUrgent?.(row)
                             ? "tv-linha-urgente"
-                            : undefined
+                            : defAtual?.rowClass?.(row)
                         }
                       >
                         {colunas.map((c, ci) => (
@@ -636,7 +768,12 @@ export default function ModoTV() {
                 onClick={() => setConfigAberta(false)}
                 aria-label="Fechar"
               >
-                <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  width="18"
+                  height="18"
+                >
                   <path
                     fillRule="evenodd"
                     d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"

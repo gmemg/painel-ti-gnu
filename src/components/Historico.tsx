@@ -104,7 +104,6 @@ const Historico = () => {
               <th>Data e Hora</th>
               <th>Dia da Semana</th>
               <th>Local do Evento</th>
-              <th>Adicionado por</th>
               <th>Plantão TI</th>
               <th>Plantão Eventos</th>
               <th>Equipamentos Necessários</th>
@@ -115,7 +114,7 @@ const Historico = () => {
           <tbody>
             {eventosView.length === 0 ? (
               <tr>
-                <td colSpan={10} className="empty-state">
+                <td colSpan={9} className="empty-state">
                   Nenhum evento no histórico.
                 </td>
               </tr>
@@ -126,7 +125,6 @@ const Historico = () => {
                   <td>{evento.dataHoraFormatada}</td>
                   <td>{evento.diaSemanaFormatado}</td>
                   <td>{evento.localEvento}</td>
-                  <td>{evento.adicionadoPor || "-"}</td>
                   <td>{evento.funcionarioPlantao}</td>
                   <td>{evento.plantaoEventos || "-"}</td>
                   <td>{evento.equipamentosNecessarios}</td>

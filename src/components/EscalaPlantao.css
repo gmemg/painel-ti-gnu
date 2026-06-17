@@ -105,6 +105,12 @@
   border-bottom: 1px solid var(--border);
 }
 
+.esc-equipe-title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+
 .esc-equipe-title {
   font-size: 0.9rem;
   font-weight: 600;
@@ -237,6 +243,12 @@
   padding: 0.05rem 0.3rem;
 }
 
+.esc-membro-edit-icon {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
 .esc-membro-menu {
   position: absolute;
   top: calc(100% + 4px);
@@ -326,13 +338,37 @@
 
 .esc-ferias-item {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr auto auto auto;
   align-items: center;
   gap: 0.75rem;
   padding: 0.55rem 0.75rem;
   border-radius: 7px;
   border: 1px solid var(--border);
   background: var(--surface);
+}
+
+.esc-ferias-remover {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border: 1px solid color-mix(in srgb, #ef4444 45%, transparent);
+  border-radius: 0.35rem;
+  background: transparent;
+  color: #ef4444;
+  font-size: 0.7rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.esc-ferias-remover:hover:not(:disabled) {
+  background: color-mix(in srgb, #ef4444 12%, transparent);
+}
+
+.esc-ferias-remover:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .esc-ferias-item-ativas {

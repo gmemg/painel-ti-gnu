@@ -184,28 +184,32 @@ function acharMembroId(equipe: MembroEquipe[], dia: EscalaDia): string | null {
 }
 
 /**
- * Membros escaláveis cujas férias cruzam o mês da escala mas que não aparecem
- * em nenhum dia já cadastrado dela — usado para avisar no card que alguém
- * ficou de fora da escala por estar de férias.
+ * Membros escaláveis cujas férias cruzam o mês da escala — usado para avisar
+ * no card que alguém está/esteve de férias naquele mês, esteja ou não incluso
+ * nos dias já cadastrados dela.
  */
-function membrosDeFeriasSemEscala(
+function membrosDeFeriasNoMes(
   equipe: MembroEquipe[],
   escala: Escala,
 ): MembroEquipe[] {
   const inicioMes = primeiroDiaISO(escala.ano, escala.mes);
   const fimMes = ultimoDiaISO(escala.ano, escala.mes);
-  const idsNaEscala = new Set(
-    escala.dias
-      .map((d) => acharMembroId(equipe, d))
-      .filter((id): id is string => id != null),
-  );
   return equipe.filter((m) => {
-    if (membroNaoEscalavel(m) || idsNaEscala.has(m.id)) return false;
+    if (membroNaoEscalavel(m)) return false;
     if (!m.feriasInicio && !m.feriasFim) return false;
     const inicio = m.feriasInicio || "0000-01-01";
     const fim = m.feriasFim || "9999-12-31";
     return inicio <= fimMes && fim >= inicioMes;
   });
+}
+
+/** true se o membro aparece em algum dia já cadastrado da escala. */
+function membroNaEscala(
+  equipe: MembroEquipe[],
+  escala: Escala,
+  membroId: string,
+): boolean {
+  return escala.dias.some((d) => acharMembroId(equipe, d) === membroId);
 }
 
 /** Diferença em dias entre duas datas ISO (positivo quando isoB > isoA). */
@@ -216,6 +220,13 @@ function diffDias(isoA: string, isoB: string): number {
     (new Date(aB, mB - 1, dB).getTime() - new Date(aA, mA - 1, dA).getTime()) /
       (24 * 60 * 60 * 1000),
   );
+}
+
+/** Mês/ano (1-12) do dia seguinte a uma data ISO — usado para achar o mês de retorno de férias. */
+function mesEAnoDoDiaSeguinte(iso: string): { ano: number; mes: number } {
+  const [ano, mes, dia] = iso.split("-").map(Number);
+  const d = new Date(ano, mes - 1, dia + 1);
+  return { ano: d.getFullYear(), mes: d.getMonth() + 1 };
 }
 
 /** true se a data ISO cair num sábado ou domingo. */
@@ -268,11 +279,12 @@ function parceiroFimDeSemana(
  * Gera os dias de plantão de um mês usando uma fila rotativa (round-robin):
  * cada pessoa escalada vai para o final da fila. A fila não reinicia a cada
  * mês — ela é reconstruída replayando, em ordem cronológica desde o primeiro
- * mês cadastrado, quem foi REALMENTE escalado em cada mês salvo. Se um mês
- * não fizer a fila progredir nenhuma posição (ex.: número de plantões múltiplo
- * exato do tamanho da equipe, fechando um ciclo completo e voltando ao ponto
- * de partida), um passo extra é forçado — garantindo que nenhum mês comece
- * exatamente como o anterior.
+ * mês cadastrado, quem foi REALMENTE escalado em cada mês salvo. Se o número
+ * de plantões realizados num mês for um múltiplo exato do tamanho da equipe
+ * (um ciclo completo — a fila resultante vira exatamente a sequência de uso
+ * daquele mês), um passo extra é forçado — EXCETO se todos tiverem plantonado
+ * exatamente uma vez naquele mês (sem repetições): nesse caso o passo extra não
+ * é aplicado, e o 1º da fila daquele mês permanece na posição 1 no mês seguinte.
  *
  * Regras de férias:
  * - Pessoa de férias num dia específico é pulada nesse dia (sem perder a vez —
@@ -282,6 +294,12 @@ function parceiroFimDeSemana(
  *   semana inteiro (mesmo que já tenha voltado para o outro dia) e a vez dela
  *   passa para o próximo fim de semana. Se as férias terminam antes do fim de
  *   semana (ex.: terminam na sexta), ela já está disponível normalmente.
+ * - Quando o dia seguinte ao fim das férias de alguém cai dentro do mês sendo
+ *   gerado (ou seja, a pessoa volta de férias nesse mês), ela é movida para o
+ *   fim da fila antes de gerar os dias — perde a posição que tinha antes de
+ *   sair — e só pode ser escalada no último dia a escalar daquele mês (garante
+ *   que ela realmente fique por último, mesmo que o mês precise de mais dias
+ *   do que o tamanho da equipe e o rodízio "dê a volta" antes de chegar nela).
  *
  * Intervalo mínimo entre plantões (quem não está de férias):
  * - Entre dois plantões em dia de semana (feriado), exige no mínimo 7 dias de
@@ -326,14 +344,20 @@ function gerarEscalaRoundRobin(
     .sort((a, b) => a.ano - b.ano || a.mes - b.mes);
 
   // Reconstrói a fila replayando o que de fato aconteceu em cada mês anterior
-  // (quem foi realmente escalado vai para o final). Se um mês não fizer a
-  // fila progredir nem 1 posição (ex.: número de plantões múltiplo exato do
-  // tamanho da equipe, fazendo a fila voltar ao ponto de partida), força um
-  // passo extra — garante que nenhum mês comece exatamente como o anterior.
+  // (quem foi realmente escalado vai para o final). Se um mês tiver um número
+  // de plantões realizados múltiplo exato do tamanho da equipe — um ciclo
+  // completo, em que a fila resultante vira exatamente a sequência de uso
+  // daquele mês — força um passo extra, A MENOS que todos os membros tenham
+  // plantonado exatamente uma vez naquele mês (sem repetições): nesse caso a
+  // fila já volta naturalmente à ordem original e o passo extra é dispensado,
+  // mantendo o 1º da fila na posição 1 do mês seguinte. Note que comparar só a
+  // "frente" da fila antes/depois não basta: pulos por férias podem reordenar
+  // quem fica na frente sem romper o ciclo completo de uso.
   const fila = [...ordenada];
   const ultimoPlantao = new Map<string, string>();
   for (const esc of historico) {
-    const frenteAntes = fila[0]?.id;
+    let usos = 0;
+    const idsUsados = new Set<string>();
     const diasEsc = [...esc.dias]
       .filter((d) => d.data)
       .sort((a, b) => a.data.localeCompare(b.data));
@@ -346,36 +370,80 @@ function gerarEscalaRoundRobin(
       if (idx === -1) continue;
       const [pessoa] = fila.splice(idx, 1);
       fila.push(pessoa);
+      usos++;
+      idsUsados.add(id);
     }
-    if (fila.length > 0 && fila[0].id === frenteAntes) {
+    const semRepeticoes = idsUsados.size === fila.length;
+    if (usos > 0 && usos % fila.length === 0 && !semRepeticoes) {
       const [pessoa] = fila.splice(0, 1);
       fila.push(pessoa);
     }
   }
 
+  // Quem voltou de férias neste mês (dia seguinte ao fim das férias cai dentro
+  // do mês sendo gerado) vai para o fim da fila, perdendo a posição que tinha
+  // antes de sair.
+  const retornantesIds = new Set<string>();
+  for (const m of ordenada) {
+    if (!m.feriasFim) continue;
+    const retorno = mesEAnoDoDiaSeguinte(m.feriasFim);
+    if (retorno.ano !== ano || retorno.mes !== mes) continue;
+    retornantesIds.add(m.id);
+    const idx = fila.findIndex((x) => x.id === m.id);
+    if (idx === -1 || idx === fila.length - 1) continue;
+    const [pessoa] = fila.splice(idx, 1);
+    fila.push(pessoa);
+  }
+
+  /** Elegibilidade de `m` para `data` (férias do dia/parceiro + intervalo mínimo). */
+  const elegivel = (m: MembroEquipe, data: string, parceiro: string | null) => {
+    if (membroEmFeriasNoDia(m, data)) return false;
+    if (parceiro && membroEmFeriasNoDia(m, parceiro)) return false;
+    const ultima = ultimoPlantao.get(m.id);
+    if (ultima) {
+      // Entre dois fins de semana, exige pular pelo menos um (>=14 dias entre
+      // os sábados de referência) — 7 dias seria o fim de semana imediatamente
+      // seguinte, o que não é permitido.
+      if (ehFimDeSemana(data) && ehFimDeSemana(ultima)) {
+        if (diffDias(ancoraFimDeSemana(ultima), ancoraFimDeSemana(data)) < 14)
+          return false;
+      } else if (diffDias(ultima, data) < 7) {
+        return false;
+      }
+    }
+    return true;
+  };
+
   const resultado: EscalaDia[] = [];
+  const ultimoDiaDoMes = dias[dias.length - 1];
 
   for (const data of dias) {
     const parceiro = parceiroFimDeSemana(ano, mes, data);
+    const ehUltimoDia = data === ultimoDiaDoMes;
     let escolhidoIdx = -1;
-    for (let i = 0; i < fila.length; i++) {
-      const m = fila[i];
-      if (membroEmFeriasNoDia(m, data)) continue;
-      if (parceiro && membroEmFeriasNoDia(m, parceiro)) continue;
-      const ultima = ultimoPlantao.get(m.id);
-      if (ultima) {
-        // Entre dois fins de semana, exige pular pelo menos um (>=14 dias entre
-        // os sábados de referência) — 7 dias seria o fim de semana imediatamente
-        // seguinte, o que não é permitido.
-        if (ehFimDeSemana(data) && ehFimDeSemana(ultima)) {
-          if (diffDias(ancoraFimDeSemana(ultima), ancoraFimDeSemana(data)) < 14)
-            continue;
-        } else if (diffDias(ultima, data) < 7) {
-          continue;
-        }
+
+    // No último dia a escalar do mês, prioriza quem voltou de férias — garante
+    // que a pessoa realmente fique por último, mesmo que o mês precise de mais
+    // dias do que o tamanho da equipe (o que faria o rodízio "dar a volta" e
+    // repetir alguém antes dela).
+    if (ehUltimoDia && retornantesIds.size > 0) {
+      for (let i = 0; i < fila.length; i++) {
+        const m = fila[i];
+        if (!retornantesIds.has(m.id)) continue;
+        if (!elegivel(m, data, parceiro)) continue;
+        escolhidoIdx = i;
+        break;
       }
-      escolhidoIdx = i;
-      break;
+    }
+
+    if (escolhidoIdx === -1) {
+      for (let i = 0; i < fila.length; i++) {
+        const m = fila[i];
+        if (!ehUltimoDia && retornantesIds.has(m.id)) continue;
+        if (!elegivel(m, data, parceiro)) continue;
+        escolhidoIdx = i;
+        break;
+      }
     }
     if (escolhidoIdx === -1) continue;
 
@@ -801,6 +869,18 @@ export default function EscalaPlantao() {
     );
   };
 
+  /** Remove só o período de férias do membro, sem abrir o modal de edição. */
+  const removerFeriasMembro = async (m: MembroEquipe) => {
+    const agora = new Date().toISOString();
+    await persistirEquipe(
+      equipe.map((x) =>
+        x.id === m.id
+          ? { ...x, feriasInicio: "", feriasFim: "", updatedAt: agora }
+          : x,
+      ),
+    );
+  };
+
   // ─── Feriados ────────────────────────────────────────────────────
   const abrirFeriados = () => {
     setFeriadosForm(feriados.map((f) => ({ ...f })));
@@ -931,7 +1011,7 @@ export default function EscalaPlantao() {
           ) : (
             <div className="esc-grid">
               {escalas.map((escala) => {
-                const deFerias = membrosDeFeriasSemEscala(equipe, escala);
+                const deFerias = membrosDeFeriasNoMes(equipe, escala);
                 return (
                   <div key={escala.id} className="esc-card-wrap">
                     <EscalaCard escala={escala} />
@@ -941,7 +1021,7 @@ export default function EscalaPlantao() {
                           type="button"
                           className="esc-btn-icon esc-btn-icon-ferias"
                           onClick={() => setAvisoFeriasEscala(escala)}
-                          title={`De férias neste mês (sem plantão): ${deFerias.map((m) => m.nome).join(", ")}`}
+                          title={`De férias neste mês: ${deFerias.map((m: MembroEquipe) => m.nome).join(", ")}`}
                           aria-label="Funcionário de férias neste mês"
                         >
                           !
@@ -997,7 +1077,9 @@ export default function EscalaPlantao() {
 
         <aside className="esc-equipe" ref={equipeRef}>
           <div className="esc-equipe-header">
-            <span className="esc-equipe-title">Equipe T.I</span>
+            <div className="esc-equipe-title-group">
+              <span className="esc-equipe-title">Equipe T.I</span>
+            </div>
             {isAdmin && (
               <button
                 type="button"
@@ -1063,6 +1145,18 @@ export default function EscalaPlantao() {
                         >
                           Férias
                         </span>
+                      )}
+                      {isAdmin && (
+                        <svg
+                          className="esc-membro-edit-icon"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                          width="13"
+                          height="13"
+                          aria-hidden="true"
+                        >
+                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                        </svg>
                       )}
                     </button>
                     {isAdmin && membroMenuId === m.id && (
@@ -1667,6 +1761,18 @@ export default function EscalaPlantao() {
                           >
                             {STATUS_FERIAS_LABEL[status]}
                           </span>
+                          {isAdmin && status !== "nenhuma" && (
+                            <button
+                              type="button"
+                              className="esc-ferias-remover"
+                              onClick={() => removerFeriasMembro(m)}
+                              disabled={salvandoEquipe}
+                              title="Remover férias deste funcionário"
+                              aria-label={`Remover férias de ${m.nome}`}
+                            >
+                              ✕
+                            </button>
+                          )}
                         </li>
                       );
                     })}
@@ -1742,13 +1848,25 @@ export default function EscalaPlantao() {
               <h3>Aviso de férias</h3>
             </div>
             <div className="esc-modal-body">
-              {membrosDeFeriasSemEscala(equipe, avisoFeriasEscala).map((m) => (
-                <p key={m.id}>
-                  <strong>{m.nome}</strong> não está incluso(a) na escala deste
-                  mês pois está de férias de {formatDiaCurto(m.feriasInicio)}{" "}
-                  até {formatDiaCurto(m.feriasFim)}.
-                </p>
-              ))}
+              {membrosDeFeriasNoMes(equipe, avisoFeriasEscala).map(
+                (m: MembroEquipe) => {
+                  const naEscala = membroNaEscala(
+                    equipe,
+                    avisoFeriasEscala,
+                    m.id,
+                  );
+                  return (
+                    <p key={m.id}>
+                      <strong>{m.nome}</strong> está de férias de{" "}
+                      {formatDiaCurto(m.feriasInicio)} até{" "}
+                      {formatDiaCurto(m.feriasFim)}
+                      {naEscala
+                        ? " neste mês."
+                        : " e não está incluso(a) na escala deste mês."}
+                    </p>
+                  );
+                },
+              )}
             </div>
             <div className="esc-modal-footer">
               <button

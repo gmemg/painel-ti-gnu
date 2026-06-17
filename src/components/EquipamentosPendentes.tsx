@@ -48,7 +48,16 @@ export default function EquipamentosPendentes() {
       salvandoRef.current = true;
       try {
         const todosEventos = await getEventos();
-        if (!todosEventos.find((e) => e.id === evento.id)) {
+        const jaExiste = todosEventos.some((e) => e.id === evento.id);
+        if (jaExiste) {
+          await saveEventos(
+            todosEventos.map((e) =>
+              e.id === evento.id
+                ? { ...e, removido: false, concluido: false }
+                : e,
+            ),
+          );
+        } else {
           await saveEventos([
             ...todosEventos,
             { ...evento, removido: false, concluido: false },

@@ -67,6 +67,24 @@
   background-color: var(--blue-2);
 }
 
+.btn-adicionar-teste {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0.75rem 1.25rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.btn-adicionar-teste:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+}
+
 .btn-teste {
   background: rgba(43, 143, 251, 0.1);
   color: var(--text);
