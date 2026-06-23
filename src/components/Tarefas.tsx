@@ -5,19 +5,24 @@ import { formatDateTime } from "../utils/dateUtils";
 import { useAuth } from "../context/AuthContext";
 import "./Tarefas.css";
 
-const PRIORIDADES: Array<{ value: TarefaPrioridade; label: string; cor: string }> = [
-  { value: "baixa",   label: "Baixa",   cor: "#22c55e" },
-  { value: "media",   label: "Média",   cor: "#f5c200" },
-  { value: "alta",    label: "Alta",    cor: "#f97316" },
+const PRIORIDADES: Array<{
+  value: TarefaPrioridade;
+  label: string;
+  cor: string;
+}> = [
+  { value: "baixa", label: "Baixa", cor: "#22c55e" },
+  { value: "media", label: "Média", cor: "#f5c200" },
+  { value: "alta", label: "Alta", cor: "#f97316" },
   { value: "critica", label: "Crítica", cor: "#ef4444" },
 ];
 
-const STATUS_LIST: Array<{ value: TarefaStatus; label: string; cor: string }> = [
-  { value: "pendente",     label: "Pendente",     cor: "#9ca3af" },
-  { value: "em_andamento", label: "Em andamento", cor: "#2b8ffb" },
-  { value: "concluida",    label: "Concluído",    cor: "#22c55e" },
-  { value: "cancelada",    label: "Cancelada",    cor: "#ef4444" },
-];
+const STATUS_LIST: Array<{ value: TarefaStatus; label: string; cor: string }> =
+  [
+    { value: "pendente", label: "Pendente", cor: "#ffa500" },
+    { value: "em_andamento", label: "Em andamento", cor: "#2b8ffb" },
+    { value: "concluida", label: "Concluído", cor: "#22c55e" },
+    { value: "cancelada", label: "Cancelada", cor: "#ef4444" },
+  ];
 
 const FORM_VAZIO = {
   tarefa: "",
@@ -62,7 +67,9 @@ export default function Tarefas() {
   const [salvando, setSalvando] = useState(false);
   const [erroSalvar, setErroSalvar] = useState<string | null>(null);
   const [confirmarRemocao, setConfirmarRemocao] = useState<string | null>(null);
-  const [confirmarConclusao, setConfirmarConclusao] = useState<string | null>(null);
+  const [confirmarConclusao, setConfirmarConclusao] = useState<string | null>(
+    null,
+  );
   const primeiroInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -74,9 +81,7 @@ export default function Tarefas() {
 
   useEffect(() => {
     const id = window.setInterval(() => {
-      reconcileTarefasAutomaticas()
-        .then(setTarefas)
-        .catch(console.error);
+      reconcileTarefasAutomaticas().then(setTarefas).catch(console.error);
     }, 60_000);
     return () => window.clearInterval(id);
   }, []);
@@ -151,7 +156,9 @@ export default function Tarefas() {
         updatedAt: agora,
       };
       if (editando) {
-        await salvarLista(tarefas.map((t) => (t.id === editando.id ? tarefa : t)));
+        await salvarLista(
+          tarefas.map((t) => (t.id === editando.id ? tarefa : t)),
+        );
       } else {
         await salvarLista([...tarefas, tarefa]);
       }
@@ -178,7 +185,11 @@ export default function Tarefas() {
       await salvarLista(
         tarefas.map((t) =>
           t.id === confirmarConclusao
-            ? { ...t, status: "concluida" as const, updatedAt: new Date().toISOString() }
+            ? {
+                ...t,
+                status: "concluida" as const,
+                updatedAt: new Date().toISOString(),
+              }
             : t,
         ),
       );
@@ -190,13 +201,17 @@ export default function Tarefas() {
   const tarefasView = useMemo(
     () =>
       tarefas.map((t) => ({
-          ...t,
-          urgente: prazoUrgente(t.prazo),
-          prazoFormatado: t.prazo ? formatDateTime(t.prazo) : "—",
-          dataCriacaoFormatada: t.dataCriacao ? formatDateTime(t.dataCriacao) : "—",
-          prioridadeInfo: PRIORIDADES.find((p) => p.value === t.prioridade) ?? PRIORIDADES[1],
-          statusInfo: STATUS_LIST.find((s) => s.value === t.status) ?? STATUS_LIST[0],
-        })),
+        ...t,
+        urgente: prazoUrgente(t.prazo),
+        prazoFormatado: t.prazo ? formatDateTime(t.prazo) : "—",
+        dataCriacaoFormatada: t.dataCriacao
+          ? formatDateTime(t.dataCriacao)
+          : "—",
+        prioridadeInfo:
+          PRIORIDADES.find((p) => p.value === t.prioridade) ?? PRIORIDADES[1],
+        statusInfo:
+          STATUS_LIST.find((s) => s.value === t.status) ?? STATUS_LIST[0],
+      })),
     [tarefas],
   );
 
@@ -207,7 +222,11 @@ export default function Tarefas() {
       <div className="trf-header">
         <div className="trf-header-left">
           {isAdmin && (
-            <button type="button" className="trf-btn-add" onClick={abrirModalNovo}>
+            <button
+              type="button"
+              className="trf-btn-add"
+              onClick={abrirModalNovo}
+            >
               + Adicionar
             </button>
           )}
@@ -217,7 +236,11 @@ export default function Tarefas() {
           <div className="trf-stat">
             Tarefas pendentes:{" "}
             <strong>
-              {tarefas.filter((t) => t.status === "pendente" || t.status === "em_andamento").length}
+              {
+                tarefas.filter(
+                  (t) => t.status === "pendente" || t.status === "em_andamento",
+                ).length
+              }
             </strong>
           </div>
         </div>
@@ -270,43 +293,66 @@ export default function Tarefas() {
                   <td>{t.chamado || "—"}</td>
                   <td>{t.dataCriacaoFormatada}</td>
                   {isAdmin && (
-                  <td className="trf-td-acoes">
-                    <div className="trf-acoes-inner">
-                      <button
-                        type="button"
-                        className="trf-btn-concluir"
-                        onClick={() => setConfirmarConclusao(t.id)}
-                        title="Concluir tarefa"
-                        aria-label="Concluir tarefa"
-                      >
-                        <svg viewBox="0 0 20 20" fill="currentColor" width="21" height="21">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </button>
-                      <button
-                        type="button"
-                        className="trf-btn-editar"
-                        onClick={() => abrirModalEditar(t)}
-                        title="Editar tarefa"
-                        aria-label="Editar tarefa"
-                      >
-                        <svg viewBox="0 0 20 20" fill="currentColor" width="21" height="21">
-                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                        </svg>
-                      </button>
-                      <button
-                        type="button"
-                        className="trf-btn-remover"
-                        onClick={() => setConfirmarRemocao(t.id)}
-                        title="Remover tarefa"
-                        aria-label="Remover tarefa"
-                      >
-                        <svg viewBox="0 0 20 20" fill="currentColor" width="21" height="21">
-                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
+                    <td className="trf-td-acoes">
+                      <div className="trf-acoes-inner">
+                        <button
+                          type="button"
+                          className="trf-btn-concluir"
+                          onClick={() => setConfirmarConclusao(t.id)}
+                          title="Concluir tarefa"
+                          aria-label="Concluir tarefa"
+                        >
+                          <svg
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            width="21"
+                            height="21"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          className="trf-btn-editar"
+                          onClick={() => abrirModalEditar(t)}
+                          title="Editar tarefa"
+                          aria-label="Editar tarefa"
+                        >
+                          <svg
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            width="21"
+                            height="21"
+                          >
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          className="trf-btn-remover"
+                          onClick={() => setConfirmarRemocao(t.id)}
+                          title="Remover tarefa"
+                          aria-label="Remover tarefa"
+                        >
+                          <svg
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            width="21"
+                            height="21"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
                   )}
                 </tr>
               ))
@@ -336,7 +382,12 @@ export default function Tarefas() {
                 onClick={fecharModal}
                 aria-label="Fechar"
               >
-                <svg viewBox="0 0 20 20" fill="currentColor" width="21" height="21">
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  width="21"
+                  height="21"
+                >
                   <path
                     fillRule="evenodd"
                     d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
@@ -437,7 +488,8 @@ export default function Tarefas() {
                     }}
                     onBlur={(e) => {
                       const v = e.target.value;
-                      if (v && v.split("-")[0].length > 4) setField("prazo", "");
+                      if (v && v.split("-")[0].length > 4)
+                        setField("prazo", "");
                     }}
                   />
                 </div>
@@ -456,7 +508,8 @@ export default function Tarefas() {
                     }}
                     onBlur={(e) => {
                       const v = e.target.value;
-                      if (v && v.split("-")[0].length > 4) setField("dataCriacao", "");
+                      if (v && v.split("-")[0].length > 4)
+                        setField("dataCriacao", "");
                     }}
                   />
                 </div>
@@ -502,7 +555,8 @@ export default function Tarefas() {
               <h3>Concluir tarefa</h3>
             </div>
             <div className="trf-modal-body">
-              Confirmar conclusão desta tarefa? Ela será enviada para o histórico.
+              Confirmar conclusão desta tarefa? Ela será enviada para o
+              histórico.
             </div>
             <div className="trf-modal-footer">
               <button

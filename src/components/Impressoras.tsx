@@ -438,7 +438,7 @@ export default function Impressoras() {
     if (!tonersLoadedRef.current) return;
     if (tonerSaveTimerRef.current) clearTimeout(tonerSaveTimerRef.current);
     tonerSaveTimerRef.current = setTimeout(() => {
-      saveToners(toners).then(setToners).catch(console.error);
+      saveToners(toners).catch(console.error);
     }, 400);
     return () => {
       if (tonerSaveTimerRef.current) clearTimeout(tonerSaveTimerRef.current);

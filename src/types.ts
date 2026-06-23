@@ -43,6 +43,7 @@ export interface InventarioUnidade {
   localizacao: string;
   requerente: string;
   montadoPor: string;
+  problema: string;
   status: InventarioStatus;
   historico: InventarioHistoricoEntry[];
   updatedAt: string;
@@ -139,6 +140,35 @@ export interface Feriado {
   data: string; // ISO "YYYY-MM-DD"
   nome: string;
   comPlantao: boolean;
+  updatedAt: string;
+}
+
+export interface ManutencaoRegistro {
+  id: string;
+  equipamento: string;
+  nm: string;
+  local: string;
+  patrimonio: string;
+  fornecedor: string;
+  sede: string;
+  updatedAt: string;
+}
+
+export type CameraStatus = "online" | "offline" | "reposicionar" | "reposicionada";
+
+export type RatStatus = "Aguardando assinatura" | "Assinado" | "Criar" | "Criado" | "Imprimir" | "";
+
+export interface Camera {
+  id: string;
+  local: string;
+  sede: string;
+  marca: string;
+  modelo: string;
+  ip: string;
+  rat: RatStatus;
+  chamado: string;
+  status: CameraStatus;
+  historico: InventarioHistoricoEntry[];
   updatedAt: string;
 }
 

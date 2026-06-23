@@ -937,6 +937,89 @@ export default function EscalaPlantao() {
     }
   };
 
+  // ─── Exportar para Excel (.xls HTML-table) ───────────────────────
+  const exportarExcel = () => {
+    if (escalas.length === 0) return;
+
+    const ordenadas = [...escalas].sort((a, b) => a.ano - b.ano || a.mes - b.mes);
+
+    // Para cada mês, constrói linhas igual ao EscalaCard: grupos separados por null
+    const blocos = ordenadas.map((escala) => {
+      const grupos = agruparDias(escala.dias);
+      const linhas: Array<{ data: string; nome: string; matricula: string } | null> = [];
+      grupos.forEach((grupo, gi) => {
+        if (gi > 0) linhas.push(null);
+        for (const dia of grupo) {
+          linhas.push({ data: dia.data, nome: dia.nome, matricula: dia.matricula });
+        }
+      });
+      return { titulo: escala.titulo, linhas };
+    });
+
+    const maxLinhas = Math.max(...blocos.map((b) => b.linhas.length), 0);
+
+    const S = {
+      titulo: "font-family:Calibri,Arial,sans-serif;font-size:11pt;font-weight:bold;background:#1e3a5f;color:#ffffff;text-align:center;padding:5px 10px;",
+      data: "font-family:Calibri,Arial,sans-serif;font-size:10pt;color:#555;white-space:nowrap;padding:2px 8px;",
+      nome: "font-family:Calibri,Arial,sans-serif;font-size:10pt;padding:2px 8px;",
+      mat: "font-family:Calibri,Arial,sans-serif;font-size:10pt;color:#888;padding:2px 8px;",
+      sep: "width:18px;",
+    };
+
+    const td = (content: string, style: string) =>
+      `<td style="${style}">${content}</td>`;
+
+    let rows = "";
+
+    // Linha de títulos
+    rows += "<tr>";
+    blocos.forEach(({ titulo }, i) => {
+      rows += td(titulo, S.titulo) + td("", S.titulo) + td("", S.titulo);
+      if (i < blocos.length - 1) rows += td("", S.sep);
+    });
+    rows += "</tr>";
+
+    // Linhas de dados
+    for (let r = 0; r < maxLinhas; r++) {
+      rows += "<tr>";
+      blocos.forEach(({ linhas }, i) => {
+        const linha = r < linhas.length ? linhas[r] : undefined;
+        if (!linha) {
+          // null = separador de grupo; undefined = mês sem mais linhas
+          rows += td("", "") + td("", "") + td("", "");
+        } else {
+          rows += td(formatDiaCurto(linha.data), S.data);
+          rows += td(linha.nome, S.nome);
+          rows += td(linha.matricula, S.mat);
+        }
+        if (i < blocos.length - 1) rows += td("", S.sep);
+      });
+      rows += "</tr>";
+    }
+
+    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office"
+xmlns:x="urn:schemas-microsoft-com:office:excel"
+xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="UTF-8">
+<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets>
+<x:ExcelWorksheet><x:Name>Escala Plantão</x:Name>
+<x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+</head><body>
+<table border="0" cellspacing="0" cellpadding="0">${rows}</table>
+</body></html>`;
+
+    const blob = new Blob(["﻿" + html], {
+      type: "application/vnd.ms-excel;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "escala-plantao.xls";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // ─── Simulação da escala ─────────────────────────────────────────
   const simularDiasNoModal = () => {
     const ano = Number(form.ano);
@@ -977,31 +1060,43 @@ export default function EscalaPlantao() {
                 cadastrados
               </span>
             </div>
-            {isAdmin && (
-              <div className="esc-toolbar-actions">
-                <button
-                  type="button"
-                  className="esc-btn-add"
-                  onClick={abrirModalNovo}
-                >
-                  + Adicionar
-                </button>
+            <div className="esc-toolbar-actions">
+              {isAdmin && (
+                <>
+                  <button
+                    type="button"
+                    className="esc-btn-add"
+                    onClick={abrirModalNovo}
+                  >
+                    + Adicionar
+                  </button>
+                  <button
+                    type="button"
+                    className="esc-btn-sim"
+                    onClick={abrirFeriados}
+                  >
+                    Feriados
+                  </button>
+                  <button
+                    type="button"
+                    className="esc-btn-sim"
+                    onClick={() => setFeriasResumoAberto(true)}
+                  >
+                    Férias
+                  </button>
+                </>
+              )}
+              {escalas.length > 0 && (
                 <button
                   type="button"
                   className="esc-btn-sim"
-                  onClick={abrirFeriados}
+                  onClick={exportarExcel}
+                  title="Exportar escala para Excel"
                 >
-                  Feriados
+                  Exportar Excel
                 </button>
-                <button
-                  type="button"
-                  className="esc-btn-sim"
-                  onClick={() => setFeriasResumoAberto(true)}
-                >
-                  Férias
-                </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {escalas.length === 0 ? (

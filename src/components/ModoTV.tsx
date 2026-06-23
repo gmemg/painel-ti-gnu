@@ -4,6 +4,7 @@ import { Escala, Impressora, InventarioItem } from "../types";
 import {
   reconcileEventosAutomaticos,
   reconcileTarefasAutomaticas,
+  getCameras,
   getEquipamentosPendentes,
   getEscalas,
   getHistorico,
@@ -18,22 +19,28 @@ import { formatDateTime, faltamDoisDiasOuMenos } from "../utils/dateUtils";
 import { EscalaCard } from "./EscalaPlantao";
 import "./ModoTV.css";
 
-const INTERVALO = 30;
-
+const INTERVALO = 45;
 
 /* ─── Status ──────────────────────────────────────────────────────── */
-const TAREFA_STATUS_LABEL: Record<string, string> = {
-  pendente: "Pendente",
-  em_andamento: "Em andamento",
-  concluida: "Concluído",
-  cancelada: "Cancelada",
+const TAREFA_PRIORIDADE_LABEL: Record<string, string> = {
+  baixa: "Baixa",
+  media: "Média",
+  alta: "Alta",
+  critica: "Urgente",
 };
 
-const TAREFA_STATUS_COR: Record<string, string> = {
-  pendente: "#9ca3af",
-  em_andamento: "#2b8ffb",
-  concluida: "#22c55e",
-  cancelada: "#ef4444",
+const TAREFA_PRIORIDADE_COR: Record<string, string> = {
+  baixa: "#9ca3af",
+  media: "#2b8ffb",
+  alta: "#f97316",
+  critica: "#dc2626",
+};
+
+const CAM_STATUS_COR: Record<string, string> = {
+  online: "#22c55e",
+  offline: "#dc2626",
+  reposicionar: "#f97316",
+  reposicionada: "#22c55e",
 };
 
 const INV_STATUS_LABEL: Record<string, string> = {
@@ -50,10 +57,18 @@ const INV_STATUS_COR: Record<string, string> = {
   reservado: "#a855f7",
 };
 
-function StatusBadge({ label, cor }: { label: string; cor: string }) {
+function StatusBadge({
+  label,
+  cor,
+  className,
+}: {
+  label: string;
+  cor: string;
+  className?: string;
+}) {
   return (
     <span
-      className="tv-status-badge"
+      className={["tv-status-badge", className].filter(Boolean).join(" ")}
       style={{
         backgroundColor: cor + "26",
         color: cor,
@@ -111,7 +126,7 @@ interface TelaDef {
   renderCustom?: (rows: Record<string, unknown>[]) => React.ReactNode;
 }
 
-const txt = (v: unknown) => (v ? String(v) : "—");
+const txt = (v: unknown) => (v ? String(v) : "");
 
 /* Colunas compartilhadas para telas baseadas em Evento */
 const COLUNAS_EVENTO: Coluna[] = [
@@ -133,12 +148,12 @@ const COLUNAS_EVENTO: Coluna[] = [
   },
   { titulo: "Local", largura: "10%", render: (r) => txt(r.localEvento) },
   {
-    titulo: "Plantão TI",
+    titulo: "Plantão T.I",
     largura: "10%",
     render: (r) => txt(r.funcionarioPlantao),
   },
   {
-    titulo: "Plantão Eventos",
+    titulo: "Plantão Eve.",
     largura: "10%",
     render: (r) => txt(r.plantaoEventos),
   },
@@ -179,8 +194,16 @@ const COLUNAS_HISTORICO: Coluna[] = [
     },
   },
   { titulo: "Local", largura: "10%", render: (r) => txt(r.localEvento) },
-  { titulo: "Plantão TI", largura: "9%", render: (r) => txt(r.funcionarioPlantao) },
-  { titulo: "Plantão Eventos", largura: "9%", render: (r) => txt(r.plantaoEventos) },
+  {
+    titulo: "Plantão TI",
+    largura: "9%",
+    render: (r) => txt(r.funcionarioPlantao),
+  },
+  {
+    titulo: "Plantão Eventos",
+    largura: "9%",
+    render: (r) => txt(r.plantaoEventos),
+  },
   {
     titulo: "Equipamentos",
     largura: "13%",
@@ -194,9 +217,12 @@ const COLUNAS_HISTORICO: Coluna[] = [
     largura: "9%",
     render: (r) => {
       const key = r.concluido ? "concluido" : r.removido ? "removido" : null;
-      if (!key) return "—";
+      if (!key) return "";
       return (
-        <StatusBadge label={HIST_STATUS_LABEL[key]} cor={HIST_STATUS_COR[key]} />
+        <StatusBadge
+          label={HIST_STATUS_LABEL[key]}
+          cor={HIST_STATUS_COR[key]}
+        />
       );
     },
   },
@@ -207,29 +233,30 @@ const COLUNAS_TAREFA: Coluna[] = [
   { titulo: "Tarefa", classe: "tv-td-destaque", render: (r) => txt(r.tarefa) },
   {
     titulo: "Descrição",
+    largura: "35%",
     classe: "tv-td-desc",
     render: (r) => txt(r.descricao),
   },
   {
-    titulo: "Status",
+    titulo: "Prioridade",
+    largura: "10%",
     render: (r) => (
       <StatusBadge
-        label={TAREFA_STATUS_LABEL[String(r.status)] ?? String(r.status)}
-        cor={TAREFA_STATUS_COR[String(r.status)] ?? "#9ca3af"}
+        label={
+          TAREFA_PRIORIDADE_LABEL[String(r.prioridade)] ?? String(r.prioridade)
+        }
+        cor={TAREFA_PRIORIDADE_COR[String(r.prioridade)] ?? "#9ca3af"}
+        className={r.prioridade === "critica" ? "tv-badge-urgente" : undefined}
       />
     ),
   },
   { titulo: "Responsável", render: (r) => txt(r.responsavel) },
   {
     titulo: "Prazo",
-    render: (r) => (r.prazo ? formatDateTime(String(r.prazo)) : "—"),
+    largura: "10%",
+    render: (r) => (r.prazo ? formatDateTime(String(r.prazo)) : ""),
   },
-  { titulo: "Chamado", render: (r) => txt(r.chamado) },
-  {
-    titulo: "Criado em",
-    render: (r) =>
-      r.dataCriacao ? formatDateTime(String(r.dataCriacao)) : "—",
-  },
+  { titulo: "Chamado", largura: "10%", render: (r) => txt(r.chamado) },
 ];
 
 const asRows = <T,>(arr: T[]) => arr as unknown as Record<string, unknown>[];
@@ -255,7 +282,19 @@ const CATALOGO: TelaDef[] = [
     colunas: COLUNAS_TAREFA,
     vazioMsg: "Nenhuma tarefa pendente.",
     isUrgent: (r) => faltamDoisDiasOuMenos(String(r.prazo ?? "")),
-    load: async () => asRows(await reconcileTarefasAutomaticas()),
+    load: async () => {
+      const ORDEM: Record<string, number> = {
+        critica: 0,
+        alta: 1,
+        media: 2,
+        baixa: 3,
+      };
+      const tarefas = await reconcileTarefasAutomaticas();
+      tarefas.sort(
+        (a, b) => (ORDEM[a.prioridade] ?? 9) - (ORDEM[b.prioridade] ?? 9),
+      );
+      return asRows(tarefas);
+    },
   },
   {
     id: "equipamentos",
@@ -282,7 +321,7 @@ const CATALOGO: TelaDef[] = [
       { titulo: "Modelo", largura: "14%", render: (r) => txt(r.modelo) },
       { titulo: "Nº Série", largura: "12%", render: (r) => txt(r.numeroSerie) },
       { titulo: "IP", largura: "15%", render: (r) => txt(r.ip) },
-      { titulo: "MAC", largura: "15%", render: (r) => txt(r.mac) },
+      { titulo: "MAC", largura: "17%", render: (r) => txt(r.mac) },
       {
         titulo: "Toner",
         largura: "20%",
@@ -311,7 +350,11 @@ const CATALOGO: TelaDef[] = [
     colunas: COLUNAS_HISTORICO,
     vazioMsg: "Nenhuma montagem no histórico.",
     rowClass: (r) =>
-      r.concluido ? "tv-linha-concluida" : r.removido ? "tv-linha-removida" : undefined,
+      r.concluido
+        ? "tv-linha-concluida"
+        : r.removido
+          ? "tv-linha-removida"
+          : undefined,
     load: async () => asRows(await getHistorico()),
   },
   {
@@ -321,6 +364,68 @@ const CATALOGO: TelaDef[] = [
     colunas: COLUNAS_TAREFA,
     vazioMsg: "Nenhuma tarefa no histórico.",
     load: async () => asRows(await getHistoricoTarefas()),
+  },
+  {
+    id: "cameras",
+    label: "CÂMERAS",
+    accent: "azul",
+    vazioMsg: "Nenhuma câmera cadastrada.",
+    colunas: [
+      {
+        titulo: "Local",
+        largura: "16%",
+        classe: "tv-td-destaque",
+        render: (r) => txt(r.local),
+      },
+      {
+        titulo: "Sede",
+        largura: "9%",
+        classe: "tv-td-center",
+        render: (r) => txt(r.sede),
+      },
+      { titulo: "Marca", largura: "9%", render: (r) => txt(r.marca) },
+      { titulo: "Modelo", largura: "13%", render: (r) => txt(r.modelo) },
+      { titulo: "IP", largura: "12%", render: (r) => txt(r.ip) },
+      {
+        titulo: "RAT",
+        largura: "13%",
+        classe: "tv-td-center",
+        render: (r) => txt(r.rat),
+      },
+      {
+        titulo: "Chamado",
+        largura: "9%",
+        classe: "tv-td-center",
+        render: (r) => txt(r.chamado),
+      },
+      {
+        titulo: "Status",
+        largura: "11%",
+        render: (r) => (
+          <StatusBadge
+            label={
+              String(r.status) === "online"
+                ? "Online"
+                : String(r.status) === "reposicionar"
+                  ? "Reposicionar"
+                  : "Offline"
+            }
+            cor={CAM_STATUS_COR[String(r.status)] ?? "#9ca3af"}
+          />
+        ),
+      },
+    ],
+    load: async () => {
+      const ORDEM: Record<string, number> = {
+        offline: 0,
+        reposicionar: 1,
+        reposicionada: 2,
+        online: 3,
+      };
+      const cams = await getCameras();
+      cams.sort((a, b) => (ORDEM[a.status] ?? 9) - (ORDEM[b.status] ?? 9));
+      return asRows(cams);
+    },
   },
   {
     id: "inventario",
@@ -334,30 +439,35 @@ const CATALOGO: TelaDef[] = [
         classe: "tv-td-destaque",
         render: (r) => txt(r.item),
       },
-      { titulo: "Modelo", largura: "14%", render: (r) => txt(r.modelo) },
+      { titulo: "Modelo", largura: "13%", render: (r) => txt(r.modelo) },
       {
         titulo: "Patrimônio",
-        largura: "12%",
+        largura: "11%",
         render: (r) => txt(r.patrimonio),
       },
       {
         titulo: "Localização",
-        largura: "14%",
+        largura: "13%",
         render: (r) => txt(r.localizacao),
       },
       {
         titulo: "Requerente",
-        largura: "13%",
+        largura: "11%",
         render: (r) => txt(r.requerente),
       },
       {
         titulo: "Montado por",
-        largura: "13%",
+        largura: "11%",
         render: (r) => txt(r.montadoPor),
       },
       {
+        titulo: "Problema",
+        largura: "9%",
+        render: (r) => txt(r.problema),
+      },
+      {
         titulo: "Status",
-        largura: "12%",
+        largura: "10%",
         render: (r) =>
           r.status ? (
             <StatusBadge
@@ -371,11 +481,14 @@ const CATALOGO: TelaDef[] = [
     ],
     load: async () => {
       const itens: InventarioItem[] = await getInventario();
-      return itens.flatMap((item) =>
-        item.unidades.length > 0
-          ? item.unidades.map((u) => ({ item: item.item, ...u }))
-          : [{ item: item.item }],
-      ) as Record<string, unknown>[];
+      return itens.flatMap((item) => {
+        const unidades = [...item.unidades].sort((a, b) =>
+          a.modelo.localeCompare(b.modelo, "pt-BR"),
+        );
+        return unidades.length > 0
+          ? unidades.map((u) => ({ item: item.item, ...u }))
+          : [{ item: item.item }];
+      }) as Record<string, unknown>[];
     },
   },
 ];
@@ -490,6 +603,17 @@ export default function ModoTV() {
     });
   }, [carregarTela]);
 
+  const voltarTela = useCallback(() => {
+    const ativas = telasAtivasRef.current;
+    if (ativas.length === 0) return;
+    setTela((atual) => {
+      const idx = ativas.indexOf(atual);
+      const anterior = ativas[(idx - 1 + ativas.length) % ativas.length];
+      carregarTela(anterior);
+      return anterior;
+    });
+  }, [carregarTela]);
+
   useEffect(() => {
     const id = window.setInterval(() => {
       setSegundos((prev) => {
@@ -503,6 +627,11 @@ export default function ModoTV() {
     return () => window.clearInterval(id);
   }, [avancarTela]);
 
+  const handleBack = useCallback(() => {
+    voltarTela();
+    setSegundos(INTERVALO);
+  }, [voltarTela]);
+
   const handleSkip = useCallback(() => {
     avancarTela();
     setSegundos(INTERVALO);
@@ -512,17 +641,35 @@ export default function ModoTV() {
   useEffect(() => {
     if (tbodyWrapRef.current) tbodyWrapRef.current.scrollTop = 0;
 
-    // pauseTicks > 0 significa que está aguardando no final antes de voltar ao topo
-    let pauseTicks = 0;
     const PAUSE_TICKS = 62; // 62 × 40ms ≈ 2.5s de pausa no fim
+    const SCROLL_BACK_TICKS = 75; // 75 × 40ms = 3s de retorno ao topo
+    let delayTicks = 125; // 125 × 40ms = 5s de espera inicial
+    let pauseTicks = 0;
+    let scrollBackTicks = 0;
+    let scrollBackStartPos = 0;
 
     const id = setInterval(() => {
       const el = tbodyWrapRef.current;
       if (!el) return;
 
+      if (delayTicks > 0) {
+        delayTicks--;
+        return;
+      }
+
+      if (scrollBackTicks > 0) {
+        scrollBackTicks--;
+        el.scrollTop =
+          scrollBackStartPos * (scrollBackTicks / SCROLL_BACK_TICKS);
+        return;
+      }
+
       if (pauseTicks > 0) {
         pauseTicks--;
-        if (pauseTicks === 0) el.scrollTop = 0;
+        if (pauseTicks === 0) {
+          scrollBackStartPos = el.scrollTop;
+          scrollBackTicks = SCROLL_BACK_TICKS;
+        }
         return;
       }
 
@@ -629,6 +776,20 @@ export default function ModoTV() {
               <path
                 fillRule="evenodd"
                 d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.53 1.53 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
+          <button
+            className="tv-skip"
+            onClick={handleBack}
+            title="Tela anterior"
+            aria-label="Tela anterior"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+              <path
+                fillRule="evenodd"
+                d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
                 clipRule="evenodd"
               />
             </svg>

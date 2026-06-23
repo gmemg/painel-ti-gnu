@@ -16,6 +16,8 @@ import Tarefas from "./components/Tarefas";
 import HistoricoTarefas from "./components/HistoricoTarefas";
 import ModoTV from "./components/ModoTV";
 import EquipamentosPendentes from "./components/EquipamentosPendentes";
+import Cameras from "./components/Cameras";
+import NumeroManutencao from "./components/NumeroManutencao";
 import Login from "./components/Login";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import "./App.css";
@@ -282,6 +284,22 @@ function AppLayout() {
               >
                 Escala Plantão
               </NavLink>
+              <NavLink
+                to="/cameras"
+                className={({ isActive }) =>
+                  `side-nav-link${isActive ? " active" : ""}`
+                }
+              >
+                Câmeras
+              </NavLink>
+              <NavLink
+                to="/numero-manutencao"
+                className={({ isActive }) =>
+                  `side-nav-link${isActive ? " active" : ""}`
+                }
+              >
+                NM
+              </NavLink>
             </nav>
           </div>
         </aside>
@@ -299,6 +317,8 @@ function AppLayout() {
             <Route path="/escala-plantao" element={<EscalaPlantao />} />
             <Route path="/tarefas" element={<Tarefas />} />
             <Route path="/historico-tarefas" element={<HistoricoTarefas />} />
+            <Route path="/cameras" element={<Cameras />} />
+            <Route path="/numero-manutencao" element={<NumeroManutencao />} />
           </Routes>
         </main>
       </div>

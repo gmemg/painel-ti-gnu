@@ -55,7 +55,9 @@
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
-  transition: opacity 0.15s, transform 0.12s;
+  transition:
+    opacity 0.15s,
+    transform 0.12s;
   white-space: nowrap;
 }
 
@@ -96,7 +98,10 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: box-shadow 0.2s, border-color 0.2s, transform 0.15s;
+  transition:
+    box-shadow 0.2s,
+    border-color 0.2s,
+    transform 0.15s;
 }
 
 html[data-theme="light"] .imp-card {
@@ -137,7 +142,7 @@ html[data-theme="light"] .imp-card {
 
 .imp-card-subtitle {
   font-size: 0.72rem;
-  color: var(--text-muted);
+  color: #008ed6;
   font-weight: 400;
   white-space: nowrap;
   overflow: hidden;
@@ -161,7 +166,10 @@ html[data-theme="light"] .imp-card {
   border-radius: 0.4rem;
   color: var(--text-muted);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
 }
 
 .imp-btn-icon:hover {
@@ -323,7 +331,9 @@ html[data-theme="light"] .imp-card {
 }
 
 @keyframes imp-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .imp-erro {
@@ -346,8 +356,12 @@ html[data-theme="light"] .imp-card {
 }
 
 @keyframes imp-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* ─── Modal ───────────────────────────────────────────────────── */
@@ -364,8 +378,14 @@ html[data-theme="light"] .imp-card {
 }
 
 @keyframes imp-slide-up {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .imp-modal-confirm {
@@ -397,7 +417,9 @@ html[data-theme="light"] .imp-card {
   border-radius: 0.35rem;
   color: var(--text-muted);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 .imp-modal-close:hover {
@@ -450,7 +472,9 @@ html[data-theme="light"] .imp-card {
   padding: 0.45rem 0.7rem;
   color: var(--text);
   font-size: 0.85rem;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
   width: 100%;
 }
 
@@ -589,7 +613,9 @@ html[data-theme="light"] .imp-card {
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 .imp-btn-cancel:hover {
@@ -653,7 +679,10 @@ html[data-theme="light"] .imp-card {
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
   white-space: nowrap;
 }
 
@@ -688,7 +717,10 @@ html[data-theme="light"] .imp-card {
   font-size: 0.82rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
   white-space: nowrap;
 }
 
@@ -749,7 +781,9 @@ html[data-theme="light"] .toner-panel {
   font-size: 0.73rem;
   font-weight: 500;
   cursor: pointer;
-  transition: opacity 0.15s, transform 0.12s;
+  transition:
+    opacity 0.15s,
+    transform 0.12s;
 }
 
 .toner-btn-add:hover {
@@ -827,7 +861,10 @@ html[data-theme="light"] .toner-panel {
   background: transparent;
   color: var(--text);
   font-size: 0.79rem;
-  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    box-shadow 0.15s;
 }
 
 .toner-input:hover {
@@ -892,7 +929,10 @@ html[data-theme="light"] .toner-panel {
   color: var(--text-muted);
   font-size: 0.65rem;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
 }
 
 .toner-btn-remove:hover {

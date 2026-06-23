@@ -86,7 +86,10 @@
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.18);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: background 0.3s, transform 0.3s, border-color 0.3s;
+  transition:
+    background 0.3s,
+    transform 0.3s,
+    border-color 0.3s;
 }
 
 .tv-dot.tv-dot-active {
@@ -131,7 +134,10 @@
   border-radius: 6px;
   color: rgba(255, 255, 255, 0.65);
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s, color 0.2s;
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    color 0.2s;
   touch-action: auto;
 }
 
@@ -153,7 +159,11 @@
   border-radius: 6px;
   color: rgba(255, 255, 255, 0.65);
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.4s;
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    color 0.2s,
+    transform 0.4s;
   touch-action: auto;
 }
 
@@ -185,7 +195,10 @@
   padding: 0.25rem 0.75rem;
   border-radius: 6px;
   font-weight: 600;
-  transition: background 0.2s, border-color 0.2s, color 0.2s;
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    color 0.2s;
   touch-action: auto;
 }
 
@@ -314,7 +327,10 @@
   font-size: 2rem;
   line-height: 1;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s, color 0.2s;
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    color 0.2s;
   touch-action: auto;
 }
 
@@ -367,13 +383,17 @@
 
 .tv-tabela th {
   padding: 0.65rem 0.85rem;
-  text-align: left;
-  font-weight: 500;
+  text-align: center;
+  font-weight: 700;
   font-size: 0.9rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #ffffff;
-  background: linear-gradient(135deg, rgb(43, 143, 251) 0%, rgb(21, 100, 192) 100%);
+  background: linear-gradient(
+    135deg,
+    rgb(43, 143, 251) 0%,
+    rgb(21, 100, 192) 100%
+  );
   border-bottom: 2px solid rgb(43, 143, 251);
   white-space: normal;
   word-break: break-word;
@@ -386,27 +406,47 @@
 
 /* variações de cor do cabeçalho — mesmo estilo, hues diferentes por aba */
 .tv-head-laranja th {
-  background: linear-gradient(135deg, rgb(251, 146, 43) 0%, rgb(192, 100, 21) 100%);
+  background: linear-gradient(
+    135deg,
+    rgb(251, 146, 43) 0%,
+    rgb(192, 100, 21) 100%
+  );
   border-bottom: 2px solid rgb(251, 146, 43);
 }
 
 .tv-head-ciano th {
-  background: linear-gradient(135deg, rgb(34, 211, 238) 0%, rgb(14, 116, 144) 100%);
+  background: linear-gradient(
+    135deg,
+    rgb(34, 211, 238) 0%,
+    rgb(14, 116, 144) 100%
+  );
   border-bottom: 2px solid rgb(34, 211, 238);
 }
 
 .tv-head-verde th {
-  background: linear-gradient(135deg, rgb(34, 197, 94) 0%, rgb(21, 128, 61) 100%);
+  background: linear-gradient(
+    135deg,
+    rgb(34, 197, 94) 0%,
+    rgb(21, 128, 61) 100%
+  );
   border-bottom: 2px solid rgb(34, 197, 94);
 }
 
 .tv-head-roxo th {
-  background: linear-gradient(135deg, rgb(168, 85, 247) 0%, rgb(109, 40, 217) 100%);
+  background: linear-gradient(
+    135deg,
+    rgb(168, 85, 247) 0%,
+    rgb(109, 40, 217) 100%
+  );
   border-bottom: 2px solid rgb(168, 85, 247);
 }
 
 .tv-head-indigo th {
-  background: linear-gradient(135deg, rgb(99, 102, 241) 0%, rgb(55, 48, 163) 100%);
+  background: linear-gradient(
+    135deg,
+    rgb(99, 102, 241) 0%,
+    rgb(55, 48, 163) 100%
+  );
   border-bottom: 2px solid rgb(99, 102, 241);
 }
 
@@ -441,8 +481,8 @@
 .tv-tabela td {
   padding: 0.65rem 0.85rem;
   font-size: 1rem;
-  color: rgba(255, 255, 255, 0.88);
-  font-weight: 400;
+  color: #ffffff;
+  font-weight: 700;
   text-transform: uppercase;
   white-space: normal;
   word-break: break-word;
@@ -460,19 +500,28 @@
 .tv-td-destaque {
   color: #ffffff !important;
   font-size: 1.05rem !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
+}
+
+/* coluna com conteúdo centralizado */
+.tv-td-center {
+  text-align: center !important;
 }
 
 /* coluna de texto longo (equipamentos / descrição) */
 .tv-td-desc {
-  text-transform: none !important;
-  font-weight: 400 !important;
+  text-transform: uppercase !important;
+  font-weight: 700 !important;
   font-size: 0.95rem !important;
   color: #ffffff !important;
   line-height: 1.35 !important;
 }
 
 /* ─── Badge de status ────────────────────────────────────────────── */
+.tv-tabela td:has(.tv-status-badge) {
+  text-align: center;
+}
+
 .tv-status-badge {
   display: inline-flex;
   align-items: center;
@@ -493,9 +542,23 @@
   animation: tvPiscarFundo 0.9s ease-in-out infinite;
 }
 
+@keyframes tvPiscarBadge {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.25; }
+}
+
+.tv-badge-urgente {
+  animation: tvPiscarBadge 0.8s ease-in-out infinite;
+}
+
 @keyframes tvPiscarFundo {
-  0%, 100% { background: rgba(200, 0, 0, 0.28); }
-  50%       { background: rgba(255, 0, 0, 0.65); }
+  0%,
+  100% {
+    background: rgba(200, 0, 0, 0.28);
+  }
+  50% {
+    background: rgba(255, 0, 0, 0.65);
+  }
 }
 
 /* ─── Linhas de histórico (concluído / removido) ─────────────────── */
@@ -574,7 +637,9 @@
   border-radius: 6px;
   color: rgba(255, 255, 255, 0.55);
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+  transition:
+    background 0.2s,
+    color 0.2s;
 }
 
 .tv-cfg-close:hover {
@@ -652,7 +717,10 @@
   color: rgba(255, 255, 255, 0.6);
   font-size: 0.7rem;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border-color 0.2s;
 }
 
 .tv-cfg-mover:hover:not(:disabled) {
@@ -681,7 +749,10 @@
   font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s, color 0.2s;
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    color 0.2s;
 }
 
 .tv-cfg-cancel {

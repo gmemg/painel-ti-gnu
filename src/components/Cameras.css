@@ -1,0 +1,49 @@
+.cameras-ut-head,
+.cameras-ut-row {
+  grid-template-columns: 1.5rem 8rem 1fr 1fr 1fr 1fr 6rem 10.5rem 6rem 8.5rem 5.5rem;
+  min-width: 980px;
+}
+
+.status-badge.status-online,
+select.status-select.status-online {
+  background-color: rgba(34, 197, 94, 0.16);
+  color: #1e8f4b;
+  border-color: rgba(34, 197, 94, 0.25);
+}
+
+.status-badge.status-offline,
+select.status-select.status-offline {
+  background-color: rgba(239, 68, 68, 0.16);
+  color: #dc2626;
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+select.status-select.status-online {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231e8f4b' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+}
+
+select.status-select.status-offline {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23dc2626' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+}
+
+.status-badge.status-reposicionar,
+select.status-select.status-reposicionar {
+  background-color: rgba(249, 115, 22, 0.16);
+  color: #c2570a;
+  border-color: rgba(249, 115, 22, 0.25);
+}
+
+select.status-select.status-reposicionar {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c2570a' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+}
+
+.status-badge.status-reposicionada,
+select.status-select.status-reposicionada {
+  background-color: rgba(34, 197, 94, 0.16);
+  color: #1e8f4b;
+  border-color: rgba(34, 197, 94, 0.25);
+}
+
+select.status-select.status-reposicionada {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231e8f4b' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+}

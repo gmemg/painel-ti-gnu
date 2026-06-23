@@ -178,9 +178,14 @@ const initDatabase = async () => {
       localizacao TEXT,
       requerente TEXT,
       montado_por TEXT,
+      quantidade TEXT DEFAULT '',
       status TEXT NOT NULL,
       updated_at TIMESTAMP NOT NULL
     );
+
+    ALTER TABLE inventario_unidades ADD COLUMN IF NOT EXISTS quantidade TEXT DEFAULT '';
+    ALTER TABLE inventario_itens ADD COLUMN IF NOT EXISTS position INTEGER DEFAULT 0;
+    ALTER TABLE inventario_unidades ADD COLUMN IF NOT EXISTS position INTEGER DEFAULT 0;
 
     CREATE TABLE IF NOT EXISTS inventario_historico (
       id TEXT PRIMARY KEY,
@@ -289,6 +294,39 @@ const initDatabase = async () => {
       com_plantao BOOLEAN NOT NULL DEFAULT false,
       updated_at TIMESTAMP NOT NULL
     );
+
+    DROP TABLE IF EXISTS cameras_historico;
+    DROP TABLE IF EXISTS cameras_unidades;
+    DROP TABLE IF EXISTS cameras_itens;
+
+    CREATE TABLE IF NOT EXISTS cameras (
+      id TEXT PRIMARY KEY,
+      local_texto TEXT DEFAULT '',
+      sede TEXT DEFAULT '',
+      marca TEXT DEFAULT '',
+      modelo TEXT DEFAULT '',
+      ip TEXT DEFAULT '',
+      rat TEXT DEFAULT '',
+      chamado TEXT DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'online',
+      historico TEXT NOT NULL DEFAULT '[]',
+      updated_at TIMESTAMP NOT NULL
+    );
+
+    ALTER TABLE cameras ADD COLUMN IF NOT EXISTS chamado TEXT DEFAULT '';
+
+    CREATE TABLE IF NOT EXISTS manutencao_registros (
+      id TEXT PRIMARY KEY,
+      equipamento TEXT DEFAULT '',
+      nm TEXT DEFAULT '',
+      local_texto TEXT DEFAULT '',
+      patrimonio TEXT DEFAULT '',
+      fornecedor TEXT DEFAULT '',
+      sede TEXT DEFAULT '',
+      updated_at TIMESTAMP NOT NULL
+    );
+
+    ALTER TABLE manutencao_registros ADD COLUMN IF NOT EXISTS sede TEXT DEFAULT '';
 
     CREATE TABLE IF NOT EXISTS tv_config (
       id TEXT PRIMARY KEY,
@@ -609,10 +647,10 @@ app.post(
 app.get("/api/inventario", async (_req, res, next) => {
   try {
     const itensResult = await pool.query(
-      "SELECT * FROM inventario_itens ORDER BY updated_at ASC",
+      "SELECT * FROM inventario_itens ORDER BY position ASC, updated_at ASC",
     );
     const unidadesResult = await pool.query(
-      "SELECT * FROM inventario_unidades ORDER BY updated_at ASC",
+      "SELECT * FROM inventario_unidades ORDER BY position ASC, updated_at ASC",
     );
     const historicoResult = await pool.query(
       "SELECT * FROM inventario_historico ORDER BY data DESC",
@@ -639,6 +677,7 @@ app.get("/api/inventario", async (_req, res, next) => {
         localizacao: unidade.localizacao || "",
         requerente: unidade.requerente || "",
         montadoPor: unidade.montado_por || "",
+        problema: unidade.quantidade || "",
         status: unidade.status,
         historico: historicoPorUnidade.get(unidade.id) || [],
         updatedAt: new Date(unidade.updated_at).toISOString(),
@@ -667,20 +706,20 @@ app.put("/api/inventario", async (req, res, next) => {
     await client.query("BEGIN");
     await client.query("DELETE FROM inventario_itens");
 
-    for (const item of itens) {
+    for (const [itemIdx, item] of itens.entries()) {
       await client.query(
-        "INSERT INTO inventario_itens (id, item, updated_at) VALUES ($1, $2, $3)",
-        [item.id, item.item, item.updatedAt],
+        "INSERT INTO inventario_itens (id, item, updated_at, position) VALUES ($1, $2, $3, $4)",
+        [item.id, item.item, item.updatedAt, itemIdx],
       );
 
-      for (const unidade of item.unidades || []) {
+      for (const [uIdx, unidade] of (item.unidades || []).entries()) {
         await client.query(
           `
             INSERT INTO inventario_unidades (
               id, item_id, modelo, patrimonio, localizacao, requerente,
-              montado_por, status, updated_at
+              montado_por, quantidade, status, updated_at, position
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
           `,
           [
             unidade.id,
@@ -690,8 +729,10 @@ app.put("/api/inventario", async (req, res, next) => {
             unidade.localizacao || "",
             unidade.requerente || "",
             unidade.montadoPor || "",
+            unidade.problema || "",
             unidade.status,
             unidade.updatedAt,
+            uIdx,
           ],
         );
 
@@ -716,6 +757,81 @@ app.put("/api/inventario", async (req, res, next) => {
     client.release();
   }
 });
+const rowToCamera = (row) => ({
+  id: row.id,
+  local: row.local_texto || "",
+  sede: row.sede || "",
+  marca: row.marca || "",
+  modelo: row.modelo || "",
+  ip: row.ip || "",
+  rat: row.rat || "",
+  chamado: row.chamado || "",
+  status: row.status,
+  historico: (() => { try { return JSON.parse(row.historico || "[]"); } catch { return []; } })(),
+  updatedAt: new Date(row.updated_at).toISOString(),
+});
+
+app.get("/api/cameras", async (_req, res, next) => {
+  try {
+    const result = await pool.query("SELECT * FROM cameras ORDER BY updated_at ASC");
+    res.json(result.rows.map(rowToCamera));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put("/api/cameras", async (req, res, next) => {
+  const cameras = req.body || [];
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const ids = cameras.map((c) => c.id);
+    if (ids.length > 0) {
+      await client.query("DELETE FROM cameras WHERE NOT (id = ANY($1::text[]))", [ids]);
+    } else {
+      await client.query("DELETE FROM cameras");
+    }
+    for (const c of cameras) {
+      await client.query(
+        `INSERT INTO cameras (id, local_texto, sede, marca, modelo, ip, rat, chamado, status, historico, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         ON CONFLICT (id) DO UPDATE SET
+           local_texto = EXCLUDED.local_texto,
+           sede = EXCLUDED.sede,
+           marca = EXCLUDED.marca,
+           modelo = EXCLUDED.modelo,
+           ip = EXCLUDED.ip,
+           rat = EXCLUDED.rat,
+           chamado = EXCLUDED.chamado,
+           status = EXCLUDED.status,
+           historico = EXCLUDED.historico,
+           updated_at = EXCLUDED.updated_at`,
+        [
+          c.id,
+          c.local || "",
+          c.sede || "",
+          c.marca || "",
+          c.modelo || "",
+          c.ip || "",
+          c.rat || "",
+          c.chamado || "",
+          c.status || "online",
+          JSON.stringify(c.historico || []),
+          c.updatedAt,
+        ],
+      );
+    }
+    await client.query("COMMIT");
+    const result = await pool.query("SELECT * FROM cameras ORDER BY updated_at ASC");
+    res.json(result.rows.map(rowToCamera));
+  } catch (error) {
+    await client.query("ROLLBACK");
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+
 app.get("/api/impressoras", async (_req, res, next) => {
   try {
     const result = await pool.query(
@@ -966,7 +1082,7 @@ app.put("/api/feriados", async (req, res, next) => {
 app.get("/api/toners", async (_req, res, next) => {
   try {
     const result = await pool.query(
-      "SELECT * FROM toner_registros ORDER BY updated_at ASC",
+      "SELECT * FROM toner_registros ORDER BY id ASC",
     );
     res.json(result.rows.map(rowToTonerRegistro));
   } catch (error) {
@@ -1014,9 +1130,82 @@ app.put("/api/toners", async (req, res, next) => {
     }
     await client.query("COMMIT");
     const result = await pool.query(
-      "SELECT * FROM toner_registros ORDER BY updated_at ASC",
+      "SELECT * FROM toner_registros ORDER BY id ASC",
     );
     res.json(result.rows.map(rowToTonerRegistro));
+  } catch (error) {
+    await client.query("ROLLBACK");
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+
+const rowToManutencao = (row) => ({
+  id: row.id,
+  equipamento: row.equipamento || "",
+  nm: row.nm || "",
+  local: row.local_texto || "",
+  patrimonio: row.patrimonio || "",
+  fornecedor: row.fornecedor || "",
+  sede: row.sede || "",
+  updatedAt: new Date(row.updated_at).toISOString(),
+});
+
+app.get("/api/manutencao", async (_req, res, next) => {
+  try {
+    const result = await pool.query(
+      "SELECT * FROM manutencao_registros ORDER BY updated_at ASC",
+    );
+    res.json(result.rows.map(rowToManutencao));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put("/api/manutencao", async (req, res, next) => {
+  const registros = req.body || [];
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const ids = registros.map((r) => r.id);
+    if (ids.length > 0) {
+      await client.query(
+        "DELETE FROM manutencao_registros WHERE NOT (id = ANY($1::text[]))",
+        [ids],
+      );
+    } else {
+      await client.query("DELETE FROM manutencao_registros");
+    }
+    for (const r of registros) {
+      await client.query(
+        `INSERT INTO manutencao_registros (id, equipamento, nm, local_texto, patrimonio, fornecedor, sede, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (id) DO UPDATE SET
+           equipamento = EXCLUDED.equipamento,
+           nm = EXCLUDED.nm,
+           local_texto = EXCLUDED.local_texto,
+           patrimonio = EXCLUDED.patrimonio,
+           fornecedor = EXCLUDED.fornecedor,
+           sede = EXCLUDED.sede,
+           updated_at = EXCLUDED.updated_at`,
+        [
+          r.id,
+          r.equipamento || "",
+          r.nm || "",
+          r.local || "",
+          r.patrimonio || "",
+          r.fornecedor || "",
+          r.sede || "",
+          r.updatedAt,
+        ],
+      );
+    }
+    await client.query("COMMIT");
+    const result = await pool.query(
+      "SELECT * FROM manutencao_registros ORDER BY updated_at ASC",
+    );
+    res.json(result.rows.map(rowToManutencao));
   } catch (error) {
     await client.query("ROLLBACK");
     next(error);

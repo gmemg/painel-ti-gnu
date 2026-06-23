@@ -1,9 +1,11 @@
 import {
+  Camera,
   Escala,
   Evento,
   Feriado,
   Impressora,
   InventarioItem,
+  ManutencaoRegistro,
   MembroEquipe,
   Tarefa,
   TonerRegistro,
@@ -298,6 +300,26 @@ export const saveFeriados = (lista: Feriado[]): Promise<Feriado[]> =>
   requestJson<Feriado[]>("/feriados", {
     method: "PUT",
     body: JSON.stringify(lista),
+  });
+
+export const getCameras = (): Promise<Camera[]> =>
+  requestJson<Camera[]>("/cameras");
+
+export const saveCameras = (cameras: Camera[]): Promise<Camera[]> =>
+  requestJson<Camera[]>("/cameras", {
+    method: "PUT",
+    body: JSON.stringify(cameras),
+  });
+
+export const getManutencao = (): Promise<ManutencaoRegistro[]> =>
+  requestJson<ManutencaoRegistro[]>("/manutencao");
+
+export const saveManutencao = (
+  registros: ManutencaoRegistro[],
+): Promise<ManutencaoRegistro[]> =>
+  requestJson<ManutencaoRegistro[]>("/manutencao", {
+    method: "PUT",
+    body: JSON.stringify(registros),
   });
 
 export const getToners = (): Promise<TonerRegistro[]> =>

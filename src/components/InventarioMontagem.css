@@ -557,6 +557,25 @@ html[data-theme="light"] .inventario-card {
   overflow: hidden;
 }
 
+.inventario-card-body.is-collapsed {
+  display: none;
+}
+
+.inventario-card:has(.inventario-card-body.is-collapsed) .inventario-card-header {
+  border-bottom-color: transparent;
+}
+
+.inventario-chevron {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+  transform: rotate(0deg);
+}
+
+.inventario-chevron.is-closed {
+  transform: rotate(-90deg);
+}
+
 /* ─── Unit Table ──────────────────────────────────────────────── */
 .ut-wrap {
   width: 100%;
@@ -566,9 +585,9 @@ html[data-theme="light"] .inventario-card {
 .ut-head,
 .ut-row {
   display: grid;
-  grid-template-columns: 1.5rem 8rem 1fr 6.5rem 8rem 6.5rem 7.5rem 8.5rem 5.5rem;
+  grid-template-columns: 1.5rem 7rem 1fr 1fr 1fr 1fr 1fr 6rem 8.5rem 5rem;
   align-items: center;
-  min-width: 780px;
+  min-width: 900px;
 }
 
 .ut-head {
