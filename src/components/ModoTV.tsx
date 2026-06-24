@@ -15,7 +15,12 @@ import {
   saveTvConfig,
   TvConfig,
 } from "../utils/storage";
-import { formatDateTime, faltamDoisDiasOuMenos, faltam12HorasOuMenos, faltam24HorasOuMenos } from "../utils/dateUtils";
+import {
+  formatDateTime,
+  faltamDoisDiasOuMenos,
+  faltam12HorasOuMenos,
+  faltam24HorasOuMenos,
+} from "../utils/dateUtils";
 import { EscalaCard } from "./EscalaPlantao";
 import "./ModoTV.css";
 
@@ -133,7 +138,7 @@ const txt = (v: unknown) => (v ? String(v) : "");
 const COLUNAS_EVENTO: Coluna[] = [
   {
     titulo: "Nome do Evento",
-    largura: "15%",
+    largura: "10%",
     classe: "tv-td-destaque",
     render: (r) => txt(r.nomeEvento),
   },
@@ -182,7 +187,7 @@ const HIST_STATUS_COR: Record<string, string> = {
 const COLUNAS_HISTORICO: Coluna[] = [
   {
     titulo: "Nome do Evento",
-    largura: "14%",
+    largura: "10%",
     classe: "tv-td-destaque",
     render: (r) => txt(r.nomeEvento),
   },
