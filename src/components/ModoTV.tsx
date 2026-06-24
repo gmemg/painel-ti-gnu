@@ -15,7 +15,7 @@ import {
   saveTvConfig,
   TvConfig,
 } from "../utils/storage";
-import { formatDateTime, faltamDoisDiasOuMenos } from "../utils/dateUtils";
+import { formatDateTime, faltamDoisDiasOuMenos, faltam12HorasOuMenos, faltam24HorasOuMenos } from "../utils/dateUtils";
 import { EscalaCard } from "./EscalaPlantao";
 import "./ModoTV.css";
 
@@ -120,6 +120,7 @@ interface TelaDef {
   colunas: Coluna[];
   load: () => Promise<Record<string, unknown>[]>;
   isUrgent?: (row: Record<string, unknown>) => boolean;
+  isOrangeUrgent?: (row: Record<string, unknown>) => boolean;
   rowClass?: (row: Record<string, unknown>) => string | undefined;
   vazioMsg: string;
   /* Quando definido, renderiza conteúdo livre em vez da tabela. */
@@ -278,7 +279,11 @@ const CATALOGO: TelaDef[] = [
     accent: "azul",
     colunas: COLUNAS_EVENTO,
     vazioMsg: "Nenhuma montagem cadastrada.",
-    isUrgent: (r) => faltamDoisDiasOuMenos(String(r.dataHora ?? "")),
+    isUrgent: (r) => faltam12HorasOuMenos(String(r.dataHora ?? "")),
+    isOrangeUrgent: (r) => {
+      const dh = String(r.dataHora ?? "");
+      return faltam24HorasOuMenos(dh) && !faltam12HorasOuMenos(dh);
+    },
     load: async () => {
       const eventos = await reconcileEventosAutomaticos();
       return asRows(eventos.filter((e) => !e.removido));
@@ -905,7 +910,9 @@ export default function ModoTV() {
                         className={
                           defAtual?.isUrgent?.(row)
                             ? "tv-linha-urgente"
-                            : defAtual?.rowClass?.(row)
+                            : defAtual?.isOrangeUrgent?.(row)
+                              ? "tv-linha-urgente-laranja"
+                              : defAtual?.rowClass?.(row)
                         }
                       >
                         {colunas.map((c, ci) => (

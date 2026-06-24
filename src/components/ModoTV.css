@@ -561,6 +561,22 @@
   }
 }
 
+/* ─── Linha urgente laranja (evento entre 12h e 24h) ─────────────── */
+.tv-tabela tbody tr.tv-linha-urgente-laranja,
+.tv-tabela tbody tr.tv-linha-urgente-laranja:nth-child(even) {
+  animation: tvPiscarFundoLaranja 0.9s ease-in-out infinite;
+}
+
+@keyframes tvPiscarFundoLaranja {
+  0%,
+  100% {
+    background: rgba(230, 120, 0, 0.18);
+  }
+  50% {
+    background: rgba(230, 120, 0, 0.5);
+  }
+}
+
 /* ─── Linhas de histórico (concluído / removido) ─────────────────── */
 .tv-tabela tbody tr.tv-linha-concluida,
 .tv-tabela tbody tr.tv-linha-concluida:nth-child(even) {
