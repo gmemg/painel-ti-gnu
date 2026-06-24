@@ -31,7 +31,21 @@ const FIELD_LABELS: Record<
   problema: "Problema",
 };
 
-type SortOption = "manual" | "nome" | "quantidade" | "recentes";
+type UnitSortOption = "manual" | "modelo" | "status" | "recentes";
+
+const getSortedUnidades = (
+  item: InventarioItem,
+  sortOrder: Map<string, string[]>,
+  sortBy: UnitSortOption,
+): InventarioUnidade[] => {
+  if (sortBy === "manual") return item.unidades;
+  const ids = sortOrder.get(item.id);
+  if (!ids) return item.unidades;
+  const unitMap = new Map(item.unidades.map((u) => [u.id, u]));
+  return ids
+    .map((id) => unitMap.get(id))
+    .filter((u): u is InventarioUnidade => u !== undefined);
+};
 
 type UndoState =
   | {
@@ -188,7 +202,10 @@ const InventarioMontagem = () => {
     itemNome: string;
     unidadeId: string;
   } | null>(null);
-  const [sortBy, setSortBy] = useState<SortOption>("manual");
+  const [unitSortBy, setUnitSortBy] = useState<UnitSortOption>("manual");
+  const [unitSortOrder, setUnitSortOrder] = useState<Map<string, string[]>>(
+    new Map(),
+  );
   const [search, setSearch] = useState("");
   const [colapsados, setColapsados] = useState<Set<string>>(new Set());
   const fieldStartValuesRef = useRef<Record<string, string>>({});
@@ -202,7 +219,6 @@ const InventarioMontagem = () => {
 
   const [visualItens, setVisualItens] = useState<InventarioItem[]>([]);
   const lastItemIdsRef = useRef<string[]>([]);
-  const lastSortByRef = useRef<SortOption>("manual");
 
   useEffect(() => {
     const currentIds = itens.map((item) => item.id);
@@ -212,24 +228,11 @@ const InventarioMontagem = () => {
       currentIds.length !== prevIds.length ||
       currentIds.some((id, idx) => id !== prevIds[idx]);
 
-    const sortByChanged = sortBy !== lastSortByRef.current;
-
-    if (idsChanged || sortByChanged || visualItens.length === 0) {
-      let base = [...itens];
-
-      if (sortBy === "nome") {
-        base.sort((a, b) => a.item.localeCompare(b.item, "pt-BR"));
-      } else if (sortBy === "quantidade") {
-        base.sort((a, b) => b.unidades.length - a.unidades.length);
-      } else if (sortBy === "recentes") {
-        base.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-      }
-
-      setVisualItens(base);
+    if (idsChanged || visualItens.length === 0) {
+      setVisualItens([...itens]);
       lastItemIdsRef.current = currentIds;
-      lastSortByRef.current = sortBy;
     }
-  }, [itens, sortBy, dragSourceId]);
+  }, [itens]);
 
   useEffect(() => {
     setVisualItens((prev) =>
@@ -379,10 +382,12 @@ const InventarioMontagem = () => {
   }, [itens]);
 
   const itensFiltrados = useMemo(() => {
+    const itensById = new Map(itens.map((item) => [item.id, item]));
+    const ordered = visualItens.map((vi) => itensById.get(vi.id) ?? vi);
     const termo = normalizeText(search.trim());
     return termo.length === 0
-      ? visualItens
-      : visualItens.filter((item) => {
+      ? ordered
+      : ordered.filter((item) => {
           const statusText = item.unidades
             .map(
               (unidade) =>
@@ -405,7 +410,7 @@ const InventarioMontagem = () => {
           );
           return haystack.includes(termo);
         });
-  }, [visualItens, search]);
+  }, [itens, visualItens, search]);
 
   const unidadeHistoricoAberto = useMemo(() => {
     if (!historicoAberto) return null;
@@ -422,6 +427,36 @@ const InventarioMontagem = () => {
     }
     return null;
   }, [historicoAberto, itens]);
+
+  const unitIdsKey = useMemo(
+    () =>
+      itens
+        .map((i) => i.id + ":" + i.unidades.map((u) => u.id).join(","))
+        .join("|"),
+    [itens],
+  );
+
+  useEffect(() => {
+    const map = new Map<string, string[]>();
+    for (const item of itens) {
+      const sorted = [...item.unidades];
+      if (unitSortBy === "modelo") {
+        sorted.sort((a, b) => a.modelo.localeCompare(b.modelo, "pt-BR"));
+      } else if (unitSortBy === "status") {
+        const order: Record<InventarioStatus, number> = {
+          disponivel: 0,
+          em_uso: 1,
+          reservado: 2,
+          manutencao: 3,
+        };
+        sorted.sort((a, b) => order[a.status] - order[b.status]);
+      } else if (unitSortBy === "recentes") {
+        sorted.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+      }
+      map.set(item.id, sorted.map((u) => u.id));
+    }
+    setUnitSortOrder(map);
+  }, [unitIdsKey, unitSortBy]);
 
   const markFieldStartValue = (
     itemId: string,
@@ -698,7 +733,7 @@ const InventarioMontagem = () => {
   };
 
   const handleDragStart = (e: React.DragEvent, itemId: string) => {
-    if (sortBy !== "manual" || canDragId !== itemId) {
+    if (canDragId !== itemId) {
       e.preventDefault();
       return;
     }
@@ -712,12 +747,7 @@ const InventarioMontagem = () => {
     targetId: string,
   ) => {
     e.preventDefault();
-    if (
-      !dragSourceRef.current ||
-      dragSourceRef.current === targetId ||
-      sortBy !== "manual"
-    )
-      return;
+    if (!dragSourceRef.current || dragSourceRef.current === targetId) return;
 
     e.dataTransfer.dropEffect = "move";
 
@@ -786,12 +816,7 @@ const InventarioMontagem = () => {
         } ${estaHover ? "is-drag-over" : ""}`}
         key={item.id}
         data-flip-id={item.id}
-        draggable={
-          isAdmin &&
-          canDragId === item.id &&
-          !estaEditando &&
-          sortBy === "manual"
-        }
+        draggable={isAdmin && canDragId === item.id && !estaEditando}
         onDragStart={(e) => handleDragStart(e, item.id)}
         onDragOver={(e) => handleDragOver(e, item.id)}
         onDrop={(e) => handleDrop(e, item.id)}
@@ -889,6 +914,25 @@ const InventarioMontagem = () => {
             >
               <button
                 type="button"
+                className="btn-drag-handle"
+                title="Arrastar para reordenar"
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  setCanDragId(item.id);
+                }}
+                onMouseUp={() => {
+                  if (!dragSourceId) setCanDragId(null);
+                }}
+                onTouchStart={(e) => {
+                  e.stopPropagation();
+                  setCanDragId(item.id);
+                }}
+                onTouchEnd={() => setCanDragId(null)}
+              >
+                ⠿
+              </button>
+              <button
+                type="button"
                 className="btn-editar-item"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -947,9 +991,7 @@ const InventarioMontagem = () => {
                 <span>Atualizado</span>
                 <span></span>
               </div>
-              {[...item.unidades]
-                .sort((a, b) => a.modelo.localeCompare(b.modelo, "pt-BR"))
-                .map((unidade, uIdx) => (
+              {getSortedUnidades(item, unitSortOrder, unitSortBy).map((unidade, uIdx) => (
                   <div key={unidade.id} className="ut-row">
                     <span className="ut-num">{uIdx + 1}</span>
                     <div className="ut-status">
@@ -1278,6 +1320,19 @@ const InventarioMontagem = () => {
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Item, patrimônio, localização..."
           />
+        </div>
+        <div className="inventario-toolbar-field">
+          <label htmlFor="inventario-ordenar-unidades">Ordenar unidades por</label>
+          <select
+            id="inventario-ordenar-unidades"
+            value={unitSortBy}
+            onChange={(e) => setUnitSortBy(e.target.value as UnitSortOption)}
+          >
+            <option value="manual">Ordem de cadastro</option>
+            <option value="modelo">Modelo (A→Z)</option>
+            <option value="status">Status</option>
+            <option value="recentes">Mais recentes</option>
+          </select>
         </div>
       </div>
 

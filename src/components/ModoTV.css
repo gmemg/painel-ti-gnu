@@ -573,6 +573,11 @@
   opacity: 0.8;
 }
 
+.tv-tabela tbody tr.tv-linha-eq-pendente,
+.tv-tabela tbody tr.tv-linha-eq-pendente:nth-child(even) {
+  background: rgba(230, 120, 0, 0.18);
+}
+
 /* ─── Estado vazio ───────────────────────────────────────────────── */
 .tv-empty {
   text-align: center;

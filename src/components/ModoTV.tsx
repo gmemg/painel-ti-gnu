@@ -170,10 +170,12 @@ const COLUNAS_EVENTO: Coluna[] = [
 const HIST_STATUS_LABEL: Record<string, string> = {
   concluido: "Concluído",
   removido: "Removido",
+  "eq-pendente": "Eq Pendente",
 };
 const HIST_STATUS_COR: Record<string, string> = {
   concluido: "#22c55e",
   removido: "#ef4444",
+  "eq-pendente": "#e67800",
 };
 
 const COLUNAS_HISTORICO: Coluna[] = [
@@ -210,13 +212,20 @@ const COLUNAS_HISTORICO: Coluna[] = [
     classe: "tv-td-desc",
     render: (r) => txt(r.equipamentosNecessarios),
   },
-  { titulo: "Chamado", largura: "7%", render: (r) => txt(r.numeroChamado) },
+  { titulo: "Chamado", largura: "8%", render: (r) => txt(r.numeroChamado) },
   { titulo: "Requerente", largura: "9%", render: (r) => txt(r.requerente) },
   {
     titulo: "Status",
     largura: "9%",
     render: (r) => {
-      const key = r.concluido ? "concluido" : r.removido ? "removido" : null;
+      const key =
+        r.eqPendente && !r.concluido
+          ? "eq-pendente"
+          : r.concluido
+            ? "concluido"
+            : r.removido
+              ? "removido"
+              : null;
       if (!key) return "";
       return (
         <StatusBadge
@@ -350,11 +359,13 @@ const CATALOGO: TelaDef[] = [
     colunas: COLUNAS_HISTORICO,
     vazioMsg: "Nenhuma montagem no histórico.",
     rowClass: (r) =>
-      r.concluido
-        ? "tv-linha-concluida"
-        : r.removido
-          ? "tv-linha-removida"
-          : undefined,
+      r.eqPendente && !r.concluido
+        ? "tv-linha-eq-pendente"
+        : r.concluido
+          ? "tv-linha-concluida"
+          : r.removido
+            ? "tv-linha-removida"
+            : undefined,
     load: async () => asRows(await getHistorico()),
   },
   {

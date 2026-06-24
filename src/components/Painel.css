@@ -177,6 +177,28 @@
   }
 }
 
+.linha-urgente-laranja {
+  border-bottom-color: transparent;
+}
+
+.linha-urgente-laranja td {
+  animation: piscarLinhaLaranja 0.9s ease-in-out infinite;
+}
+
+.linha-urgente-laranja:hover td {
+  animation: piscarLinhaLaranja 0.9s ease-in-out infinite;
+}
+
+@keyframes piscarLinhaLaranja {
+  0%,
+  100% {
+    background-color: rgba(230, 120, 0, 0.18);
+  }
+  50% {
+    background-color: rgba(230, 120, 0, 0.5);
+  }
+}
+
 .empty-state {
   text-align: center;
   padding: 3rem !important;

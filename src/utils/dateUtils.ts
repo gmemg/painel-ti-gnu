@@ -51,17 +51,29 @@ export const formatDateTime = (dataHora: string): string => {
 export const faltamDoisDiasOuMenos = (dataHora: string): boolean => {
   const dataEvento = new Date(dataHora);
   const hoje = new Date();
-  
+
   // Resetar horas para comparar apenas as datas
   hoje.setHours(0, 0, 0, 0);
   dataEvento.setHours(0, 0, 0, 0);
-  
+
   // Calcular diferença em milissegundos
   const diferencaMs = dataEvento.getTime() - hoje.getTime();
-  
+
   // Converter para dias
   const diferencaDias = Math.ceil(diferencaMs / (1000 * 60 * 60 * 24));
-  
+
   // Retornar true se faltam 2 dias ou menos e o evento ainda não passou
   return diferencaDias >= 0 && diferencaDias <= 2;
+};
+
+/** Retorna `true` se o evento ocorre em até 12 horas a partir de agora. */
+export const faltam12HorasOuMenos = (dataHora: string): boolean => {
+  const diff = new Date(dataHora).getTime() - Date.now();
+  return diff >= 0 && diff <= 12 * 60 * 60 * 1000;
+};
+
+/** Retorna `true` se o evento ocorre em até 24 horas a partir de agora. */
+export const faltam24HorasOuMenos = (dataHora: string): boolean => {
+  const diff = new Date(dataHora).getTime() - Date.now();
+  return diff >= 0 && diff <= 24 * 60 * 60 * 1000;
 };

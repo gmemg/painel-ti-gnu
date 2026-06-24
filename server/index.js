@@ -145,6 +145,8 @@ const initDatabase = async () => {
     ALTER TABLE historico_eventos ADD COLUMN IF NOT EXISTS requerente TEXT;
     ALTER TABLE eventos ADD COLUMN IF NOT EXISTS plantao_eventos TEXT;
     ALTER TABLE historico_eventos ADD COLUMN IF NOT EXISTS plantao_eventos TEXT;
+    ALTER TABLE eventos ADD COLUMN IF NOT EXISTS eq_pendente BOOLEAN DEFAULT false;
+    ALTER TABLE historico_eventos ADD COLUMN IF NOT EXISTS eq_pendente BOOLEAN DEFAULT false;
 
     CREATE TABLE IF NOT EXISTS equipamentos_pendentes (
       id TEXT PRIMARY KEY,
@@ -470,6 +472,7 @@ const rowToEvento = (row) => ({
   requerente: row.requerente || "",
   removido: Boolean(row.removido),
   concluido: Boolean(row.concluido),
+  eqPendente: Boolean(row.eq_pendente),
   dataRemocao: row.data_remocao
     ? new Date(row.data_remocao).toISOString()
     : undefined,
@@ -491,9 +494,9 @@ const upsertEventos = async (client, tableName, eventos) => {
         INSERT INTO ${tableName} (
           id, nome_evento, adicionado_por, data_hora, dia_semana, local_evento,
           funcionario_plantao, plantao_eventos, equipamentos_necessarios, numero_chamado, requerente,
-          removido, concluido, data_remocao, data_conclusao
+          removido, concluido, eq_pendente, data_remocao, data_conclusao
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
         ON CONFLICT (id) DO UPDATE SET
           nome_evento = EXCLUDED.nome_evento,
           adicionado_por = EXCLUDED.adicionado_por,
@@ -507,6 +510,7 @@ const upsertEventos = async (client, tableName, eventos) => {
           requerente = EXCLUDED.requerente,
           removido = EXCLUDED.removido,
           concluido = EXCLUDED.concluido,
+          eq_pendente = EXCLUDED.eq_pendente,
           data_remocao = EXCLUDED.data_remocao,
           data_conclusao = EXCLUDED.data_conclusao
       `,
@@ -524,6 +528,7 @@ const upsertEventos = async (client, tableName, eventos) => {
         evento.requerente || "",
         Boolean(evento.removido),
         Boolean(evento.concluido),
+        Boolean(evento.eqPendente),
         evento.dataRemocao || null,
         evento.dataConclusao || null,
       ],

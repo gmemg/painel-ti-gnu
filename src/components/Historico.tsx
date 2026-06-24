@@ -1,24 +1,20 @@
-﻿import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Evento } from "../types";
 import {
   getHistorico,
   reconcileEventosAutomaticos,
+  saveHistorico,
+  getStoredUser,
 } from "../utils/storage";
 import { getDiaSemana, formatDateTime } from "../utils/dateUtils";
 import "./Historico.css";
 
-/**
- * Tela de histórico: exibe apenas eventos removidos ou concluídos.
- * O objetivo é oferecer rastreabilidade sem misturar itens ainda ativos.
- */
 const Historico = () => {
   const [totalMontagens, setTotalMontagens] = useState(0);
   const [todosEventos, setTodosEventos] = useState<Evento[]>([]);
+  const [carregando, setCarregando] = useState<string | null>(null);
+  const isAdmin = getStoredUser()?.role === "admin";
 
-  /**
-   * Recarrega e reconcilia dados do histórico.
-   * A união por `id` evita duplicidade quando um evento está em mais de um lugar.
-   */
   const carregarDados = useCallback(async () => {
     await reconcileEventosAutomaticos();
     const historico = await getHistorico();
@@ -32,7 +28,6 @@ const Historico = () => {
   }, []);
 
   useEffect(() => {
-    // Carregamento inicial para evitar render vazio com estado incompleto.
     carregarDados().catch((error) => {
       console.error("Erro ao carregar histórico", error);
     });
@@ -50,30 +45,69 @@ const Historico = () => {
     };
   }, [carregarDados]);
 
-  /**
-   * Resolve a classe CSS baseada no estado do evento.
-   *
-   * @param evento Evento avaliado.
-   * @returns Classe CSS correspondente.
-   */
+  const handleStatusChange = useCallback(
+    async (id: string, novoStatus: string) => {
+      setCarregando(id);
+      try {
+        const historico = await getHistorico();
+        const atualizado = historico.map((e) => {
+          if (e.id !== id) return e;
+          if (novoStatus === "concluido") {
+            return {
+              ...e,
+              eqPendente: false,
+              concluido: true,
+              dataConclusao: e.dataConclusao || new Date().toISOString(),
+            };
+          }
+          return {
+            ...e,
+            eqPendente: true,
+            concluido: false,
+            dataConclusao: undefined,
+          };
+        });
+        await saveHistorico(atualizado);
+        await carregarDados();
+      } catch (error) {
+        console.error("Erro ao atualizar status", error);
+      } finally {
+        setCarregando(null);
+      }
+    },
+    [carregarDados],
+  );
+
   const eventosView = useMemo(
     () =>
       todosEventos.map((evento) => {
-        const statusClass = evento.concluido
-          ? "concluido"
-          : evento.removido
-            ? "removido"
-            : "ativo";
-        const statusLabel = evento.concluido
-          ? "Concluído"
-          : evento.removido
-            ? "Removido"
-            : "Ativo";
+        let statusClass: string;
+        let statusLabel: string;
+        let statusValue: string;
+
+        if (evento.eqPendente && !evento.concluido) {
+          statusClass = "eq-pendente";
+          statusLabel = "Eq Pendente";
+          statusValue = "eq-pendente";
+        } else if (evento.concluido) {
+          statusClass = "concluido";
+          statusLabel = "Concluído";
+          statusValue = "concluido";
+        } else if (evento.removido) {
+          statusClass = "removido";
+          statusLabel = "Removido";
+          statusValue = "concluido";
+        } else {
+          statusClass = "ativo";
+          statusLabel = "Ativo";
+          statusValue = "concluido";
+        }
 
         return {
           ...evento,
           statusClass,
           statusLabel,
+          statusValue,
           dataHoraFormatada: formatDateTime(evento.dataHora),
           diaSemanaFormatado: getDiaSemana(evento.dataHora),
         };
@@ -130,9 +164,25 @@ const Historico = () => {
                   <td>{evento.equipamentosNecessarios}</td>
                   <td>{evento.numeroChamado}</td>
                   <td>
-                    <span className={`status-badge ${evento.statusClass}`}>
-                      {evento.statusLabel}
-                    </span>
+                    {isAdmin ? (
+                      <div className={`status-select-wrapper ${evento.statusValue}`}>
+                        <select
+                          className="status-select"
+                          value={evento.statusValue}
+                          disabled={carregando === evento.id}
+                          onChange={(e) =>
+                            handleStatusChange(evento.id, e.target.value)
+                          }
+                        >
+                          <option value="eq-pendente">Eq Pendente</option>
+                          <option value="concluido">Concluído</option>
+                        </select>
+                      </div>
+                    ) : (
+                      <span className={`status-badge ${evento.statusClass}`}>
+                        {evento.statusLabel}
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))
@@ -140,7 +190,6 @@ const Historico = () => {
           </tbody>
         </table>
       </div>
-
     </div>
   );
 };

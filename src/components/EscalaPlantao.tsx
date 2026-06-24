@@ -144,15 +144,6 @@ function ordemDot(m: MembroEquipe): number {
   return 0;
 }
 
-/** Verifica se o membro está de férias em uma data ISO específica. */
-function membroEmFeriasNoDia(m: MembroEquipe, data: string): boolean {
-  if (!m.feriasInicio && !m.feriasFim) return false;
-  return (
-    data >= (m.feriasInicio || "0000-01-01") &&
-    data <= (m.feriasFim || "9999-12-31")
-  );
-}
-
 /** Todos os sábados e domingos do mês, em ISO, ordenados cronologicamente. */
 function fimDeSemanaDoMes(ano: number, mes: number): string[] {
   const total = diasNoMes(ano, mes);
@@ -212,103 +203,58 @@ function membroNaEscala(
   return escala.dias.some((d) => acharMembroId(equipe, d) === membroId);
 }
 
-/** Diferença em dias entre duas datas ISO (positivo quando isoB > isoA). */
-function diffDias(isoA: string, isoB: string): number {
-  const [aA, mA, dA] = isoA.split("-").map(Number);
-  const [aB, mB, dB] = isoB.split("-").map(Number);
-  return Math.round(
-    (new Date(aB, mB - 1, dB).getTime() - new Date(aA, mA - 1, dA).getTime()) /
-      (24 * 60 * 60 * 1000),
-  );
-}
-
-/** Mês/ano (1-12) do dia seguinte a uma data ISO — usado para achar o mês de retorno de férias. */
-function mesEAnoDoDiaSeguinte(iso: string): { ano: number; mes: number } {
-  const [ano, mes, dia] = iso.split("-").map(Number);
-  const d = new Date(ano, mes - 1, dia + 1);
-  return { ano: d.getFullYear(), mes: d.getMonth() + 1 };
-}
-
-/** true se a data ISO cair num sábado ou domingo. */
-function ehFimDeSemana(data: string): boolean {
-  const [ano, mes, dia] = data.split("-").map(Number);
-  const diaSemana = new Date(ano, mes - 1, dia).getDay();
-  return diaSemana === 0 || diaSemana === 6;
-}
+type JanelaBloqueio = { inicio: string; fim: string };
 
 /**
- * Para uma data de fim de semana, retorna o sábado daquele mesmo fim de semana
- * (chave estável para comparar "o mesmo fim de semana" entre meses/anos
- * diferentes). Para qualquer outra data, retorna a própria data sem alteração.
+ * Janela de bloqueio de um dia de plantão (regra 4). Para sábados e domingos,
+ * cobre [sexta, sábado, domingo, segunda] do mesmo fim de semana — qualquer
+ * indisponibilidade que caia nesse intervalo impede a pessoa de assumir o fim
+ * de semana inteiro. Para um feriado em dia de semana, cobre só o próprio dia.
  */
-function ancoraFimDeSemana(data: string): string {
+function janelaBloqueio(data: string): JanelaBloqueio {
   const [ano, mes, dia] = data.split("-").map(Number);
-  const d = new Date(ano, mes - 1, dia);
-  if (d.getDay() === 0) d.setDate(d.getDate() - 1); // domingo → sábado anterior
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const dow = new Date(ano, mes - 1, dia).getDay();
+  const fmt = (x: Date) =>
+    `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(
+      x.getDate(),
+    ).padStart(2, "0")}`;
+  if (dow !== 0 && dow !== 6) return { inicio: data, fim: data };
+  const offsetSexta = dow === 6 ? -1 : -2; // sábado → sexta = -1; domingo → sexta = -2
+  return {
+    inicio: fmt(new Date(ano, mes - 1, dia + offsetSexta)),
+    fim: fmt(new Date(ano, mes - 1, dia + offsetSexta + 3)),
+  };
 }
 
 /**
- * Se `data` for sábado ou domingo, retorna a outra data do mesmo fim de semana
- * (dentro do mesmo mês). Para qualquer outro dia (ex.: feriado em dia de semana),
- * retorna null — não há "parceiro" de fim de semana a considerar.
+ * true se a indisponibilidade do membro (data única quando início = fim, ou um
+ * intervalo) cruzar a janela de bloqueio do fim de semana.
  */
-function parceiroFimDeSemana(
-  ano: number,
-  mes: number,
-  data: string,
-): string | null {
-  const dia = Number(data.slice(-2));
-  const diaSemana = new Date(ano, mes - 1, dia).getDay();
-  const prefixo = `${ano}-${String(mes).padStart(2, "0")}-`;
-  if (diaSemana === 6) {
-    const total = diasNoMes(ano, mes);
-    return dia + 1 <= total
-      ? `${prefixo}${String(dia + 1).padStart(2, "0")}`
-      : null;
-  }
-  if (diaSemana === 0) {
-    return dia - 1 >= 1
-      ? `${prefixo}${String(dia - 1).padStart(2, "0")}`
-      : null;
-  }
-  return null;
+function indisponivelNaJanela(m: MembroEquipe, janela: JanelaBloqueio): boolean {
+  if (!m.feriasInicio && !m.feriasFim) return false;
+  const ini = m.feriasInicio || "0000-01-01";
+  const fim = m.feriasFim || "9999-12-31";
+  return ini <= janela.fim && fim >= janela.inicio;
 }
 
 /**
- * Gera os dias de plantão de um mês usando uma fila rotativa (round-robin):
- * cada pessoa escalada vai para o final da fila. A fila não reinicia a cada
- * mês — ela é reconstruída replayando, em ordem cronológica desde o primeiro
- * mês cadastrado, quem foi REALMENTE escalado em cada mês salvo. Se o número
- * de plantões realizados num mês for um múltiplo exato do tamanho da equipe
- * (um ciclo completo — a fila resultante vira exatamente a sequência de uso
- * daquele mês), um passo extra é forçado — EXCETO se todos tiverem plantonado
- * exatamente uma vez naquele mês (sem repetições): nesse caso o passo extra não
- * é aplicado, e o 1º da fila daquele mês permanece na posição 1 no mês seguinte.
+ * Gera os dias de plantão de um mês seguindo a ordem fixa da fila (regras 1-6).
  *
- * Regras de férias:
- * - Pessoa de férias num dia específico é pulada nesse dia (sem perder a vez —
- *   ela continua na mesma posição da fila, só não é escalada "fora de ordem").
- * - Um fim de semana (sábado+domingo) é tratado como bloco: se a pessoa ainda
- *   estiver de férias em QUALQUER um dos dois dias, ela fica de fora do fim de
- *   semana inteiro (mesmo que já tenha voltado para o outro dia) e a vez dela
- *   passa para o próximo fim de semana. Se as férias terminam antes do fim de
- *   semana (ex.: terminam na sexta), ela já está disponível normalmente.
- * - Quando o dia seguinte ao fim das férias de alguém cai dentro do mês sendo
- *   gerado (ou seja, a pessoa volta de férias nesse mês), ela é movida para o
- *   fim da fila antes de gerar os dias — perde a posição que tinha antes de
- *   sair — e só pode ser escalada no último dia a escalar daquele mês (garante
- *   que ela realmente fique por último, mesmo que o mês precise de mais dias
- *   do que o tamanho da equipe e o rodízio "dê a volta" antes de chegar nela).
- *
- * Intervalo mínimo entre plantões (quem não está de férias):
- * - Entre dois plantões em dia de semana (feriado), exige no mínimo 7 dias de
- *   diferença em relação à data do último plantão da pessoa.
- * - Entre dois fins de semana, a pessoa não pode pegar o fim de semana
- *   imediatamente seguinte ao do último plantão dela — precisa pular ao menos
- *   um fim de semana (comparando os sábados de referência, exige >= 14 dias).
- * - Quando a regra bloqueia a pessoa, ela é pulada nessa data (sem perder a
- *   vez) e passa o próximo da fila.
+ * 1. Fila fixa e contínua: a equipe é percorrida na ordem definida (`ordem`);
+ *    depois do último volta-se ao primeiro.
+ * 2. Continuidade entre meses: a fila nunca reinicia. É reconstruída replayando,
+ *    em ordem cronológica, quem foi REALMENTE escalado no histórico (cada
+ *    escalado vai para o fim da fila), então o 1º plantão do mês cai no próximo
+ *    da fila depois do último escalado.
+ * 3. Ordem é prioridade: não há tentativa de equilibrar a quantidade de plantões.
+ * 4. Indisponibilidade: para cada fim de semana de plantão considera-se a janela
+ *    [sexta, sábado, domingo, segunda]. Qualquer indisponibilidade nessa janela
+ *    impede a pessoa de assumir o fim de semana. Quem está indisponível perde a
+ *    vez e vai para o fim da fila (volta só depois que todos passarem).
+ * 5. Sem repetição em plantões consecutivos: ninguém assume dois plantões
+ *    seguidos; nesse caso procura-se o próximo elegível da fila.
+ * 6. Sem ninguém disponível: o dia é criado com nome "A DEFINIR" (a fila fica
+ *    inalterada) para edição manual posterior.
  *
  * Os `feriados` do mês ajustam os dias a escalar: um feriado "sem plantão" sai
  * da lista (mesmo num fim de semana) e um feriado "com plantão" entra (mesmo num
@@ -320,6 +266,8 @@ function gerarEscalaRoundRobin(
   mes: number,
   escalas: Escala[],
   feriados: Feriado[],
+  filaInicialIds?: string[],
+  foraIds?: string[],
 ): EscalaDia[] {
   const prefixoMes = `${ano}-${String(mes).padStart(2, "0")}-`;
   const feriadosMes = feriados.filter((f) => f.data.startsWith(prefixoMes));
@@ -339,117 +287,79 @@ function gerarEscalaRoundRobin(
     .sort((a, b) => a.ordem - b.ordem);
   if (ordenada.length === 0) return [];
 
-  const historico = escalas
-    .filter((e) => e.ano < ano || (e.ano === ano && e.mes < mes))
-    .sort((a, b) => a.ano - b.ano || a.mes - b.mes);
+  // ── Fila inicial ───────────────────────────────────────────────────────
+  // Se filaInicialIds for fornecida (modo manual), usa-a diretamente.
+  // Novos membros ainda não na lista são acrescentados ao final pela ordem.
+  // Caso contrário, reconstrói via replay cronológico do histórico.
+  let fila: MembroEquipe[];
+  let prevAssigneeId: string | null = null;
 
-  // Reconstrói a fila replayando o que de fato aconteceu em cada mês anterior
-  // (quem foi realmente escalado vai para o final). Se um mês tiver um número
-  // de plantões realizados múltiplo exato do tamanho da equipe — um ciclo
-  // completo, em que a fila resultante vira exatamente a sequência de uso
-  // daquele mês — força um passo extra, A MENOS que todos os membros tenham
-  // plantonado exatamente uma vez naquele mês (sem repetições): nesse caso a
-  // fila já volta naturalmente à ordem original e o passo extra é dispensado,
-  // mantendo o 1º da fila na posição 1 do mês seguinte. Note que comparar só a
-  // "frente" da fila antes/depois não basta: pulos por férias podem reordenar
-  // quem fica na frente sem romper o ciclo completo de uso.
-  const fila = [...ordenada];
-  const ultimoPlantao = new Map<string, string>();
-  for (const esc of historico) {
-    let usos = 0;
-    const idsUsados = new Set<string>();
-    const diasEsc = [...esc.dias]
+  if (filaInicialIds && filaInicialIds.length > 0) {
+    const existentes = filaInicialIds
+      .map((id) => ordenada.find((m) => m.id === id))
+      .filter((m): m is MembroEquipe => m !== undefined);
+    const idsNaLista = new Set(filaInicialIds);
+    const extras = ordenada.filter((m) => !idsNaLista.has(m.id));
+    fila = [...existentes, ...extras];
+  } else {
+    fila = [...ordenada];
+    const historico = escalas
+      .filter((e) => e.ano < ano || (e.ano === ano && e.mes < mes))
+      .sort((a, b) => a.ano - b.ano || a.mes - b.mes);
+    const diasHistorico = historico
+      .flatMap((esc) => esc.dias)
       .filter((d) => d.data)
       .sort((a, b) => a.data.localeCompare(b.data));
-    for (const d of diasEsc) {
+    for (const d of diasHistorico) {
       const id = acharMembroId(equipe, d);
+      prevAssigneeId = id;
       if (id == null) continue;
-      const atual = ultimoPlantao.get(id);
-      if (!atual || d.data > atual) ultimoPlantao.set(id, d.data);
       const idx = fila.findIndex((m) => m.id === id);
       if (idx === -1) continue;
       const [pessoa] = fila.splice(idx, 1);
       fila.push(pessoa);
-      usos++;
-      idsUsados.add(id);
-    }
-    const semRepeticoes = idsUsados.size === fila.length;
-    if (usos > 0 && usos % fila.length === 0 && !semRepeticoes) {
-      const [pessoa] = fila.splice(0, 1);
-      fila.push(pessoa);
     }
   }
-
-  // Quem voltou de férias neste mês (dia seguinte ao fim das férias cai dentro
-  // do mês sendo gerado) vai para o fim da fila, perdendo a posição que tinha
-  // antes de sair.
-  const retornantesIds = new Set<string>();
-  for (const m of ordenada) {
-    if (!m.feriasFim) continue;
-    const retorno = mesEAnoDoDiaSeguinte(m.feriasFim);
-    if (retorno.ano !== ano || retorno.mes !== mes) continue;
-    retornantesIds.add(m.id);
-    const idx = fila.findIndex((x) => x.id === m.id);
-    if (idx === -1 || idx === fila.length - 1) continue;
-    const [pessoa] = fila.splice(idx, 1);
-    fila.push(pessoa);
-  }
-
-  /** Elegibilidade de `m` para `data` (férias do dia/parceiro + intervalo mínimo). */
-  const elegivel = (m: MembroEquipe, data: string, parceiro: string | null) => {
-    if (membroEmFeriasNoDia(m, data)) return false;
-    if (parceiro && membroEmFeriasNoDia(m, parceiro)) return false;
-    const ultima = ultimoPlantao.get(m.id);
-    if (ultima) {
-      // Entre dois fins de semana, exige pular pelo menos um (>=14 dias entre
-      // os sábados de referência) — 7 dias seria o fim de semana imediatamente
-      // seguinte, o que não é permitido.
-      if (ehFimDeSemana(data) && ehFimDeSemana(ultima)) {
-        if (diffDias(ancoraFimDeSemana(ultima), ancoraFimDeSemana(data)) < 14)
-          return false;
-      } else if (diffDias(ultima, data) < 7) {
-        return false;
-      }
-    }
-    return true;
-  };
 
   const resultado: EscalaDia[] = [];
-  const ultimoDiaDoMes = dias[dias.length - 1];
 
   for (const data of dias) {
-    const parceiro = parceiroFimDeSemana(ano, mes, data);
-    const ehUltimoDia = data === ultimoDiaDoMes;
+    // Procura o primeiro elegível: disponível no dia (regra 4) e diferente
+    // de quem fez o plantão anterior (regra 5). A ordem da fila é prioridade
+    // absoluta — sem balanceamento (regra 3).
     let escolhidoIdx = -1;
-
-    // No último dia a escalar do mês, prioriza quem voltou de férias — garante
-    // que a pessoa realmente fique por último, mesmo que o mês precise de mais
-    // dias do que o tamanho da equipe (o que faria o rodízio "dar a volta" e
-    // repetir alguém antes dela).
-    if (ehUltimoDia && retornantesIds.size > 0) {
-      for (let i = 0; i < fila.length; i++) {
-        const m = fila[i];
-        if (!retornantesIds.has(m.id)) continue;
-        if (!elegivel(m, data, parceiro)) continue;
-        escolhidoIdx = i;
-        break;
+    for (let i = 0; i < fila.length; i++) {
+      const m = fila[i];
+      if (foraIds && foraIds.includes(m.id)) continue;
+      if (m.feriasInicio || m.feriasFim) {
+        const ini = m.feriasInicio || "0000-01-01";
+        const fim = m.feriasFim || "9999-12-31";
+        if (data >= ini && data <= fim) continue;
       }
+      if (m.id === prevAssigneeId) continue;
+      escolhidoIdx = i;
+      break;
     }
 
+    // Regra 6: ninguém disponível → "A DEFINIR", fila inalterada.
     if (escolhidoIdx === -1) {
-      for (let i = 0; i < fila.length; i++) {
-        const m = fila[i];
-        if (!ehUltimoDia && retornantesIds.has(m.id)) continue;
-        if (!elegivel(m, data, parceiro)) continue;
-        escolhidoIdx = i;
-        break;
-      }
+      resultado.push({
+        id: gerarId("dia"),
+        data,
+        nome: "A DEFINIR",
+        matricula: "",
+      });
+      prevAssigneeId = null;
+      continue;
     }
-    if (escolhidoIdx === -1) continue;
 
-    const [escolhido] = fila.splice(escolhidoIdx, 1);
+    // Regra 4 (rotação): só o escolhido vai para o fim da fila; quem foi pulado
+    // permanece na frente e terá prioridade no próximo plantão.
+    const escolhido = fila[escolhidoIdx];
+    fila.splice(escolhidoIdx, 1);
     fila.push(escolhido);
-    ultimoPlantao.set(escolhido.id, data);
+
+    prevAssigneeId = escolhido.id;
     resultado.push({
       id: gerarId("dia"),
       data,
@@ -497,6 +407,30 @@ export function agruparDias(dias: EscalaDia[]): EscalaDia[][] {
   }
 
   return grupos;
+}
+
+/**
+ * Reconstrói a fila atual replaying todo o histórico de escalas, retornando
+ * os IDs dos membros escaláveis na ordem em que estão na fila.
+ */
+function computarFilaAtual(equipe: MembroEquipe[], escalas: Escala[]): string[] {
+  const ordenada = [...equipe]
+    .filter((m) => !membroNaoEscalavel(m))
+    .sort((a, b) => a.ordem - b.ordem);
+  const fila = [...ordenada];
+  const dias = [...escalas]
+    .flatMap((esc) => esc.dias)
+    .filter((d) => d.data)
+    .sort((a, b) => a.data.localeCompare(b.data));
+  for (const d of dias) {
+    const id = acharMembroId(equipe, d);
+    if (id == null) continue;
+    const idx = fila.findIndex((m) => m.id === id);
+    if (idx === -1) continue;
+    const [pessoa] = fila.splice(idx, 1);
+    fila.push(pessoa);
+  }
+  return fila.map((m) => m.id);
 }
 
 /** Card de UM mês de escala. Reaproveitado pela página e pelo Modo TV. */
@@ -576,6 +510,11 @@ export default function EscalaPlantao() {
   const [erroSalvar, setErroSalvar] = useState<string | null>(null);
   const primeiroInputRef = useRef<HTMLInputElement>(null);
 
+  // Fila manual
+  const [verFila, setVerFila] = useState(false);
+  const [filaManual, setFilaManual] = useState<string[] | null>(null);
+  const [foraIds, setForaIds] = useState<string[]>([]);
+
   // Equipe T.I
   const [equipe, setEquipe] = useState<MembroEquipe[]>([]);
   const [membroMenuId, setMembroMenuId] = useState<string | null>(null);
@@ -606,6 +545,14 @@ export default function EscalaPlantao() {
         setEscalas(esc);
         setEquipe(eq);
         setFeriados(fer);
+        const raw = localStorage.getItem("esc_fila_manual");
+        if (raw) {
+          try { setFilaManual(JSON.parse(raw) as string[]); } catch { /* ignore */ }
+        }
+        const rawFora = localStorage.getItem("esc_fora_ids");
+        if (rawFora) {
+          try { setForaIds(JSON.parse(rawFora) as string[]); } catch { /* ignore */ }
+        }
       })
       .catch(() => setErro("Não foi possível carregar as escalas."))
       .finally(() => setCarregando(false));
@@ -1020,11 +967,59 @@ xmlns="http://www.w3.org/TR/REC-html40">
     URL.revokeObjectURL(url);
   };
 
+  // ─── Fila manual ─────────────────────────────────────────────────
+  const escalaveisIds = new Set(
+    equipe.filter((m) => !membroNaoEscalavel(m)).map((m) => m.id),
+  );
+
+  // IDs dos membros escaláveis na ordem atual da fila (manual ou automática).
+  // Membros adicionados depois da última gravação manual aparecem ao final.
+  const filaAtualIds: string[] = (() => {
+    if (filaManual) {
+      const existentes = filaManual.filter((id) => escalaveisIds.has(id));
+      const novos = [...equipe]
+        .filter((m) => !membroNaoEscalavel(m) && !existentes.includes(m.id))
+        .sort((a, b) => a.ordem - b.ordem)
+        .map((m) => m.id);
+      return [...existentes, ...novos];
+    }
+    return computarFilaAtual(equipe, escalas);
+  })();
+
+  const filaAtual = filaAtualIds
+    .map((id) => equipe.find((m) => m.id === id))
+    .filter((m): m is MembroEquipe => m !== undefined);
+
+  const salvarFilaManual = (ids: string[] | null) => {
+    if (ids) {
+      localStorage.setItem("esc_fila_manual", JSON.stringify(ids));
+    } else {
+      localStorage.removeItem("esc_fila_manual");
+    }
+    setFilaManual(ids);
+  };
+
+  const moverNaFila = (idx: number, direcao: -1 | 1) => {
+    const nova = [...filaAtualIds];
+    const alvo = idx + direcao;
+    if (alvo < 0 || alvo >= nova.length) return;
+    [nova[idx], nova[alvo]] = [nova[alvo], nova[idx]];
+    salvarFilaManual(nova);
+  };
+
+  const toggleFora = (id: string) => {
+    const nova = foraIds.includes(id)
+      ? foraIds.filter((x) => x !== id)
+      : [...foraIds, id];
+    localStorage.setItem("esc_fora_ids", JSON.stringify(nova));
+    setForaIds(nova);
+  };
+
   // ─── Simulação da escala ─────────────────────────────────────────
   const simularDiasNoModal = () => {
     const ano = Number(form.ano);
     const mes = Number(form.mes);
-    const dias = gerarEscalaRoundRobin(equipe, ano, mes, escalas, feriados);
+    const dias = gerarEscalaRoundRobin(equipe, ano, mes, escalas, feriados, filaManual ?? undefined, foraIds.length ? foraIds : undefined);
     if (dias.length === 0) {
       setErroSalvar(
         "Cadastre pessoas na Equipe T.I (e tire alguém de férias) para simular.",
@@ -1172,10 +1167,23 @@ xmlns="http://www.w3.org/TR/REC-html40">
 
         <aside className="esc-equipe" ref={equipeRef}>
           <div className="esc-equipe-header">
-            <div className="esc-equipe-title-group">
-              <span className="esc-equipe-title">Equipe T.I</span>
+            <div className="esc-sidebar-tabs">
+              <button
+                type="button"
+                className={`esc-sidebar-tab${!verFila ? " esc-sidebar-tab-ativo" : ""}`}
+                onClick={() => setVerFila(false)}
+              >
+                Equipe
+              </button>
+              <button
+                type="button"
+                className={`esc-sidebar-tab${verFila ? " esc-sidebar-tab-ativo" : ""}`}
+                onClick={() => setVerFila(true)}
+              >
+                Fila
+              </button>
             </div>
-            {isAdmin && (
+            {!verFila && isAdmin && (
               <button
                 type="button"
                 className="esc-equipe-add"
@@ -1188,92 +1196,189 @@ xmlns="http://www.w3.org/TR/REC-html40">
             )}
           </div>
 
-          {equipe.length === 0 ? (
-            <div className="esc-equipe-vazio">Nenhuma pessoa cadastrada.</div>
+          {!verFila ? (
+            equipe.length === 0 ? (
+              <div className="esc-equipe-vazio">Nenhuma pessoa cadastrada.</div>
+            ) : (
+              <ul className="esc-equipe-lista">
+                {[...equipe]
+                  .sort((a, b) => ordemDot(a) - ordemDot(b))
+                  .map((m) => (
+                    <li key={m.id} className="esc-membro-wrap">
+                      <button
+                        type="button"
+                        className={[
+                          "esc-membro",
+                          membroEmFeriasHoje(m) || membroNaoEscalavel(m)
+                            ? "esc-membro-ferias"
+                            : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                        onClick={() =>
+                          isAdmin &&
+                          setMembroMenuId((id) => (id === m.id ? null : m.id))
+                        }
+                        disabled={!isAdmin}
+                      >
+                        <span
+                          className={
+                            membroEmFeriasHoje(m)
+                              ? "esc-membro-dot esc-membro-dot-em-ferias"
+                              : membroNaoEscalavel(m)
+                                ? "esc-membro-dot esc-membro-dot-sem-escala"
+                                : m.feriasInicio || m.feriasFim
+                                  ? "esc-membro-dot esc-membro-dot-ferias"
+                                  : "esc-membro-dot esc-membro-dot-ativo"
+                          }
+                        />
+                        <span className="esc-membro-info">
+                          <span className="esc-membro-nome">{m.nome}</span>
+                          {m.cargo && (
+                            <span className="esc-membro-cargo">{m.cargo}</span>
+                          )}
+                        </span>
+                        {membroEmFeriasHoje(m) && (
+                          <span
+                            className="esc-membro-badge"
+                            title={
+                              m.feriasInicio
+                                ? `${formatDiaCurto(m.feriasInicio)} – ${formatDiaCurto(m.feriasFim)}`
+                                : ""
+                            }
+                          >
+                            Férias
+                          </span>
+                        )}
+                        {isAdmin && (
+                          <svg
+                            className="esc-membro-edit-icon"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            width="13"
+                            height="13"
+                            aria-hidden="true"
+                          >
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                          </svg>
+                        )}
+                      </button>
+                      {isAdmin && membroMenuId === m.id && (
+                        <div className="esc-membro-menu">
+                          <button
+                            type="button"
+                            onClick={() => abrirEditarPessoa(m)}
+                          >
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            className="esc-membro-menu-danger"
+                            onClick={() => removerMembro(m)}
+                          >
+                            Remover
+                          </button>
+                        </div>
+                      )}
+                    </li>
+                  ))}
+              </ul>
+            )
           ) : (
-            <ul className="esc-equipe-lista">
-              {[...equipe]
-                .sort((a, b) => ordemDot(a) - ordemDot(b))
-                .map((m) => (
-                  <li key={m.id} className="esc-membro-wrap">
+            <>
+              {filaAtual.length === 0 ? (
+                <div className="esc-equipe-vazio">Nenhum membro escalável.</div>
+              ) : (
+                <ul className="esc-fila-lista">
+                  {(() => {
+                    const primeiroAtivoIdx = filaAtual.findIndex(
+                      (m) => !foraIds.includes(m.id),
+                    );
+                    return filaAtual.map((m, i) => {
+                      const eFora = foraIds.includes(m.id);
+                      return (
+                        <li
+                          key={m.id}
+                          className={[
+                            "esc-fila-row",
+                            i === primeiroAtivoIdx
+                              ? "esc-fila-row-primeiro"
+                              : "",
+                            eFora ? "esc-fila-row-fora" : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
+                        >
+                          <span className="esc-fila-pos">{i + 1}</span>
+                          <span className="esc-fila-nome">{m.nome}</span>
+                          {eFora && (
+                            <span className="esc-fila-badge-fora">Fora</span>
+                          )}
+                          {isAdmin && (
+                            <div className="esc-fila-actions">
+                              {!eFora && (
+                                <div className="esc-fila-arrows">
+                                  <button
+                                    type="button"
+                                    className="esc-fila-btn"
+                                    disabled={i === 0}
+                                    onClick={() => moverNaFila(i, -1)}
+                                    title="Subir na fila"
+                                  >
+                                    ▲
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="esc-fila-btn"
+                                    disabled={
+                                      i === filaAtual.length - 1
+                                    }
+                                    onClick={() => moverNaFila(i, 1)}
+                                    title="Descer na fila"
+                                  >
+                                    ▼
+                                  </button>
+                                </div>
+                              )}
+                              <button
+                                type="button"
+                                className={`esc-fila-btn-fora${eFora ? " esc-fila-btn-fora-ativo" : ""}`}
+                                onClick={() => toggleFora(m.id)}
+                                title={
+                                  eFora
+                                    ? "Colocar de volta na fila"
+                                    : "Retirar do mês"
+                                }
+                              >
+                                {eFora ? "↩" : "×"}
+                              </button>
+                            </div>
+                          )}
+                        </li>
+                      );
+                    });
+                  })()}
+                </ul>
+              )}
+              {isAdmin && (
+                <div className="esc-fila-footer">
+                  <span
+                    className={`esc-fila-status${filaManual ? " esc-fila-status-manual" : ""}`}
+                  >
+                    {filaManual ? "Manual" : "Automático"}
+                  </span>
+                  {filaManual && (
                     <button
                       type="button"
-                      className={[
-                        "esc-membro",
-                        membroEmFeriasHoje(m) || membroNaoEscalavel(m)
-                          ? "esc-membro-ferias"
-                          : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                      onClick={() =>
-                        isAdmin &&
-                        setMembroMenuId((id) => (id === m.id ? null : m.id))
-                      }
-                      disabled={!isAdmin}
+                      className="esc-btn-fila-reset"
+                      onClick={() => salvarFilaManual(null)}
                     >
-                      <span
-                        className={
-                          membroEmFeriasHoje(m)
-                            ? "esc-membro-dot esc-membro-dot-em-ferias"
-                            : membroNaoEscalavel(m)
-                              ? "esc-membro-dot esc-membro-dot-sem-escala"
-                              : m.feriasInicio || m.feriasFim
-                                ? "esc-membro-dot esc-membro-dot-ferias"
-                                : "esc-membro-dot esc-membro-dot-ativo"
-                        }
-                      />
-                      <span className="esc-membro-info">
-                        <span className="esc-membro-nome">{m.nome}</span>
-                        {m.cargo && (
-                          <span className="esc-membro-cargo">{m.cargo}</span>
-                        )}
-                      </span>
-                      {membroEmFeriasHoje(m) && (
-                        <span
-                          className="esc-membro-badge"
-                          title={
-                            m.feriasInicio
-                              ? `${formatDiaCurto(m.feriasInicio)} – ${formatDiaCurto(m.feriasFim)}`
-                              : ""
-                          }
-                        >
-                          Férias
-                        </span>
-                      )}
-                      {isAdmin && (
-                        <svg
-                          className="esc-membro-edit-icon"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                          width="13"
-                          height="13"
-                          aria-hidden="true"
-                        >
-                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                        </svg>
-                      )}
+                      Usar automático
                     </button>
-                    {isAdmin && membroMenuId === m.id && (
-                      <div className="esc-membro-menu">
-                        <button
-                          type="button"
-                          onClick={() => abrirEditarPessoa(m)}
-                        >
-                          Editar
-                        </button>
-                        <button
-                          type="button"
-                          className="esc-membro-menu-danger"
-                          onClick={() => removerMembro(m)}
-                        >
-                          Remover
-                        </button>
-                      </div>
-                    )}
-                  </li>
-                ))}
-            </ul>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </aside>
       </div>

@@ -17,6 +17,7 @@ export interface Evento {
   requerente: string;
   removido: boolean;
   concluido?: boolean;
+  eqPendente?: boolean;
   dataRemocao?: string;
   dataConclusao?: string;
 }

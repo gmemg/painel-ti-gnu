@@ -78,6 +78,15 @@
   font-size: 0.95rem;
 }
 
+.tabela-historico th:nth-child(8),
+.tabela-historico td:nth-child(8) {
+  width: 7rem;
+  max-width: 7rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .tabela-historico tbody tr {
   border-bottom: 1px solid var(--border);
   transition: background-color 0.2s;
@@ -111,6 +120,14 @@
 
 .tabela-historico tbody tr.concluido:hover {
   background-color: rgba(46, 125, 50, 0.24);
+}
+
+.tabela-historico tbody tr.eq-pendente {
+  background-color: rgba(230, 120, 0, 0.12);
+}
+
+.tabela-historico tbody tr.eq-pendente:hover {
+  background-color: rgba(230, 120, 0, 0.2);
 }
 
 .tabela-historico tbody tr:last-child {
@@ -158,6 +175,89 @@
   background-color: var(--green);
   color: white;
   border: 1px solid rgba(46, 125, 50, 0.6);
+}
+
+.status-badge.eq-pendente {
+  background-color: #e67800;
+  color: white;
+  border: 1px solid rgba(230, 120, 0, 0.6);
+}
+
+.status-select-wrapper {
+  position: relative;
+  display: inline-block;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  transition: filter 0.15s, box-shadow 0.15s;
+}
+
+.status-select-wrapper:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.status-select-wrapper::after {
+  content: "▾";
+  font-size: 1rem;
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  color: rgba(255, 255, 255, 0.95);
+  border-left: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 0 6px 6px 0;
+}
+
+.status-select-wrapper.eq-pendente {
+  background-color: #e67800;
+  border: 1px solid rgba(230, 120, 0, 0.55);
+}
+
+.status-select-wrapper.concluido {
+  background-color: var(--green);
+  border: 1px solid rgba(46, 125, 50, 0.55);
+}
+
+.status-select-wrapper:focus-within {
+  outline: 2px solid rgba(255, 255, 255, 0.35);
+  outline-offset: 1px;
+}
+
+.status-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 0.45rem 2.5rem 0.45rem 0.85rem;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: white;
+  min-width: 9.5rem;
+  white-space: nowrap;
+  display: block;
+}
+
+.status-select:focus {
+  outline: none;
+}
+
+.status-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.status-select option {
+  background-color: #1e2433;
+  color: white;
+  font-weight: 600;
 }
 
 .btn-remover-historico {

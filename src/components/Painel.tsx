@@ -11,7 +11,8 @@ import {
 import {
   getDiaSemana,
   formatDateTime,
-  faltamDoisDiasOuMenos,
+  faltam12HorasOuMenos,
+  faltam24HorasOuMenos,
 } from "../utils/dateUtils";
 import FormularioEvento from "./FormularioEvento";
 import { useAuth } from "../context/AuthContext";
@@ -304,7 +305,11 @@ const Painel = () => {
         ...evento,
         dataHoraFormatada: formatDateTime(evento.dataHora),
         diaSemanaFormatado: getDiaSemana(evento.dataHora),
-        urgente: faltamDoisDiasOuMenos(evento.dataHora),
+        urgencia: faltam12HorasOuMenos(evento.dataHora)
+          ? "critica"
+          : faltam24HorasOuMenos(evento.dataHora)
+            ? "alta"
+            : null,
       })),
     [eventos],
   );
@@ -368,7 +373,13 @@ const Painel = () => {
               eventosView.map((evento) => (
                 <tr
                   key={evento.id}
-                  className={evento.urgente ? "linha-urgente" : undefined}
+                  className={
+                    evento.urgencia === "critica"
+                      ? "linha-urgente"
+                      : evento.urgencia === "alta"
+                        ? "linha-urgente-laranja"
+                        : undefined
+                  }
                 >
                   <td>{evento.nomeEvento}</td>
                   <td>{evento.dataHoraFormatada}</td>

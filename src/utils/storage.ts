@@ -145,9 +145,8 @@ export const reconcileEventosAutomaticos = async (): Promise<Evento[]> => {
 
     return {
       ...evento,
-      concluido: true,
+      eqPendente: true,
       removido: true,
-      dataConclusao: evento.dataConclusao || new Date().toISOString(),
       dataRemocao: evento.dataRemocao || new Date().toISOString(),
     };
   });
@@ -164,7 +163,7 @@ export const reconcileEventosAutomaticos = async (): Promise<Evento[]> => {
   await saveEventos(eventosAtualizados);
   await Promise.all(
     eventosAtualizados
-      .filter((evento) => evento.concluido && evento.removido)
+      .filter((evento) => evento.eqPendente && evento.removido)
       .map(addToHistorico),
   );
 
