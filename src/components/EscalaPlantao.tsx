@@ -203,39 +203,6 @@ function membroNaEscala(
   return escala.dias.some((d) => acharMembroId(equipe, d) === membroId);
 }
 
-type JanelaBloqueio = { inicio: string; fim: string };
-
-/**
- * Janela de bloqueio de um dia de plantão (regra 4). Para sábados e domingos,
- * cobre [sexta, sábado, domingo, segunda] do mesmo fim de semana — qualquer
- * indisponibilidade que caia nesse intervalo impede a pessoa de assumir o fim
- * de semana inteiro. Para um feriado em dia de semana, cobre só o próprio dia.
- */
-function janelaBloqueio(data: string): JanelaBloqueio {
-  const [ano, mes, dia] = data.split("-").map(Number);
-  const dow = new Date(ano, mes - 1, dia).getDay();
-  const fmt = (x: Date) =>
-    `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(
-      x.getDate(),
-    ).padStart(2, "0")}`;
-  if (dow !== 0 && dow !== 6) return { inicio: data, fim: data };
-  const offsetSexta = dow === 6 ? -1 : -2; // sábado → sexta = -1; domingo → sexta = -2
-  return {
-    inicio: fmt(new Date(ano, mes - 1, dia + offsetSexta)),
-    fim: fmt(new Date(ano, mes - 1, dia + offsetSexta + 3)),
-  };
-}
-
-/**
- * true se a indisponibilidade do membro (data única quando início = fim, ou um
- * intervalo) cruzar a janela de bloqueio do fim de semana.
- */
-function indisponivelNaJanela(m: MembroEquipe, janela: JanelaBloqueio): boolean {
-  if (!m.feriasInicio && !m.feriasFim) return false;
-  const ini = m.feriasInicio || "0000-01-01";
-  const fim = m.feriasFim || "9999-12-31";
-  return ini <= janela.fim && fim >= janela.inicio;
-}
 
 /**
  * Gera os dias de plantão de um mês seguindo a ordem fixa da fila (regras 1-6).
