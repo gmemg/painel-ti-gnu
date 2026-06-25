@@ -274,6 +274,47 @@ const COLUNAS_TAREFA: Coluna[] = [
   { titulo: "Chamado", largura: "10%", render: (r) => txt(r.chamado) },
 ];
 
+const TAREFA_STATUS_LABEL: Record<string, string> = {
+  pendente: "Pendente",
+  em_andamento: "Em andamento",
+  concluida: "Concluído",
+  cancelada: "Cancelada",
+};
+
+const TAREFA_STATUS_COR: Record<string, string> = {
+  pendente: "#2b8ffb",
+  em_andamento: "#f97316",
+  concluida: "#22c55e",
+  cancelada: "#ef4444",
+};
+
+const COLUNAS_TAREFA_HISTORICO: Coluna[] = [
+  { titulo: "Tarefa", classe: "tv-td-destaque", render: (r) => txt(r.tarefa) },
+  {
+    titulo: "Descrição",
+    largura: "35%",
+    classe: "tv-td-desc",
+    render: (r) => txt(r.descricao),
+  },
+  { titulo: "Responsável", render: (r) => txt(r.responsavel) },
+  {
+    titulo: "Prazo",
+    largura: "10%",
+    render: (r) => (r.prazo ? formatDateTime(String(r.prazo)) : ""),
+  },
+  { titulo: "Chamado", largura: "10%", render: (r) => txt(r.chamado) },
+  {
+    titulo: "Status",
+    largura: "10%",
+    render: (r) => (
+      <StatusBadge
+        label={TAREFA_STATUS_LABEL[String(r.status)] ?? String(r.status)}
+        cor={TAREFA_STATUS_COR[String(r.status)] ?? "#9ca3af"}
+      />
+    ),
+  },
+];
+
 const asRows = <T,>(arr: T[]) => arr as unknown as Record<string, unknown>[];
 
 /* ─── Catálogo de telas disponíveis ───────────────────────────────── */
@@ -382,7 +423,7 @@ const CATALOGO: TelaDef[] = [
     id: "historico-tarefas",
     label: "HISTÓRICO DE TAREFAS",
     accent: "azul",
-    colunas: COLUNAS_TAREFA,
+    colunas: COLUNAS_TAREFA_HISTORICO,
     vazioMsg: "Nenhuma tarefa no histórico.",
     load: async () => asRows(await getHistoricoTarefas()),
   },
