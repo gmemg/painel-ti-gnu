@@ -33,6 +33,7 @@ const FormularioEvento = ({
     equipamentosNecessarios: "",
     numeroChamado: "",
     requerente: "",
+    prioridade: "",
   });
 
   useEffect(() => {
@@ -53,6 +54,7 @@ const FormularioEvento = ({
         equipamentosNecessarios: evento.equipamentosNecessarios,
         numeroChamado: evento.numeroChamado,
         requerente: evento.requerente || "",
+        prioridade: evento.prioridade || "",
       });
     } else {
       setFormData({
@@ -65,6 +67,7 @@ const FormularioEvento = ({
         equipamentosNecessarios: "",
         numeroChamado: "",
         requerente: "",
+        prioridade: "",
       });
     }
   }, [evento]);
@@ -88,7 +91,7 @@ const FormularioEvento = ({
    * Isso evita criar handlers específicos para cada input.
    */
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -124,6 +127,7 @@ const FormularioEvento = ({
         equipamentosNecessarios: formData.equipamentosNecessarios,
         numeroChamado: formData.numeroChamado,
         requerente: formData.requerente,
+        prioridade: formData.prioridade as "urgente" | "alta" | "média" | "baixa" | undefined,
         removido: false,
         concluido: evento?.concluido || false,
         dataConclusao: evento?.dataConclusao,
@@ -238,6 +242,22 @@ const FormularioEvento = ({
               onChange={handleChange}
               placeholder="Ex: Departamento Financeiro"
             />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="prioridade">Prioridade</label>
+            <select
+              id="prioridade"
+              name="prioridade"
+              value={formData.prioridade}
+              onChange={handleChange}
+            >
+              <option value="">Nenhuma</option>
+              <option value="baixa">Baixa</option>
+              <option value="média">Média</option>
+              <option value="alta">Alta</option>
+              <option value="urgente">Urgente</option>
+            </select>
           </div>
 
           <div className="form-buttons">

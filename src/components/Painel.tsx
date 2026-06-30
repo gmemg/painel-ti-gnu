@@ -305,11 +305,14 @@ const Painel = () => {
         ...evento,
         dataHoraFormatada: formatDateTime(evento.dataHora),
         diaSemanaFormatado: getDiaSemana(evento.dataHora),
-        urgencia: faltam12HorasOuMenos(evento.dataHora)
-          ? "critica"
-          : faltam24HorasOuMenos(evento.dataHora)
-            ? "alta"
-            : null,
+        urgencia:
+          evento.prioridade === "urgente"
+            ? "critica"
+            : faltam12HorasOuMenos(evento.dataHora)
+              ? "critica"
+              : faltam24HorasOuMenos(evento.dataHora)
+                ? "alta"
+                : null,
       })),
     [eventos],
   );

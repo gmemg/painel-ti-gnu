@@ -15,6 +15,7 @@ export interface Evento {
   equipamentosNecessarios: string;
   numeroChamado: string;
   requerente: string;
+  prioridade?: "urgente" | "alta" | "média" | "baixa";
   removido: boolean;
   concluido?: boolean;
   eqPendente?: boolean;

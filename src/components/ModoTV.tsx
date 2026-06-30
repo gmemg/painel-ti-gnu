@@ -325,8 +325,11 @@ const CATALOGO: TelaDef[] = [
     accent: "azul",
     colunas: COLUNAS_EVENTO,
     vazioMsg: "Nenhuma montagem cadastrada.",
-    isUrgent: (r) => faltam12HorasOuMenos(String(r.dataHora ?? "")),
+    isUrgent: (r) =>
+      r.prioridade === "urgente" ||
+      faltam12HorasOuMenos(String(r.dataHora ?? "")),
     isOrangeUrgent: (r) => {
+      if (r.prioridade === "urgente") return false;
       const dh = String(r.dataHora ?? "");
       return faltam24HorasOuMenos(dh) && !faltam12HorasOuMenos(dh);
     },
@@ -705,7 +708,8 @@ export default function ModoTV() {
 
     const PAUSE_TICKS = 62; // 62 × 40ms ≈ 2.5s de pausa no fim
     const SCROLL_BACK_TICKS = 75; // 75 × 40ms = 3s de retorno ao topo
-    let delayTicks = 125; // 125 × 40ms = 5s de espera inicial
+    const DELAY_TICKS = 125; // 125 × 40ms = 5s de espera
+    let delayTicks = DELAY_TICKS; // Espera inicial
     let pauseTicks = 0;
     let scrollBackTicks = 0;
     let scrollBackStartPos = 0;
@@ -723,6 +727,9 @@ export default function ModoTV() {
         scrollBackTicks--;
         el.scrollTop =
           scrollBackStartPos * (scrollBackTicks / SCROLL_BACK_TICKS);
+        if (scrollBackTicks === 0) {
+          delayTicks = DELAY_TICKS; // Adiciona delay após voltar ao topo
+        }
         return;
       }
 

@@ -44,7 +44,8 @@
 }
 
 .form-group input,
-.form-group textarea {
+.form-group textarea,
+.form-group select {
   width: 100%;
   padding: 0.75rem;
   border: 1px solid var(--border);
@@ -57,7 +58,8 @@
 }
 
 .form-group input:focus,
-.form-group textarea:focus {
+.form-group textarea:focus,
+.form-group select:focus {
   outline: none;
   border-color: var(--blue);
   background-color: var(--surface-3);
@@ -147,7 +149,8 @@ html[data-theme="light"] .btn-cancelar:hover {
   }
 
   .form-group input,
-  .form-group textarea {
+  .form-group textarea,
+  .form-group select {
     padding: 0.65rem;
     font-size: 0.95rem;
   }
