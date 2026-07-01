@@ -667,6 +667,33 @@ html[data-theme="light"] .imp-card {
   gap: 0.65rem;
 }
 
+.imp-sede-filter {
+  padding: 0.5rem 0.8rem;
+  background: var(--surface-3);
+  border: 1px solid var(--border-strong);
+  border-radius: 0.55rem;
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+  white-space: nowrap;
+}
+
+.imp-sede-filter:hover {
+  background: var(--surface-2);
+  border-color: rgba(43, 143, 251, 0.6);
+}
+
+.imp-sede-filter:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px rgba(43, 143, 251, 0.18);
+}
+
 .imp-btn-solicitacoes {
   display: inline-flex;
   align-items: center;

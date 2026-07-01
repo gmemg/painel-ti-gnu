@@ -320,6 +320,8 @@ function ImpressoraCard({
   );
 }
 
+const SEDES = ["AP", "UP", "IP", "MV"] as const;
+
 export default function Impressoras() {
   const { isAdmin } = useAuth();
   const [impressoras, setImpressoras] = useState<Impressora[]>([]);
@@ -334,6 +336,7 @@ export default function Impressoras() {
   const [salvando, setSalvando] = useState(false);
   const [view, setView] = useState<"impressoras" | "toners">("impressoras");
   const [toners, setToners] = useState<TonerRegistro[]>([]);
+  const [sedeSelecionada, setSedeSelecionada] = useState<string>("todas");
   const primeiroInputRef = useRef<HTMLInputElement>(null);
   const tonersLoadedRef = useRef(false);
   const tonerSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -500,6 +503,10 @@ export default function Impressoras() {
     return <div className="imp-erro">{erro}</div>;
   }
 
+  const impressorasFiltradas = sedeSelecionada === "todas"
+    ? impressoras
+    : impressoras.filter((imp) => imp.sede === sedeSelecionada);
+
   return (
     <div className="imp-page">
       <div className="imp-toolbar">
@@ -510,12 +517,27 @@ export default function Impressoras() {
           {view === "impressoras" && (
             <div className="imp-toolbar-stats">
               <span className="imp-toolbar-stat">
-                Impressoras cadastradas: <strong>{impressoras.length}</strong>
+                Impressoras cadastradas: <strong>{impressorasFiltradas.length}</strong>
               </span>
             </div>
           )}
         </div>
         <div className="imp-toolbar-right">
+          {view === "impressoras" && (
+            <select
+              className="imp-sede-filter"
+              value={sedeSelecionada}
+              onChange={(e) => setSedeSelecionada(e.target.value)}
+              aria-label="Filtrar por sede"
+            >
+              <option value="todas">Todas as sedes</option>
+              {SEDES.map((sede) => (
+                <option key={sede} value={sede}>
+                  {sede}
+                </option>
+              ))}
+            </select>
+          )}
           {view === "impressoras" && isAdmin && (
             <button
               type="button"
@@ -553,7 +575,7 @@ export default function Impressoras() {
             />
           ))}
         </div>
-      ) : impressoras.length === 0 ? (
+      ) : impressorasFiltradas.length === 0 ? (
         <div className="imp-vazio">
           <svg
             viewBox="0 0 24 24"
@@ -570,7 +592,11 @@ export default function Impressoras() {
               d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.056 48.056 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z"
             />
           </svg>
-          <p>Nenhuma impressora cadastrada.</p>
+          <p>
+            {sedeSelecionada === "todas"
+              ? "Nenhuma impressora cadastrada."
+              : `Nenhuma impressora cadastrada para a sede ${sedeSelecionada}.`}
+          </p>
           {isAdmin && (
             <button
               type="button"
@@ -583,7 +609,7 @@ export default function Impressoras() {
         </div>
       ) : (
         <div className="imp-grid">
-          {impressoras.map((imp) => (
+          {impressorasFiltradas.map((imp) => (
             <ImpressoraCard
               key={imp.id}
               impressora={imp}
