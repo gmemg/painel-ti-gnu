@@ -1021,6 +1021,32 @@
   background: color-mix(in srgb, var(--blue) 7%, var(--bg));
 }
 
+.esc-fila-row-arrastando {
+  opacity: 0.4;
+}
+
+.esc-fila-row-sobre {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--blue) 35%, transparent);
+}
+
+.esc-fila-handle {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  color: var(--text-muted);
+  cursor: grab;
+  font-size: 0.85rem;
+  line-height: 1;
+  user-select: none;
+}
+
+.esc-fila-handle:active {
+  cursor: grabbing;
+}
+
 .esc-fila-pos {
   flex-shrink: 0;
   width: 1.35rem;
@@ -1055,40 +1081,6 @@
   align-items: center;
   gap: 0.2rem;
   flex-shrink: 0;
-}
-
-.esc-fila-arrows {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  flex-shrink: 0;
-}
-
-.esc-fila-btn {
-  width: 1.15rem;
-  height: 0.95rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 0.55rem;
-  line-height: 1;
-  padding: 0;
-  border-radius: 0.2rem;
-  transition: all 0.12s;
-}
-
-.esc-fila-btn:hover:not(:disabled) {
-  color: var(--blue);
-  background: color-mix(in srgb, var(--blue) 12%, transparent);
-}
-
-.esc-fila-btn:disabled {
-  opacity: 0.2;
-  cursor: default;
 }
 
 .esc-fila-footer {

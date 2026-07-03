@@ -481,6 +481,8 @@ export default function EscalaPlantao() {
   const [verFila, setVerFila] = useState(false);
   const [filaManual, setFilaManual] = useState<string[] | null>(null);
   const [foraIds, setForaIds] = useState<string[]>([]);
+  const [arrastandoId, setArrastandoId] = useState<string | null>(null);
+  const [sobreId, setSobreId] = useState<string | null>(null);
 
   // Equipe T.I
   const [equipe, setEquipe] = useState<MembroEquipe[]>([]);
@@ -966,11 +968,12 @@ xmlns="http://www.w3.org/TR/REC-html40">
     setFilaManual(ids);
   };
 
-  const moverNaFila = (idx: number, direcao: -1 | 1) => {
+  const moverParaPosicao = (id: string, destIdx: number) => {
     const nova = [...filaAtualIds];
-    const alvo = idx + direcao;
-    if (alvo < 0 || alvo >= nova.length) return;
-    [nova[idx], nova[alvo]] = [nova[alvo], nova[idx]];
+    const origIdx = nova.indexOf(id);
+    if (origIdx === -1 || origIdx === destIdx) return;
+    nova.splice(origIdx, 1);
+    nova.splice(destIdx, 0, id);
     salvarFilaManual(nova);
   };
 
@@ -1263,19 +1266,58 @@ xmlns="http://www.w3.org/TR/REC-html40">
                     );
                     return filaAtual.map((m, i) => {
                       const eFora = foraIds.includes(m.id);
+                      const podeArrastar = isAdmin && !eFora;
                       return (
                         <li
                           key={m.id}
+                          draggable={podeArrastar}
+                          onDragStart={(e) => {
+                            setArrastandoId(m.id);
+                            e.dataTransfer.effectAllowed = "move";
+                          }}
+                          onDragOver={(e) => {
+                            if (!arrastandoId || arrastandoId === m.id) return;
+                            e.preventDefault();
+                            e.dataTransfer.dropEffect = "move";
+                            setSobreId(m.id);
+                          }}
+                          onDragLeave={() =>
+                            setSobreId((cur) => (cur === m.id ? null : cur))
+                          }
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            if (arrastandoId && arrastandoId !== m.id) {
+                              moverParaPosicao(arrastandoId, i);
+                            }
+                            setArrastandoId(null);
+                            setSobreId(null);
+                          }}
+                          onDragEnd={() => {
+                            setArrastandoId(null);
+                            setSobreId(null);
+                          }}
                           className={[
                             "esc-fila-row",
                             i === primeiroAtivoIdx
                               ? "esc-fila-row-primeiro"
                               : "",
                             eFora ? "esc-fila-row-fora" : "",
+                            arrastandoId === m.id ? "esc-fila-row-arrastando" : "",
+                            sobreId === m.id && arrastandoId !== m.id
+                              ? "esc-fila-row-sobre"
+                              : "",
                           ]
                             .filter(Boolean)
                             .join(" ")}
                         >
+                          {podeArrastar && (
+                            <span
+                              className="esc-fila-handle"
+                              title="Arraste para reordenar"
+                            >
+                              ⠿
+                            </span>
+                          )}
                           <span className="esc-fila-pos">{i + 1}</span>
                           <span className="esc-fila-nome">{m.nome}</span>
                           {eFora && (
@@ -1283,30 +1325,6 @@ xmlns="http://www.w3.org/TR/REC-html40">
                           )}
                           {isAdmin && (
                             <div className="esc-fila-actions">
-                              {!eFora && (
-                                <div className="esc-fila-arrows">
-                                  <button
-                                    type="button"
-                                    className="esc-fila-btn"
-                                    disabled={i === 0}
-                                    onClick={() => moverNaFila(i, -1)}
-                                    title="Subir na fila"
-                                  >
-                                    ▲
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="esc-fila-btn"
-                                    disabled={
-                                      i === filaAtual.length - 1
-                                    }
-                                    onClick={() => moverNaFila(i, 1)}
-                                    title="Descer na fila"
-                                  >
-                                    ▼
-                                  </button>
-                                </div>
-                              )}
                               <button
                                 type="button"
                                 className={`esc-fila-btn-fora${eFora ? " esc-fila-btn-fora-ativo" : ""}`}
