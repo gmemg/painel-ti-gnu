@@ -30,7 +30,7 @@ const FIELD_LABELS: Record<
   fornecedor: "Fornecedor",
 };
 
-type SortOption = "manual" | "equipamento" | "recentes";
+type SortOption = "manual" | "equipamento" | "sede" | "recentes";
 type UndoState = {
   registro: ManutencaoRegistro;
   index: number;
@@ -107,6 +107,8 @@ const NumeroManutencao = () => {
     const base = [...registros];
     if (sortBy === "equipamento")
       base.sort((a, b) => a.equipamento.localeCompare(b.equipamento, "pt-BR"));
+    else if (sortBy === "sede")
+      base.sort((a, b) => a.sede.localeCompare(b.sede, "pt-BR"));
     else if (sortBy === "recentes")
       base.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
     return base;
@@ -226,6 +228,7 @@ const NumeroManutencao = () => {
           >
             <option value="manual">Manual</option>
             <option value="equipamento">Equipamento</option>
+            <option value="sede">Sede</option>
             <option value="recentes">Última edição</option>
           </select>
         </div>
