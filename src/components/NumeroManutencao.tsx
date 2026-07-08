@@ -17,6 +17,7 @@ const EQUIPAMENTO_OPTIONS = [
   "Facial",
   "Digital",
   "Semáforo",
+  "Totem",
 ] as const;
 
 const FIELD_LABELS: Record<
