@@ -9,6 +9,7 @@ import {
 } from "react-router-dom";
 import Painel from "./components/Painel";
 import Historico from "./components/Historico";
+import Dashboard from "./components/Dashboard";
 import InventarioMontagem from "./components/InventarioMontagem";
 import Impressoras from "./components/Impressoras";
 import EscalaPlantao from "./components/EscalaPlantao";
@@ -225,6 +226,15 @@ function AppLayout() {
                 className={({ isActive }) =>
                   `side-nav-link${isActive ? " active" : ""}`
                 }
+                end
+              >
+                Dashboard
+              </NavLink>
+              <NavLink
+                to="/montagens"
+                className={({ isActive }) =>
+                  `side-nav-link${isActive ? " active" : ""}`
+                }
               >
                 Montagens
               </NavLink>
@@ -306,7 +316,8 @@ function AppLayout() {
         <main className="main-content">
           {/* Rotas separadas para manter cada tela isolada e simples */}
           <Routes>
-            <Route path="/" element={<Painel />} />
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/montagens" element={<Painel />} />
             <Route
               path="/equipamentos-pendentes"
               element={<EquipamentosPendentes />}

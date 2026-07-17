@@ -1,0 +1,789 @@
+.db-container {
+  width: 100%;
+  animation: dbFadeIn 0.3s ease-out;
+}
+
+@keyframes dbFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header */
+.db-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.db-header h2 {
+  color: var(--text-strong);
+  font-size: 2.2rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.db-subtitle {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin-top: 0.2rem;
+}
+
+.db-update-badge {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--text-subtle);
+  box-shadow: 0 2px 8px var(--shadow);
+}
+
+.db-pulse-dot {
+  width: 8px;
+  height: 8px;
+  background-color: var(--green);
+  border-radius: 50%;
+  position: relative;
+  display: inline-block;
+}
+
+.db-pulse-dot::after {
+  content: "";
+  width: 100%;
+  height: 100%;
+  background-color: var(--green);
+  border-radius: 50%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  animation: dbPulse 1.8s infinite ease-out;
+}
+
+@keyframes dbPulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+/* KPI Card Grid */
+.db-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 2.5rem;
+}
+
+.db-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 4px 12px var(--shadow);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), 
+              border-color 0.22s ease, 
+              box-shadow 0.22s ease;
+  position: relative;
+  overflow: visible; /* Permitir exibir o popover flutuante */
+}
+
+/* Barra lateral esquerda usando variável inline customizável */
+.db-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--card-accent);
+  transition: background 0.22s ease;
+}
+
+/* Efeito de hover dinâmico baseado na variável de cor do card */
+.db-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--card-accent);
+  box-shadow: 0 8px 24px var(--card-accent-glow);
+}
+
+/* Animação extra pulsante suave para Chamados Novos */
+.kpi-novos {
+  animation: pulseCardGlow 3s infinite alternate ease-in-out;
+}
+
+@keyframes pulseCardGlow {
+  0% {
+    border-color: var(--border);
+  }
+  100% {
+    border-color: rgba(43, 143, 251, 0.25);
+  }
+}
+
+.db-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.db-card-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.db-card-icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.22s ease;
+}
+
+.db-card-icon {
+  width: 18px;
+  height: 18px;
+  transition: color 0.22s ease;
+}
+
+/* Classes dinâmicas que herdam as variáveis inline */
+.var-accent-bg-dim {
+  background-color: var(--card-accent-dim);
+}
+
+.var-accent-color {
+  color: var(--card-accent);
+}
+
+/* Tendências nos Cards (Herdam a cor de acento do card de forma atenuada) */
+.db-card-trend {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  background-color: var(--card-accent-dim);
+  color: var(--card-accent);
+  transition: background-color 0.22s ease, color 0.22s ease;
+  white-space: nowrap;
+}
+
+.trend-neutral {
+  background: rgba(156, 163, 175, 0.12) !important;
+  color: var(--text-muted) !important;
+}
+
+.db-card-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.db-card-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  line-height: 1.2;
+}
+
+.db-card-title {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Botão do seletor de cores no card */
+.db-color-popover-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.db-card-color-btn {
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0; /* Invisível por padrão no desktop */
+  transition: opacity 0.2s, background-color 0.2s, color 0.2s;
+}
+
+/* Mostra a paleta ao passar o mouse sobre o card ou se estiver aberto */
+.db-card:hover .db-card-color-btn,
+.db-card-color-btn.active {
+  opacity: 0.65;
+}
+
+.db-card-color-btn:hover,
+.db-card-color-btn.active {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--card-accent);
+}
+
+/* Menu Popover Flutuante de Cores */
+.db-color-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--surface-3);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  padding: 0.75rem;
+  width: 170px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 90;
+  animation: popoverFade 0.15s ease-out;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+@keyframes popoverFade {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.db-color-popover-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-strong);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.4rem;
+}
+
+/* Grid de Presets circulares */
+.db-color-presets {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.4rem;
+}
+
+.db-preset-circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s;
+  padding: 0;
+}
+
+.db-preset-circle:hover {
+  transform: scale(1.2);
+}
+
+.db-preset-circle.active {
+  border-color: #ffffff;
+  transform: scale(1.15);
+}
+
+/* Seletor Customizado Nátivo */
+.db-color-picker-custom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-subtle);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.db-color-picker-custom label {
+  cursor: pointer;
+}
+
+.db-color-picker-custom input[type="color"] {
+  border: none;
+  background: transparent;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* Botão de resetar cor */
+.db-color-reset-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  color: var(--text-subtle);
+  font-size: 0.72rem;
+  padding: 0.35rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s, color 0.2s;
+  width: 100%;
+}
+
+.db-color-reset-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+/* Lower section widgets style */
+.db-lower-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.db-tech-widget {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 16px var(--shadow);
+  display: flex;
+  flex-direction: column;
+}
+
+.db-widget-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.db-widget-header h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.db-widget-header p {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* Modern Select wrapper styles */
+.db-select-wrapper {
+  position: relative;
+}
+
+.db-tech-select {
+  background: var(--surface-3);
+  color: var(--text-strong);
+  border: 1px solid var(--border-strong);
+  padding: 0.5rem 2rem 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.db-tech-select:focus {
+  border-color: var(--blue);
+}
+
+.db-select-wrapper::after {
+  content: "▼";
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  position: absolute;
+  right: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+/* Detail view within interactive widgets */
+.db-tech-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  flex: 1;
+}
+
+.db-tech-profile-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.db-tech-avatar-wrapper {
+  position: relative;
+}
+
+.db-tech-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--blue), var(--blue-2));
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1.1rem;
+  box-shadow: 0 2px 8px var(--shadow);
+}
+
+.bg-purple-grad {
+  background: linear-gradient(135deg, #a855f7, #6366f1) !important;
+}
+
+.db-tech-status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  border: 2px solid var(--surface-2);
+}
+
+.db-tech-status-dot.online {
+  background-color: var(--green);
+}
+
+.db-tech-meta h4 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-strong);
+  margin: 0;
+}
+
+.db-tech-role {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* Big counter visual results box */
+.db-tech-result-box {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  padding: 1.5rem;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex: 1;
+  box-shadow: inset 0 2px 4px var(--shadow);
+  transition: border-color 0.2s;
+}
+
+.db-tech-result-box:hover {
+  border-color: var(--border-strong);
+}
+
+.db-result-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.db-result-value {
+  font-size: 3.5rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -1px;
+  text-shadow: 0 4px 12px var(--shadow);
+}
+
+.db-result-subtext {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+}
+
+/* Light Theme overrides for specific colors */
+html[data-theme="light"] .db-update-badge {
+  background: #ffffff;
+  color: #2d3648;
+}
+
+html[data-theme="light"] .db-tech-select {
+  background: #ffffff;
+}
+
+html[data-theme="light"] .db-tech-result-box {
+  background: #ffffff;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+html[data-theme="light"] .db-color-popover {
+  background: #ffffff;
+  border-color: var(--border-strong);
+}
+
+html[data-theme="light"] .db-color-picker-custom {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+html[data-theme="light"] .db-preset-circle.active {
+  border-color: #000000;
+}
+
+/* Responsiveness overrides */
+@media (max-width: 1024px) {
+  .db-lower-section {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .db-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .db-header h2 {
+    font-size: 1.8rem;
+  }
+
+  .db-kpi-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+
+  .db-card-color-btn {
+    opacity: 0.5; /* Deixa o botão um pouco visível no mobile */
+  }
+}
+
+@media (max-width: 480px) {
+  .db-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .db-widget-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .db-tech-select {
+    width: 100%;
+  }
+
+  .db-result-value {
+    font-size: 3rem;
+  }
+}
+
+/* Estilos para o Ranking de Técnicos */
+.db-ranking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.db-ranking-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.db-ranking-item:hover {
+  transform: translateX(4px);
+  border-color: var(--border-strong);
+  box-shadow: 0 4px 12px var(--shadow);
+}
+
+.db-ranking-position-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+}
+
+.db-ranking-position {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.db-ranking-position.medal-gold {
+  background: linear-gradient(135deg, #ffd700, #ffa500);
+  color: #000000;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+}
+
+.db-ranking-position.medal-silver {
+  background: linear-gradient(135deg, #c0c0c0, #a9a9a9);
+  color: #000000;
+  box-shadow: 0 0 8px rgba(192, 192, 192, 0.4);
+}
+
+.db-ranking-position.medal-bronze {
+  background: linear-gradient(135deg, #cd7f32, #8b4513);
+  color: #ffffff;
+  box-shadow: 0 0 8px rgba(205, 127, 50, 0.4);
+}
+
+.db-ranking-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--blue), var(--blue-2));
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 4px var(--shadow);
+}
+
+.db-ranking-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.db-ranking-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.db-ranking-role {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.db-ranking-value-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.db-ranking-value {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--green);
+  line-height: 1.1;
+}
+
+.db-ranking-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+html[data-theme="light"] .db-ranking-item {
+  background: #ffffff;
+}
+
+/* Estilos para Chamados por Setor */
+.db-sector-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.05rem;
+  flex: 1;
+}
+
+.db-sector-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.db-sector-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.db-sector-name {
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.db-sector-count {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.db-sector-count strong {
+  color: var(--text-strong);
+}
+
+.db-sector-bar-bg {
+  width: 100%;
+  height: 8px;
+  background: var(--surface-3);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.db-sector-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html[data-theme="light"] .db-sector-bar-bg {
+  background: rgba(0, 0, 0, 0.05);
+}
+
