@@ -331,3 +331,70 @@ export const saveToners = (
     method: "PUT",
     body: JSON.stringify(registros),
   });
+
+// --- INTEGRAÇÃO GLPI FRONTEND ---
+
+export interface GlpiDashboardData {
+  kpis: {
+    novos: number;
+    atribuidos: number;
+    planejados: number;
+    pendentes: number;
+    fechados: number;
+  };
+  tecnicos: Array<{
+    id: string;
+    nome: string;
+    avatar: string;
+    role: string;
+    resolvidos: number;
+  }>;
+  pessoas: Array<{
+    id: string;
+    nome: string;
+    chamados: number;
+    cor: string;
+  }>;
+}
+
+export interface GlpiPrinterAvailable {
+  glpiId: string;
+  nome: string;
+  marca: string;
+  modelo: string;
+  numeroSerie: string;
+  mac: string;
+  ip: string;
+  local: string;
+}
+
+export interface GlpiSyncStatus {
+  lastSync: string | null;
+  intervalHours: number;
+  nextSync: string | null;
+}
+
+export const getGlpiDashboard = (): Promise<GlpiDashboardData> =>
+  requestJson<GlpiDashboardData>("/glpi/dashboard");
+
+export const getGlpiPrintersAvailable = (): Promise<GlpiPrinterAvailable[]> =>
+  requestJson<GlpiPrinterAvailable[]>("/glpi/impressoras-disponiveis");
+
+export const importGlpiPrinter = (
+  glpiId: string,
+  local: string,
+  sede: string,
+): Promise<Impressora> =>
+  requestJson<Impressora>("/impressoras/importar", {
+    method: "POST",
+    body: JSON.stringify({ glpiId, local, sede }),
+  });
+
+export const getGlpiSyncStatus = (): Promise<GlpiSyncStatus> =>
+  requestJson<GlpiSyncStatus>("/glpi/sync-status");
+
+export const syncGlpiPrintersNow = (): Promise<{ success: boolean; lastSync: string | null; nextSync: string | null }> =>
+  requestJson<{ success: boolean; lastSync: string | null; nextSync: string | null }>("/glpi/sync-now", {
+    method: "POST"
+  });
+

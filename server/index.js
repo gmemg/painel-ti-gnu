@@ -223,6 +223,7 @@ const initDatabase = async () => {
 
     ALTER TABLE impressoras ADD COLUMN IF NOT EXISTS sede TEXT;
     ALTER TABLE impressoras ADD COLUMN IF NOT EXISTS link TEXT;
+    ALTER TABLE impressoras ADD COLUMN IF NOT EXISTS glpi_id TEXT;
 
     CREATE TABLE IF NOT EXISTS tarefas (
       id TEXT PRIMARY KEY,
@@ -407,6 +408,7 @@ const rowToTonerRegistro = (row) => ({
 
 const rowToImpressora = (row) => ({
   id: row.id,
+  glpiId: row.glpi_id || null,
   local: row.local_texto || "",
   sede: row.sede || "",
   marca: row.marca || "",
@@ -866,11 +868,12 @@ app.put("/api/impressoras", async (req, res, next) => {
       await client.query(
         `
         INSERT INTO impressoras (
-          id, local_texto, sede, marca, modelo, numero_serie, ip, mac, link,
+          id, glpi_id, local_texto, sede, marca, modelo, numero_serie, ip, mac, link,
           toner_preto, toner_ciano, toner_magenta, toner_amarelo, updated_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
         ON CONFLICT (id) DO UPDATE SET
+          glpi_id = EXCLUDED.glpi_id,
           local_texto = EXCLUDED.local_texto,
           sede = EXCLUDED.sede,
           marca = EXCLUDED.marca,
@@ -887,6 +890,7 @@ app.put("/api/impressoras", async (req, res, next) => {
         `,
         [
           imp.id,
+          imp.glpiId || null,
           imp.local || "",
           imp.sede || "",
           imp.marca || "",
@@ -1346,6 +1350,729 @@ app.put("/api/tv-config", async (req, res, next) => {
   }
 });
 
+// --- CONFIGURAÇÃO E INTEGRAÇÃO DO GLPI ---
+const GLPI_API_URL = process.env.GLPI_API_URL || "";
+const GLPI_APP_TOKEN = process.env.GLPI_APP_TOKEN || "";
+const GLPI_USER_TOKEN = process.env.GLPI_USER_TOKEN || "";
+
+let syncTimeoutId = null;
+let syncIntervalId = null;
+
+async function initGlpiSession() {
+  if (!GLPI_API_URL) {
+    throw new Error("A variável GLPI_API_URL não está configurada no .env");
+  }
+  const res = await fetch(`${GLPI_API_URL}/initSession`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "App-Token": GLPI_APP_TOKEN,
+      "Authorization": `user_token ${GLPI_USER_TOKEN}`,
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Erro ao autenticar no GLPI (${res.status}): ${text}`);
+  }
+  const data = await res.json();
+  return data.session_token;
+}
+
+async function killGlpiSession(sessionToken) {
+  if (!GLPI_API_URL || !sessionToken) return;
+  try {
+    await fetch(`${GLPI_API_URL}/killSession`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "App-Token": GLPI_APP_TOKEN,
+        "Session-Token": sessionToken,
+      },
+    });
+  } catch (e) {
+    console.error("[GLPI] Erro ao encerrar sessão:", e.message);
+  }
+}
+
+async function getTonerDirectlyFromPrinter(ip) {
+  if (!ip) return null;
+  const cleanedIp = ip.trim();
+  if (!/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(cleanedIp)) {
+    return null;
+  }
+  
+  try {
+    const url = `http://${cleanedIp}/home/status.html`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
+    if (!res.ok) return null;
+    
+    const htmlContent = await res.text();
+    const imgRegex = /<img[^>]+class="tonerremain"[^>]*>/gi;
+    
+    let levels = null;
+    let match;
+    
+    while ((match = imgRegex.exec(htmlContent)) !== null) {
+      const imgTag = match[0];
+      const altMatch = /alt="([^"]+)"/i.exec(imgTag);
+      const srcMatch = /src="([^"]+)"/i.exec(imgTag);
+      const heightMatch = /height="(\d+)"/i.exec(imgTag);
+      
+      if (heightMatch) {
+        const height = parseInt(heightMatch[1], 10);
+        // O container tem 60px de altura no CSS, a imagem do toner costuma ter no máximo 56px.
+        const percentage = Math.min(100, Math.max(0, Math.round((height / 56) * 100)));
+        const name = (altMatch?.[1] || srcMatch?.[1] || "").toLowerCase();
+        
+        let color = "preto";
+        let isColorFound = false;
+        if (name.includes("cyan") || name.includes("ciano")) {
+          color = "ciano";
+          isColorFound = true;
+        } else if (name.includes("magenta")) {
+          color = "magenta";
+          isColorFound = true;
+        } else if (name.includes("yellow") || name.includes("amarelo")) {
+          color = "amarelo";
+          isColorFound = true;
+        } else if (name.includes("black") || name.includes("preto")) {
+          color = "preto";
+        }
+        
+        if (!levels) {
+          levels = { preto: null, ciano: null, magenta: null, amarelo: null };
+        }
+        levels[color] = percentage;
+      }
+    }
+    
+    if (levels && levels.preto === null) {
+      levels.preto = 100;
+    }
+    
+    return levels;
+  } catch (err) {
+    console.log(`[Printer Scrape] Não foi possível obter dados direto da impressora no IP ${cleanedIp}:`, err.message);
+    return null;
+  }
+}
+
+async function getGlpiPrinterToner(sessionToken, printerId) {
+  try {
+    const res = await fetch(`${GLPI_API_URL}/Printer/${printerId}/Printer_CartridgeInfo`, {
+      headers: {
+        "App-Token": GLPI_APP_TOKEN,
+        "Session-Token": sessionToken,
+      },
+    });
+    if (!res.ok) {
+      return { preto: 100, ciano: null, magenta: null, amarelo: null };
+    }
+    const cartridgeInfos = await res.json();
+    
+    // Se a impressora só tiver propriedades pretas (monocromática), podemos deixar as outras nulas
+    let hasColor = false;
+    if (Array.isArray(cartridgeInfos)) {
+      cartridgeInfos.forEach((info) => {
+        const prop = (info.property || "").toLowerCase();
+        if (
+          prop.includes("cyan") || 
+          prop.includes("ciano") || 
+          prop.includes("magenta") || 
+          prop.includes("yellow") || 
+          prop.includes("amarelo")
+        ) {
+          hasColor = true;
+        }
+      });
+    }
+
+    const levels = { 
+      preto: 100, 
+      ciano: hasColor ? 100 : null, 
+      magenta: hasColor ? 100 : null, 
+      amarelo: hasColor ? 100 : null 
+    };
+    
+    if (Array.isArray(cartridgeInfos)) {
+      cartridgeInfos.forEach((info) => {
+        const prop = (info.property || "").toLowerCase();
+        const val = String(info.value || "").toUpperCase().trim();
+        
+        let percentage = 100;
+        if (val === "OK" || val === "CHEIO" || val === "FULL") {
+          percentage = 85;
+        } else if (val === "LOW" || val === "VAZIO" || val === "EMPTY" || val === "POUCO") {
+          percentage = 10;
+        } else {
+          const parsed = parseInt(val, 10);
+          if (!isNaN(parsed)) {
+            percentage = parsed;
+          }
+        }
+        
+        if (prop.includes("black") || prop.includes("preto") || prop.includes("drumblack") || prop.includes("tamborpreto")) {
+          // Preferimos o nível do toner para a cor preta no painel de toners
+          if (prop.includes("toner")) {
+            levels.preto = percentage;
+          } else if (prop.includes("drum") && (levels.preto === 100 || levels.preto === 85)) {
+            levels.preto = percentage;
+          } else if (!prop.includes("toner") && !prop.includes("drum")) {
+            levels.preto = percentage;
+          }
+        } else if (prop.includes("cyan") || prop.includes("ciano")) {
+          levels.ciano = percentage;
+        } else if (prop.includes("magenta")) {
+          levels.magenta = percentage;
+        } else if (prop.includes("yellow") || prop.includes("amarelo")) {
+          levels.amarelo = percentage;
+        }
+      });
+    }
+    return levels;
+  } catch (e) {
+    console.error(`[GLPI] Erro ao obter toner para impressora ${printerId}:`, e.message);
+    return { preto: 100, ciano: null, magenta: null, amarelo: null };
+  }
+}
+
+async function executePrintersSync() {
+  console.log("[GLPI Sync] Iniciando sincronização periódica de toners e dados de rede...");
+  try {
+    const sessionToken = await initGlpiSession();
+    const res = await pool.query("SELECT id, glpi_id, marca, modelo FROM impressoras WHERE glpi_id IS NOT NULL");
+    const printers = res.rows;
+    
+    for (const printer of printers) {
+      console.log(`[GLPI Sync] Sincronizando impressora: ${printer.marca} ${printer.modelo} (GLPI ID: ${printer.glpi_id})`);
+      
+      let ip = null;
+      let mac = null;
+      let brand = null;
+      let model = null;
+      let serial = null;
+      let location = null;
+      
+      try {
+        const searchRes = await fetch(
+          `${GLPI_API_URL}/search/Printer` +
+          `?criteria[0][field]=2&criteria[0][searchtype]=equals&criteria[0][value]=${printer.glpi_id}` +
+          `&forcedisplay[0]=1` +   // Nome
+          `&forcedisplay[1]=23` +  // Fabricante (Marca)
+          `&forcedisplay[2]=40` +  // Modelo
+          `&forcedisplay[3]=5` +   // Número de Série
+          `&forcedisplay[4]=21` +  // MAC
+          `&forcedisplay[5]=126` + // IP
+          `&forcedisplay[6]=3` +   // Localização
+          `&range=0-1`,
+          {
+            headers: {
+              "App-Token": GLPI_APP_TOKEN,
+              "Session-Token": sessionToken
+            }
+          }
+        );
+        if (searchRes.ok) {
+          const searchData = await searchRes.json();
+          const p = searchData.data?.[0];
+          if (p) {
+            brand = p["23"] || null;
+            model = p["40"] || p["1"] || null;
+            serial = p["5"] || null;
+            mac = p["21"] || null;
+            ip = p["126"] || null;
+            location = p["3"] || null;
+          }
+        }
+      } catch (err) {
+        console.error(`[GLPI Sync] Erro ao buscar dados de rede para impressora ${printer.glpi_id}:`, err.message);
+      }
+      
+      let toners = await getTonerDirectlyFromPrinter(ip);
+      if (!toners) {
+        toners = await getGlpiPrinterToner(sessionToken, printer.glpi_id);
+      }
+      
+      await pool.query(
+        `UPDATE impressoras 
+         SET toner_preto = $1, toner_ciano = $2, toner_magenta = $3, toner_amarelo = $4,
+             ip = COALESCE($5, ip), mac = COALESCE($6, mac), 
+             marca = COALESCE($7, marca), modelo = COALESCE($8, modelo),
+             numero_serie = COALESCE($9, numero_serie), local_texto = COALESCE($10, local_texto),
+             updated_at = NOW()
+         WHERE id = $11`,
+        [
+          toners.preto, toners.ciano, toners.magenta, toners.amarelo,
+          ip, mac, brand, model, serial, location,
+          printer.id
+        ]
+      );
+    }
+    
+    await killGlpiSession(sessionToken);
+    
+    const agoraStr = new Date().toISOString();
+    await pool.query(
+      `INSERT INTO tv_config (id, valor) 
+       VALUES ('last_glpi_impressoras_sync', $1) 
+       ON CONFLICT (id) DO UPDATE SET valor = EXCLUDED.valor`,
+      [agoraStr]
+    );
+    console.log(`[GLPI Sync] Sincronização concluída com sucesso em ${agoraStr}`);
+  } catch (e) {
+    console.error("[GLPI Sync] Falha na sincronização:", e.message);
+  }
+}
+
+async function schedulePrintersSync() {
+  try {
+    const res = await pool.query("SELECT valor FROM tv_config WHERE id = 'last_glpi_impressoras_sync'");
+    const lastSyncStr = res.rows[0]?.valor;
+    
+    const SEIS_HORAS_MS = 6 * 60 * 60 * 1000;
+    const agora = Date.now();
+    
+    let tempoRestante = SEIS_HORAS_MS;
+    
+    if (lastSyncStr) {
+      const lastSync = new Date(lastSyncStr).getTime();
+      const tempoDecorrido = agora - lastSync;
+      
+      if (tempoDecorrido >= SEIS_HORAS_MS) {
+        tempoRestante = 0;
+      } else {
+        tempoRestante = SEIS_HORAS_MS - tempoDecorrido;
+      }
+    } else {
+      tempoRestante = 5000; // Primeira execução
+    }
+    
+    console.log(`[GLPI Sync] Próxima sincronização programada para daqui a ${(tempoRestante / 1000 / 60).toFixed(1)} minutos.`);
+    
+    if (syncTimeoutId) clearTimeout(syncTimeoutId);
+    if (syncTimeoutId) clearTimeout(syncTimeoutId);
+    
+    syncTimeoutId = setTimeout(async () => {
+      await executePrintersSync();
+      if (syncIntervalId) clearInterval(syncIntervalId);
+      syncIntervalId = setInterval(executePrintersSync, SEIS_HORAS_MS);
+    }, tempoRestante);
+  } catch (e) {
+    console.error("[GLPI Sync] Erro ao agendar sincronização:", e.message);
+  }
+}
+
+// --- ENDPOINTS EXPRESS DO GLPI ---
+
+app.get("/api/glpi/dashboard", async (req, res, next) => {
+  let sessionToken = null;
+  try {
+    sessionToken = await initGlpiSession();
+    
+    const statuses = [
+      { name: "novos", code: 1 },
+      { name: "atribuidos", code: 2 },
+      { name: "planejados", code: 3 },
+      { name: "pendentes", code: 4 },
+      { name: "fechados", code: 6 }
+    ];
+    
+    const statusCounts = {};
+    await Promise.all(
+      statuses.map(async (s) => {
+        try {
+          const response = await fetch(
+            `${GLPI_API_URL}/search/Ticket?criteria[0][field]=12&criteria[0][searchtype]=equals&criteria[0][value]=${s.code}&range=0-1`,
+            {
+              headers: {
+                "App-Token": GLPI_APP_TOKEN,
+                "Session-Token": sessionToken
+              }
+            }
+          );
+          if (response.ok) {
+            const data = await response.json();
+            statusCounts[s.name] = data.totalcount || 0;
+          } else {
+            statusCounts[s.name] = 0;
+          }
+        } catch (e) {
+          statusCounts[s.name] = 0;
+        }
+      })
+    );
+    
+    let tecnicosList = [];
+    let pessoasList = [];
+    
+    try {
+      let usersMap = {};
+      try {
+        const usersResponse = await fetch(`${GLPI_API_URL}/User?range=0-1000`, {
+          headers: {
+            "App-Token": GLPI_APP_TOKEN,
+            "Session-Token": sessionToken
+          }
+        });
+        if (usersResponse.ok) {
+          const usersList = await usersResponse.json();
+          if (Array.isArray(usersList)) {
+            usersList.forEach(u => {
+              const fullname = [u.firstname, u.realname].filter(Boolean).join(" ") || u.name || `User ${u.id}`;
+              usersMap[String(u.id)] = fullname;
+            });
+          }
+        }
+      } catch (err) {
+        console.error("[GLPI] Erro ao carregar mapa de usuários:", err.message);
+      }
+
+      const ticketsResponse = await fetch(
+        `${GLPI_API_URL}/search/Ticket?sort=2&order=DESC` +
+        `&forcedisplay[0]=5` +  // Técnico (Usuário ID)
+        `&forcedisplay[1]=4` +  // Requerente (Usuário ID)
+        `&forcedisplay[2]=12` + // Status (1=Novo, 2=Atribuído, etc.)
+        `&forcedisplay[3]=8` +  // Grupo Técnico (Nome)
+        `&range=0-1000`,
+        {
+          headers: {
+            "App-Token": GLPI_APP_TOKEN,
+            "Session-Token": sessionToken
+          }
+        }
+      );
+      
+      if (ticketsResponse.ok) {
+        const data = await ticketsResponse.json();
+        const tickets = data.data || [];
+        
+        const contagemTecnicos = {}; // id -> { nome, count }
+        const contagemPessoas = {};  // id -> { nome, count }
+        
+        tickets.forEach(ticket => {
+          const tecnicoId = String(ticket["5"] || "");
+          const pessoaId = String(ticket["4"] || "");
+          const statusVal = Number(ticket["12"]);
+          const grupoNome = String(ticket["8"] || "");
+          
+          const tecnicoNome = typeof usersMap[tecnicoId] === "string" ? usersMap[tecnicoId] : null;
+          const pessoaNome = typeof usersMap[pessoaId] === "string" ? usersMap[pessoaId] : null;
+          
+          const lowerGrupo = grupoNome.toLowerCase().trim();
+          const isITGroup = lowerGrupo === "infraestrutura" || lowerGrupo === "sistemas" || lowerGrupo === "infra/sistemas";
+          
+          if (tecnicoNome && statusVal === 6) {
+            const lowerNome = tecnicoNome.toLowerCase().trim();
+            if (
+              lowerNome !== "infraestrutura" &&
+              lowerNome !== "sistemas" &&
+              lowerNome !== "infra/sistemas"
+            ) {
+              if (!contagemTecnicos[tecnicoId]) {
+                contagemTecnicos[tecnicoId] = { nome: tecnicoNome, count: 0 };
+              }
+              contagemTecnicos[tecnicoId].count++;
+            }
+          }
+          if (pessoaNome && isITGroup) {
+            const lowerNome = pessoaNome.toLowerCase().trim();
+            if (
+              lowerNome !== "infraestrutura" &&
+              lowerNome !== "sistemas" &&
+              lowerNome !== "infra/sistemas"
+            ) {
+              if (!contagemPessoas[pessoaId]) {
+                contagemPessoas[pessoaId] = { nome: pessoaNome, count: 0 };
+              }
+              contagemPessoas[pessoaId].count++;
+            }
+          }
+        });
+        
+        const top10Raw = Object.entries(contagemTecnicos)
+          .map(([id, item]) => ({ id, nome: item.nome, count: item.count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 10);
+           
+        tecnicosList = await Promise.all(
+          top10Raw.map(async (tech) => {
+            let totalResolvidos = tech.count;
+            try {
+              const countRes = await fetch(
+                `${GLPI_API_URL}/search/Ticket?criteria[0][field]=5&criteria[0][searchtype]=equals&criteria[0][value]=${tech.id}` +
+                `&criteria[1][link]=AND&criteria[1][field]=12&criteria[1][searchtype]=equals&criteria[1][value]=6` +
+                `&range=0-1`,
+                {
+                  headers: {
+                    "App-Token": GLPI_APP_TOKEN,
+                    "Session-Token": sessionToken
+                  }
+                }
+              );
+              if (countRes.ok) {
+                const countData = await countRes.json();
+                totalResolvidos = countData.totalcount || 0;
+              }
+            } catch (err) {
+              console.error(`[GLPI] Erro ao buscar total de chamados para técnico ${tech.nome}:`, err.message);
+            }
+            
+            return {
+              id: tech.nome.toLowerCase().replace(/\s+/g, '-'),
+              nome: tech.nome,
+              avatar: tech.nome.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
+              role: "Técnico de Suporte",
+              resolvidos: totalResolvidos
+            };
+          })
+        );
+        tecnicosList.sort((a, b) => b.resolvidos - a.resolvidos);
+          
+        const top10PessoasRaw = Object.entries(contagemPessoas)
+          .map(([id, item]) => ({ id, nome: item.nome, count: item.count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 10);
+
+        const coresSetores = [
+          "#2b8ffb", "#10b981", "#eab308", "#f97316", "#a855f7", 
+          "#ef4444", "#6366f1", "#14b8a6", "#ec4899", "#f43f5e"
+        ];
+        pessoasList = await Promise.all(
+          top10PessoasRaw.map(async (p, index) => {
+            let totalAbertos = 0;
+            try {
+              const idsGrupos = [1, 2, 4]; // Infraestrutura, Sistemas, Infra/sistemas
+              const counts = await Promise.all(
+                idsGrupos.map(async (gid) => {
+                  try {
+                    const countRes = await fetch(
+                      `${GLPI_API_URL}/search/Ticket?criteria[0][field]=4&criteria[0][searchtype]=equals&criteria[0][value]=${p.id}` +
+                      `&criteria[1][link]=AND&criteria[1][field]=8&criteria[1][searchtype]=equals&criteria[1][value]=${gid}` +
+                      `&range=0-1`,
+                      {
+                        headers: {
+                          "App-Token": GLPI_APP_TOKEN,
+                          "Session-Token": sessionToken
+                        }
+                      }
+                    );
+                    if (countRes.ok) {
+                      const countData = await countRes.json();
+                      return countData.totalcount || 0;
+                    }
+                  } catch (e) {}
+                  return 0;
+                })
+              );
+              totalAbertos = counts.reduce((acc, curr) => acc + curr, 0);
+            } catch (err) {
+              console.error(`[GLPI] Erro ao buscar total de chamados abertos para requerente ${p.nome}:`, err.message);
+            }
+            
+            return {
+              id: p.nome.toLowerCase().replace(/\s+/g, '-'),
+              nome: p.nome,
+              chamados: totalAbertos,
+              cor: coresSetores[index % coresSetores.length]
+            };
+          })
+        );
+        pessoasList.sort((a, b) => b.chamados - a.chamados);
+      }
+    } catch (e) {
+      console.error("[GLPI] Erro ao buscar chamados para ranking:", e.message);
+    }
+    
+    res.json({
+      kpis: statusCounts,
+      tecnicos: tecnicosList,
+      pessoas: pessoasList
+    });
+  } catch (error) {
+    next(error);
+  } finally {
+    if (sessionToken) {
+      await killGlpiSession(sessionToken);
+    }
+  }
+});
+
+app.get("/api/glpi/impressoras-disponiveis", async (req, res, next) => {
+  let sessionToken = null;
+  try {
+    sessionToken = await initGlpiSession();
+    
+    const glpiResponse = await fetch(
+      `${GLPI_API_URL}/search/Printer` +
+      `?forcedisplay[0]=1` +   // Nome
+      `&forcedisplay[1]=2` +   // ID
+      `&forcedisplay[2]=23` +  // Fabricante (Marca)
+      `&forcedisplay[3]=40` +  // Modelo
+      `&forcedisplay[4]=5` +   // Número de Série
+      `&forcedisplay[5]=21` +  // MAC
+      `&forcedisplay[6]=126` + // IP
+      `&forcedisplay[7]=3` +   // Localização
+      `&range=0-150`,
+      {
+        headers: {
+          "App-Token": GLPI_APP_TOKEN,
+          "Session-Token": sessionToken
+        }
+      }
+    );
+    
+    if (!glpiResponse.ok) {
+      throw new Error(`Erro ao buscar impressoras no GLPI: ${glpiResponse.status}`);
+    }
+    
+    const responseData = await glpiResponse.json();
+    const glpiPrinters = responseData.data || [];
+    
+    const localResult = await pool.query("SELECT glpi_id FROM impressoras WHERE glpi_id IS NOT NULL");
+    const localGlpiIds = new Set(localResult.rows.map(row => String(row.glpi_id)));
+    
+    const disponiveis = glpiPrinters
+      .filter(p => !localGlpiIds.has(String(p["2"])))
+      .map(p => ({
+        glpiId: String(p["2"]),
+        nome: p["1"] || `Impressora GLPI ${p["2"]}`,
+        marca: p["23"] || "",
+        modelo: p["40"] || "",
+        numeroSerie: p["5"] || "",
+        mac: p["21"] || "",
+        ip: p["126"] || "",
+        local: p["3"] || ""
+      }));
+      
+    res.json(disponiveis);
+  } catch (error) {
+    next(error);
+  } finally {
+    if (sessionToken) {
+      await killGlpiSession(sessionToken);
+    }
+  }
+});
+
+app.post("/api/impressoras/importar", async (req, res, next) => {
+  const { glpiId, local, sede } = req.body || {};
+  if (!glpiId) {
+    return res.status(400).json({ error: "O parâmetro glpiId é obrigatório." });
+  }
+  
+  let sessionToken = null;
+  try {
+    sessionToken = await initGlpiSession();
+    
+    // 1. Buscar a impressora usando o Search API para obter IP, MAC, Marca, Modelo, Serial e Localização corretos
+    const searchRes = await fetch(
+      `${GLPI_API_URL}/search/Printer` +
+      `?criteria[0][field]=2&criteria[0][searchtype]=equals&criteria[0][value]=${glpiId}` +
+      `&forcedisplay[0]=1` +   // Nome
+      `&forcedisplay[1]=23` +  // Fabricante (Marca)
+      `&forcedisplay[2]=40` +  // Modelo
+      `&forcedisplay[3]=5` +   // Número de Série
+      `&forcedisplay[4]=21` +  // MAC
+      `&forcedisplay[5]=126` + // IP
+      `&forcedisplay[6]=3` +   // Localização
+      `&range=0-1`,
+      {
+        headers: {
+          "App-Token": GLPI_APP_TOKEN,
+          "Session-Token": sessionToken
+        }
+      }
+    );
+    
+    if (!searchRes.ok) {
+      return res.status(404).json({ error: "Impressora não encontrada no GLPI." });
+    }
+    
+    const searchData = await searchRes.json();
+    const p = searchData.data?.[0];
+    
+    if (!p) {
+      return res.status(404).json({ error: "Impressora não encontrada nos resultados do GLPI." });
+    }
+    
+    const ip = p["126"] || "";
+    let toners = await getTonerDirectlyFromPrinter(ip);
+    if (!toners) {
+      toners = await getGlpiPrinterToner(sessionToken, glpiId);
+    }
+    
+    const novaId = `imp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const agora = new Date().toISOString();
+    
+    const glpiWebUrl = GLPI_API_URL.replace("apirest.php", "") + `front/printer.form.php?id=${glpiId}`;
+    
+    const insertRes = await pool.query(
+      `INSERT INTO impressoras (
+        id, glpi_id, local_texto, sede, marca, modelo, numero_serie, ip, mac, link,
+        toner_preto, toner_ciano, toner_magenta, toner_amarelo, updated_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      RETURNING *`,
+      [
+        novaId,
+        glpiId,
+        local || p["3"] || "Importada do GLPI",
+        sede || "AP",
+        p["23"] || "",
+        p["40"] || p["1"] || "",
+        p["5"] || "",
+        p["126"] || "",
+        p["21"] || "",
+        glpiWebUrl,
+        toners.preto,
+        toners.ciano,
+        toners.magenta,
+        toners.amarelo,
+        agora
+      ]
+    );
+    
+    res.status(201).json(rowToImpressora(insertRes.rows[0]));
+  } catch (error) {
+    next(error);
+  } finally {
+    if (sessionToken) {
+      await killGlpiSession(sessionToken);
+    }
+  }
+});
+
+app.get("/api/glpi/sync-status", async (req, res, next) => {
+  try {
+    const result = await pool.query("SELECT valor FROM tv_config WHERE id = 'last_glpi_impressoras_sync'");
+    const lastSync = result.rows[0]?.valor || null;
+    res.json({
+      lastSync,
+      intervalHours: 6,
+      nextSync: lastSync ? new Date(new Date(lastSync).getTime() + 6 * 60 * 60 * 1000).toISOString() : null
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/glpi/sync-now", async (req, res, next) => {
+  try {
+    await executePrintersSync();
+    await schedulePrintersSync();
+    
+    const result = await pool.query("SELECT valor FROM tv_config WHERE id = 'last_glpi_impressoras_sync'");
+    const lastSync = result.rows[0]?.valor || null;
+    res.json({
+      success: true,
+      lastSync,
+      nextSync: lastSync ? new Date(new Date(lastSync).getTime() + 6 * 60 * 60 * 1000).toISOString() : null
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 const setupFrontend = async () => {
   if (isProduction) {
     app.use(express.static(distPath));
@@ -1374,6 +2101,7 @@ assertJwtSecret();
 initDatabase()
   .then(seedUsuarios)
   .then(setupFrontend)
+  .then(() => schedulePrintersSync())
   .then(() => {
     app.listen(port, "0.0.0.0", () => {
       const modo = isProduction ? "produção" : "desenvolvimento";

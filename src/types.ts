@@ -60,6 +60,7 @@ export interface InventarioItem {
 
 export interface Impressora {
   id: string;
+  glpiId?: string | null;
   local: string;
   sede: string;
   marca: string;
@@ -69,9 +70,9 @@ export interface Impressora {
   mac: string;
   link: string;
   tonerPreto: number;
-  tonerCiano: number;
-  tonerMagenta: number;
-  tonerAmarelo: number;
+  tonerCiano: number | null;
+  tonerMagenta: number | null;
+  tonerAmarelo: number | null;
   updatedAt: string;
 }
 

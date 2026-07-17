@@ -99,11 +99,15 @@ const TONERS_MINI: Array<{
 function TonerMini({ imp }: { imp: Impressora }) {
   return (
     <span className="tv-toner-mini">
-      {TONERS_MINI.map(({ key, label, cor }) => (
-        <span key={label} className="tv-toner-chip" style={{ color: cor }}>
-          {label} {imp[key] as number}%
-        </span>
-      ))}
+      {TONERS_MINI.map(({ key, label, cor }) => {
+        const val = imp[key];
+        if (val === null || typeof val === "undefined") return null;
+        return (
+          <span key={label} className="tv-toner-chip" style={{ color: cor }}>
+            {label} {val as number}%
+          </span>
+        );
+      })}
     </span>
   );
 }

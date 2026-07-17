@@ -5,6 +5,12 @@ import {
   saveImpressoras,
   getToners,
   saveToners,
+  getGlpiPrintersAvailable,
+  importGlpiPrinter,
+  getGlpiSyncStatus,
+  syncGlpiPrintersNow,
+  GlpiPrinterAvailable,
+  GlpiSyncStatus,
 } from "../utils/storage";
 import { useAuth } from "../context/AuthContext";
 import "./Impressoras.css";
@@ -202,6 +208,11 @@ function ImpressoraCard({
         <div className="imp-card-title">
           <span className="imp-card-local">
             {impressora.local || "Sem localização"}
+            {impressora.glpiId ? (
+              <span className="imp-badge imp-badge-glpi" title="Sincronizada com o GLPI a cada 6h">GLPI</span>
+            ) : (
+              <span className="imp-badge imp-badge-manual" title="Cadastrada manualmente">Manual</span>
+            )}
           </span>
           {(impressora.marca || impressora.modelo) && (
             <span className="imp-card-subtitle">
@@ -306,14 +317,24 @@ function ImpressoraCard({
         </div>
         <div className="imp-card-toners">
           <div className="imp-toners-title">Toner</div>
-          {TONERS.map(({ key, label, cor }) => (
-            <TonerBar
-              key={key}
-              label={label}
-              valor={impressora[key]}
-              cor={cor}
-            />
-          ))}
+          {TONERS.map(({ key, label, cor }) => {
+            const hasToner = impressora[key] !== null && typeof impressora[key] !== "undefined";
+            return (
+              <div 
+                key={key} 
+                style={{ 
+                  visibility: hasToner ? "visible" : "hidden",
+                  pointerEvents: hasToner ? "auto" : "none"
+                }}
+              >
+                <TonerBar
+                  label={label}
+                  valor={hasToner ? (impressora[key] as number) : 0}
+                  cor={cor}
+                />
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -341,19 +362,114 @@ export default function Impressoras() {
   const tonersLoadedRef = useRef(false);
   const tonerSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Estados para integração GLPI
+  const [syncStatus, setSyncStatus] = useState<GlpiSyncStatus | null>(null);
+  const [timeLeft, setTimeLeft] = useState<string>("—");
+  const [sincronizando, setSincronizando] = useState<boolean>(false);
+  const [opcaoAdicionar, setOpcaoAdicionar] = useState<"menu" | "manual" | "glpi" | null>(null);
+  const [glpiPrinters, setGlpiPrinters] = useState<GlpiPrinterAvailable[]>([]);
+  const [carregandoGlpi, setCarregandoGlpi] = useState<boolean>(false);
+  const [importandoId, setImportandoId] = useState<string | null>(null);
+
   useEffect(() => {
+    // Inicia a lista vazia por padrão
+    setImpressoras([]);
     getImpressoras()
       .then(setImpressoras)
       .catch(() => setErro("Não foi possível carregar as impressoras."))
       .finally(() => setCarregando(false));
   }, []);
 
+  const carregarSyncStatus = () => {
+    getGlpiSyncStatus()
+      .then(setSyncStatus)
+      .catch(console.error);
+  };
+
   useEffect(() => {
-    if (modalAberto) {
+    carregarSyncStatus();
+    const interval = setInterval(carregarSyncStatus, 30000); // atualiza o status de hora em hora/minuto
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (!syncStatus || !syncStatus.nextSync) return;
+    
+    const updateTimer = () => {
+      const target = new Date(syncStatus.nextSync!).getTime();
+      const agora = Date.now();
+      const diff = target - agora;
+      
+      if (diff <= 0) {
+        setTimeLeft("Sincronizando...");
+        setTimeout(carregarSyncStatus, 10000);
+        return;
+      }
+      
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      const pad = (n: number) => String(n).padStart(2, "0");
+      setTimeLeft(`${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`);
+    };
+    
+    updateTimer();
+    const timerInterval = setInterval(updateTimer, 1000);
+    return () => clearInterval(timerInterval);
+  }, [syncStatus]);
+
+  const handleSyncNow = async () => {
+    setSincronizando(true);
+    try {
+      const res = await syncGlpiPrintersNow();
+      if (res.success) {
+        const impList = await getImpressoras();
+        setImpressoras(impList);
+        setSyncStatus({
+          lastSync: res.lastSync,
+          intervalHours: 6,
+          nextSync: res.nextSync
+        });
+      }
+    } catch (e) {
+      console.error("Erro ao sincronizar impressoras:", e);
+    } finally {
+      setSincronizando(false);
+    }
+  };
+
+  const carregarImpressorasGlpi = async () => {
+    setCarregandoGlpi(true);
+    try {
+      const data = await getGlpiPrintersAvailable();
+      setGlpiPrinters(data);
+    } catch (e) {
+      console.error("Erro ao carregar impressoras do GLPI:", e);
+    } finally {
+      setCarregandoGlpi(false);
+    }
+  };
+
+  const handleImportPrinter = async (glpiId: string, local: string = "", sede: string = "AP") => {
+    setImportandoId(glpiId);
+    try {
+      const nova = await importGlpiPrinter(glpiId, local, sede);
+      setImpressoras((prev) => [...prev, nova]);
+      fecharModal();
+    } catch (e) {
+      console.error("Erro ao importar impressora:", e);
+    } finally {
+      setImportandoId(null);
+    }
+  };
+
+  useEffect(() => {
+    if (modalAberto && opcaoAdicionar === "manual") {
       const t = setTimeout(() => primeiroInputRef.current?.focus(), 50);
       return () => clearTimeout(t);
     }
-  }, [modalAberto]);
+  }, [modalAberto, opcaoAdicionar]);
 
   const salvarLista = async (lista: Impressora[]) => {
     const atualizado = await saveImpressoras(lista);
@@ -363,6 +479,7 @@ export default function Impressoras() {
   const abrirModalNovo = () => {
     setEditando(null);
     setForm({ ...FORM_VAZIO });
+    setOpcaoAdicionar("menu");
     setModalAberto(true);
   };
 
@@ -382,12 +499,14 @@ export default function Impressoras() {
       tonerMagenta: imp.tonerMagenta,
       tonerAmarelo: imp.tonerAmarelo,
     });
+    setOpcaoAdicionar("manual");
     setModalAberto(true);
   };
 
   const fecharModal = () => {
     setModalAberto(false);
     setEditando(null);
+    setOpcaoAdicionar(null);
   };
 
   const setField = <K extends keyof typeof form>(
@@ -519,6 +638,20 @@ export default function Impressoras() {
               <span className="imp-toolbar-stat">
                 Impressoras cadastradas: <strong>{impressorasFiltradas.length}</strong>
               </span>
+              {syncStatus && (
+                <span className="imp-toolbar-stat imp-sync-timer">
+                  Sincronização GLPI em: <strong>{timeLeft}</strong>
+                  <button
+                    type="button"
+                    onClick={handleSyncNow}
+                    disabled={sincronizando}
+                    className="imp-btn-sync-now"
+                    title="Sincronizar agora com o GLPI"
+                  >
+                    {sincronizando ? "⌛" : "🔄"}
+                  </button>
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -636,7 +769,15 @@ export default function Impressoras() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="imp-modal-header">
-              <h3>{editando ? "Editar Impressora" : "Adicionar Impressora"}</h3>
+              <h3>
+                {editando
+                  ? "Editar Impressora"
+                  : opcaoAdicionar === "menu"
+                  ? "Adicionar Impressora"
+                  : opcaoAdicionar === "glpi"
+                  ? "Importar do GLPI"
+                  : "Adicionar Impressora"}
+              </h3>
               <button
                 type="button"
                 className="imp-modal-close"
@@ -658,157 +799,234 @@ export default function Impressoras() {
               </button>
             </div>
 
-            <form className="imp-modal-form" onSubmit={handleSubmit}>
-              <div className="imp-form-grid">
-                <div className="imp-form-field">
-                  <label htmlFor="imp-local">Local</label>
-                  <input
-                    ref={primeiroInputRef}
-                    id="imp-local"
-                    type="text"
-                    value={form.local}
-                    onChange={(e) => setField("local", e.target.value)}
-                    placeholder="Ex: Sala de reuniões"
-                  />
-                </div>
-                <div className="imp-form-field">
-                  <label htmlFor="imp-sede">Sede</label>
-                  <input
-                    id="imp-sede"
-                    type="text"
-                    value={form.sede}
-                    onChange={(e) => setField("sede", e.target.value)}
-                    placeholder="Ex: Unidade Centro"
-                  />
-                </div>
-                <div className="imp-form-field">
-                  <label htmlFor="imp-marca">Marca</label>
-                  <input
-                    id="imp-marca"
-                    type="text"
-                    value={form.marca}
-                    onChange={(e) => setField("marca", e.target.value)}
-                    placeholder="Ex: HP, Canon, Epson"
-                  />
-                </div>
-                <div className="imp-form-field">
-                  <label htmlFor="imp-modelo">Modelo</label>
-                  <input
-                    id="imp-modelo"
-                    type="text"
-                    value={form.modelo}
-                    onChange={(e) => setField("modelo", e.target.value)}
-                    placeholder="Ex: LaserJet Pro M404n"
-                  />
-                </div>
-                <div className="imp-form-field">
-                  <label htmlFor="imp-serie">Nº Série</label>
-                  <input
-                    id="imp-serie"
-                    type="text"
-                    value={form.numeroSerie}
-                    onChange={(e) => setField("numeroSerie", e.target.value)}
-                    placeholder="Número de série"
-                  />
-                </div>
-                <div className="imp-form-field">
-                  <label htmlFor="imp-ip">IP</label>
-                  <input
-                    id="imp-ip"
-                    type="text"
-                    value={form.ip}
-                    onChange={(e) => setField("ip", e.target.value)}
-                    placeholder="Ex: 192.168.1.100"
-                  />
-                </div>
-                <div className="imp-form-field">
-                  <label htmlFor="imp-mac">MAC</label>
-                  <input
-                    id="imp-mac"
-                    type="text"
-                    value={form.mac}
-                    onChange={(e) => setField("mac", e.target.value)}
-                    placeholder="Ex: 00:1A:2B:3C:4D:5E"
-                  />
-                </div>
-                <div className="imp-form-field imp-form-field-full">
-                  <label htmlFor="imp-link">Link (painel/acesso web)</label>
-                  <input
-                    id="imp-link"
-                    type="text"
-                    value={form.link}
-                    onChange={(e) => setField("link", e.target.value)}
-                    placeholder="Ex: http://192.168.1.100"
-                  />
+            {opcaoAdicionar === "menu" ? (
+              <div className="imp-choice-container">
+                <span className="imp-choice-title">Selecione como deseja adicionar a impressora</span>
+                <div className="imp-choice-buttons">
+                  <button
+                    type="button"
+                    className="imp-choice-btn"
+                    onClick={() => setOpcaoAdicionar("manual")}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="24" height="24">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                      <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z" />
+                    </svg>
+                    <span>Adicionar Manualmente</span>
+                    <p>Cadastre uma impressora local informando todos os dados manualmente.</p>
+                  </button>
+                  
+                  <button
+                    type="button"
+                    className="imp-choice-btn"
+                    onClick={() => {
+                      setOpcaoAdicionar("glpi");
+                      carregarImpressorasGlpi();
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="24" height="24">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    <span>Selecionar do GLPI</span>
+                    <p>Busque e selecione uma impressora detectada na rede pelo GLPI.</p>
+                  </button>
                 </div>
               </div>
-
-              <div className="imp-form-toners">
-                <div className="imp-form-toners-title">Nível de Toner</div>
-                {TONERS.map(({ key, label, cor }) => (
-                  <div key={key} className="imp-form-toner-row">
-                    <span
-                      className="imp-form-toner-dot"
-                      style={{ backgroundColor: cor }}
-                    />
-                    <label
-                      className="imp-form-toner-label"
-                      htmlFor={`toner-${key}`}
-                    >
-                      {label}
-                    </label>
-                    <input
-                      id={`toner-${key}`}
-                      type="range"
-                      min={0}
-                      max={100}
-                      value={form[key]}
-                      onChange={(e) => setField(key, Number(e.target.value))}
-                      style={{ accentColor: cor }}
-                      className="imp-form-toner-range"
-                    />
-                    <div className="imp-form-toner-number-wrap">
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={form[key]}
-                        onChange={(e) =>
-                          setField(
-                            key,
-                            Math.min(100, Math.max(0, Number(e.target.value))),
-                          )
-                        }
-                        className="imp-form-toner-number"
-                      />
-                      <span>%</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {erroSalvar && <p className="imp-modal-erro">{erroSalvar}</p>}
-              <div className="imp-modal-footer">
+            ) : opcaoAdicionar === "glpi" ? (
+              <div className="imp-glpi-modal-content">
                 <button
                   type="button"
-                  className="imp-btn-cancel"
-                  onClick={fecharModal}
+                  className="imp-btn-solicitacoes"
+                  onClick={() => setOpcaoAdicionar("menu")}
+                  style={{ marginBottom: "1rem", float: "left" }}
                 >
-                  Cancelar
+                  ← Voltar
                 </button>
-                <button
-                  type="submit"
-                  className="imp-btn-save"
-                  disabled={salvando}
-                >
-                  {salvando
-                    ? "Salvando…"
-                    : editando
+                {carregandoGlpi ? (
+                  <div className="imp-loading-inline">Carregando impressoras do GLPI...</div>
+                ) : glpiPrinters.length === 0 ? (
+                  <div className="imp-empty-inline" style={{ clear: "both" }}>
+                    Nenhuma impressora disponível para importação no GLPI.
+                  </div>
+                ) : (
+                  <div className="imp-glpi-list" style={{ clear: "both" }}>
+                    {glpiPrinters.map((p) => (
+                      <div key={p.glpiId} className="imp-glpi-item">
+                        <div className="imp-glpi-item-info">
+                          <span className="imp-glpi-item-name"><strong>{p.nome}</strong></span>
+                          <span className="imp-glpi-item-meta">
+                            {[p.marca, p.modelo, p.numeroSerie].filter(Boolean).join(" · ") || "Sem marca/modelo"}
+                          </span>
+                          <span className="imp-glpi-item-meta">IP: {p.ip || "—"} | MAC: {p.mac || "—"}</span>
+                        </div>
+                        <button
+                          type="button"
+                          className="imp-btn-import"
+                          disabled={importandoId === p.glpiId}
+                          onClick={() => handleImportPrinter(p.glpiId)}
+                        >
+                          {importandoId === p.glpiId ? "Importando..." : "Importar"}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <form className="imp-modal-form" onSubmit={handleSubmit}>
+                <div className="imp-form-grid">
+                  <div className="imp-form-field">
+                    <label htmlFor="imp-local">Local</label>
+                    <input
+                      ref={primeiroInputRef}
+                      id="imp-local"
+                      type="text"
+                      value={form.local}
+                      onChange={(e) => setField("local", e.target.value)}
+                      placeholder="Ex: Sala de reuniões"
+                    />
+                  </div>
+                  <div className="imp-form-field">
+                    <label htmlFor="imp-sede">Sede</label>
+                    <input
+                      id="imp-sede"
+                      type="text"
+                      value={form.sede}
+                      onChange={(e) => setField("sede", e.target.value)}
+                      placeholder="Ex: Unidade Centro"
+                    />
+                  </div>
+                  <div className="imp-form-field">
+                    <label htmlFor="imp-marca">Marca</label>
+                    <input
+                      id="imp-marca"
+                      type="text"
+                      value={form.marca}
+                      onChange={(e) => setField("marca", e.target.value)}
+                      placeholder="Ex: HP, Canon, Epson"
+                    />
+                  </div>
+                  <div className="imp-form-field">
+                    <label htmlFor="imp-modelo">Modelo</label>
+                    <input
+                      id="imp-modelo"
+                      type="text"
+                      value={form.modelo}
+                      onChange={(e) => setField("modelo", e.target.value)}
+                      placeholder="Ex: LaserJet Pro M404n"
+                    />
+                  </div>
+                  <div className="imp-form-field">
+                    <label htmlFor="imp-serie">Nº Série</label>
+                    <input
+                      id="imp-serie"
+                      type="text"
+                      value={form.numeroSerie}
+                      onChange={(e) => setField("numeroSerie", e.target.value)}
+                      placeholder="Número de série"
+                    />
+                  </div>
+                  <div className="imp-form-field">
+                    <label htmlFor="imp-ip">IP</label>
+                    <input
+                      id="imp-ip"
+                      type="text"
+                      value={form.ip}
+                      onChange={(e) => setField("ip", e.target.value)}
+                      placeholder="Ex: 192.168.1.100"
+                    />
+                  </div>
+                  <div className="imp-form-field">
+                    <label htmlFor="imp-mac">MAC</label>
+                    <input
+                      id="imp-mac"
+                      type="text"
+                      value={form.mac}
+                      onChange={(e) => setField("mac", e.target.value)}
+                      placeholder="Ex: 00:1A:2B:3C:4D:5E"
+                    />
+                  </div>
+                  <div className="imp-form-field imp-form-field-full">
+                    <label htmlFor="imp-link">Link (painel/acesso web)</label>
+                    <input
+                      id="imp-link"
+                      type="text"
+                      value={form.link}
+                      onChange={(e) => setField("link", e.target.value)}
+                      placeholder="Ex: http://192.168.1.100"
+                    />
+                  </div>
+                </div>
+
+                <div className="imp-form-toners">
+                  <div className="imp-form-toners-title">Nível de Toner</div>
+                  {TONERS.map(({ key, label, cor }) => (
+                    <div key={key} className="imp-form-toner-row">
+                      <span
+                        className="imp-form-toner-dot"
+                        style={{ backgroundColor: cor }}
+                      />
+                      <label
+                        className="imp-form-toner-label"
+                        htmlFor={`toner-${key}`}
+                      >
+                        {label}
+                      </label>
+                      <input
+                        id={`toner-${key}`}
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={form[key] ?? 0}
+                        onChange={(e) => setField(key, Number(e.target.value))}
+                        style={{ accentColor: cor }}
+                        className="imp-form-toner-range"
+                      />
+                      <div className="imp-form-toner-number-wrap">
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={form[key] ?? 0}
+                          onChange={(e) =>
+                            setField(
+                              key,
+                              Math.min(100, Math.max(0, Number(e.target.value))),
+                            )
+                          }
+                          className="imp-form-toner-number"
+                        />
+                        <span>%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {erroSalvar && <p className="imp-modal-erro">{erroSalvar}</p>}
+                <div className="imp-modal-footer">
+                  <button
+                    type="button"
+                    className="imp-btn-cancel"
+                    onClick={fecharModal}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="imp-btn-save"
+                    disabled={salvando}
+                  >
+                    {salvando
+                      ? "Salvando…"
+                      : editando
                       ? "Salvar alterações"
                       : "Adicionar"}
-                </button>
-              </div>
-            </form>
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

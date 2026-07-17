@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { reconcileEventosAutomaticos, getHistorico } from "../utils/storage";
+import { reconcileEventosAutomaticos, getHistorico, getGlpiDashboard } from "../utils/storage";
 import "./Dashboard.css";
 
 interface Tecnico {
@@ -10,7 +10,7 @@ interface Tecnico {
   resolvidos: number;
 }
 
-interface Setor {
+interface Pessoa {
   id: string;
   nome: string;
   chamados: number;
@@ -46,6 +46,31 @@ const PRESET_COLORS = [
 export default function Dashboard() {
   const [currentTime, setCurrentTime] = useState<string>("");
   
+  // Estados do GLPI
+  const [kpis, setKpis] = useState<Record<string, number>>({
+    novos: 6,
+    atribuidos: 14,
+    pendentes: 18,
+    planejados: 4,
+    fechados: 142,
+  });
+  const [tecnicos, setTecnicos] = useState<Tecnico[]>([
+    { id: "gm", nome: "Guilherme Machado", avatar: "GM", role: "Analista de Suporte", resolvidos: 47 },
+    { id: "js", nome: "João Silva", avatar: "JS", role: "Técnico de Campo", resolvidos: 38 },
+    { id: "mo", nome: "Maria Oliveira", avatar: "MO", role: "Analista de Redes", resolvidos: 42 },
+    { id: "ps", nome: "Pedro Santos", avatar: "PS", role: "Técnico de Suporte", resolvidos: 29 },
+    { id: "lc", nome: "Lucas Costa", avatar: "LC", role: "Técnico de Hardware", resolvidos: 31 },
+  ]);
+  const [pessoas, setPessoas] = useState<Pessoa[]>([
+    { id: "p1", nome: "Guilherme Machado", chamados: 25, cor: "#2b8ffb" },
+    { id: "p2", nome: "Ana Costa", chamados: 18, cor: "#10b981" },
+    { id: "p3", nome: "Carlos Souza", chamados: 15, cor: "#eab308" },
+    { id: "p4", nome: "Mariana Lima", chamados: 12, cor: "#f97316" },
+    { id: "p5", nome: "Paulo Reis", chamados: 9, cor: "#a855f7" },
+    { id: "p6", nome: "Juliana Dias", chamados: 6, cor: "#ef4444" },
+  ]);
+  const [carregandoGlpi, setCarregandoGlpi] = useState<boolean>(true);
+
   // Estados para contagens dinâmicas
   const [montagensPendentes, setMontagensPendentes] = useState<number>(0);
   const [montagensRealizadas, setMontagensRealizadas] = useState<number>(0);
@@ -119,59 +144,32 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, []);
 
+  // Efeito para carregar dados da API do GLPI
+  useEffect(() => {
+    const carregarGlpi = async () => {
+      try {
+        const data = await getGlpiDashboard();
+        if (data.kpis) setKpis(data.kpis);
+        if (data.tecnicos && data.tecnicos.length > 0) setTecnicos(data.tecnicos);
+        if (data.pessoas && data.pessoas.length > 0) setPessoas(data.pessoas);
+      } catch (error) {
+        console.error("Erro ao carregar dados do GLPI:", error);
+      } finally {
+        setCarregandoGlpi(false);
+      }
+    };
+    
+    carregarGlpi();
+    const interval = setInterval(carregarGlpi, 60000); // Atualiza a cada 1 minuto
+    return () => clearInterval(interval);
+  }, []);
+
   const saveColors = (newColors: Record<string, string>) => {
     setCardColors(newColors);
     localStorage.setItem("dashboard_card_colors", JSON.stringify(newColors));
   };
 
-  // Técnicos cadastrados (fictício para estilo visual e consulta)
-  const tecnicos: Tecnico[] = [
-    {
-      id: "gm",
-      nome: "Guilherme Machado",
-      avatar: "GM",
-      role: "Analista de Suporte",
-      resolvidos: 47,
-    },
-    {
-      id: "js",
-      nome: "João Silva",
-      avatar: "JS",
-      role: "Técnico de Campo",
-      resolvidos: 38,
-    },
-    {
-      id: "mo",
-      nome: "Maria Oliveira",
-      avatar: "MO",
-      role: "Analista de Redes",
-      resolvidos: 42,
-    },
-    {
-      id: "ps",
-      nome: "Pedro Santos",
-      avatar: "PS",
-      role: "Técnico de Suporte",
-      resolvidos: 29,
-    },
-    {
-      id: "lc",
-      nome: "Lucas Costa",
-      avatar: "LC",
-      role: "Técnico de Hardware",
-      resolvidos: 31,
-    },
-  ];
-
-  // Chamados por setor (fictício para estilo visual e consulta)
-  const setores: Setor[] = [
-    { id: "ti", nome: "Tecnologia da Informação", chamados: 45, cor: "#2b8ffb" },
-    { id: "prod", nome: "Produção / Montagem", chamados: 32, cor: "#10b981" },
-    { id: "adm", nome: "Administrativo", chamados: 21, cor: "#eab308" },
-    { id: "log", nome: "Logística", chamados: 18, cor: "#f97316" },
-    { id: "rh", nome: "Recursos Humanos", chamados: 12, cor: "#a855f7" },
-    { id: "com", nome: "Comercial / Vendas", chamados: 7, cor: "#ef4444" },
-  ];
+  // Os estados 'tecnicos' e 'pessoas' agora controlam estes dados obtidos via API
 
   const getCardStyle = (cardId: string) => {
     const accentColor = cardColors[cardId] || DEFAULT_COLORS[cardId];
@@ -288,7 +286,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="db-card-body">
-            <h3 className="db-card-value">6</h3>
+            <h3 className="db-card-value">{carregandoGlpi ? "..." : kpis.novos}</h3>
             <p className="db-card-title">Chamados Novos</p>
           </div>
         </div>
@@ -308,7 +306,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="db-card-body">
-            <h3 className="db-card-value">14</h3>
+            <h3 className="db-card-value">{carregandoGlpi ? "..." : kpis.atribuidos}</h3>
             <p className="db-card-title">Atribuídos</p>
           </div>
         </div>
@@ -328,7 +326,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="db-card-body">
-            <h3 className="db-card-value">18</h3>
+            <h3 className="db-card-value">{carregandoGlpi ? "..." : kpis.pendentes}</h3>
             <p className="db-card-title">Chamados Pendentes</p>
           </div>
         </div>
@@ -350,7 +348,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="db-card-body">
-            <h3 className="db-card-value">4</h3>
+            <h3 className="db-card-value">{carregandoGlpi ? "..." : kpis.planejados}</h3>
             <p className="db-card-title">Planejados</p>
           </div>
         </div>
@@ -369,7 +367,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="db-card-body">
-            <h3 className="db-card-value">142</h3>
+            <h3 className="db-card-value">{carregandoGlpi ? "..." : kpis.fechados}</h3>
             <p className="db-card-title">Chamados Fechados</p>
           </div>
         </div>
@@ -503,7 +501,7 @@ export default function Dashboard() {
         <div className="db-tech-widget">
           <div className="db-widget-header">
             <div className="db-widget-title-group">
-              <h3>Ranking de Técnicos</h3>
+              <h3>Ranking TI</h3>
               <p>Maior volume de chamados solucionados (GLPI)</p>
             </div>
           </div>
@@ -536,27 +534,27 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Widget 2: Chamados por Setor */}
+        {/* Widget 2: Chamados por Pessoa */}
         <div className="db-tech-widget">
           <div className="db-widget-header">
             <div className="db-widget-title-group">
-              <h3>Chamados por Setor</h3>
-              <p>Distribuição de chamados criados por departamento</p>
+              <h3>Chamados por Pessoa</h3>
+              <p>Quem mais abriu chamados (GLPI)</p>
             </div>
           </div>
 
           <div className="db-sector-list">
-            {[...setores]
+            {[...pessoas]
               .sort((a, b) => b.chamados - a.chamados)
-              .map((setor) => {
-                const maxChamados = Math.max(...setores.map((s) => s.chamados));
-                const percentage = maxChamados > 0 ? (setor.chamados / maxChamados) * 100 : 0;
+              .map((pessoa) => {
+                const maxChamados = Math.max(...pessoas.map((p) => p.chamados));
+                const percentage = maxChamados > 0 ? (pessoa.chamados / maxChamados) * 100 : 0;
                 return (
-                  <div key={setor.id} className="db-sector-item">
+                  <div key={pessoa.id} className="db-sector-item">
                     <div className="db-sector-info-row">
-                      <span className="db-sector-name">{setor.nome}</span>
+                      <span className="db-sector-name">{pessoa.nome}</span>
                       <span className="db-sector-count">
-                        <strong>{setor.chamados}</strong> chamados
+                        <strong>{pessoa.chamados}</strong> chamados
                       </span>
                     </div>
                     <div className="db-sector-bar-bg">
@@ -564,7 +562,7 @@ export default function Dashboard() {
                         className="db-sector-bar-fill"
                         style={{
                           width: `${percentage}%`,
-                          backgroundColor: setor.cor,
+                          backgroundColor: pessoa.cor,
                         }}
                       />
                     </div>
