@@ -71,6 +71,7 @@ export default function Tarefas() {
     null,
   );
   const primeiroInputRef = useRef<HTMLInputElement>(null);
+  const overlayMouseDownRef = useRef(false);
 
   useEffect(() => {
     reconcileTarefasAutomaticas()
@@ -364,7 +365,15 @@ export default function Tarefas() {
       {modalAberto && (
         <div
           className="trf-modal-overlay"
-          onClick={fecharModal}
+          onMouseDown={(e) => {
+            overlayMouseDownRef.current = e.target === e.currentTarget;
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && overlayMouseDownRef.current) {
+              fecharModal();
+            }
+            overlayMouseDownRef.current = false;
+          }}
           onKeyDown={(e) => e.key === "Escape" && fecharModal()}
         >
           <div
@@ -543,7 +552,15 @@ export default function Tarefas() {
       {confirmarConclusao && (
         <div
           className="trf-modal-overlay"
-          onClick={() => setConfirmarConclusao(null)}
+          onMouseDown={(e) => {
+            overlayMouseDownRef.current = e.target === e.currentTarget;
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && overlayMouseDownRef.current) {
+              setConfirmarConclusao(null);
+            }
+            overlayMouseDownRef.current = false;
+          }}
         >
           <div
             className="trf-modal trf-modal-confirm"
@@ -581,7 +598,15 @@ export default function Tarefas() {
       {confirmarRemocao && (
         <div
           className="trf-modal-overlay"
-          onClick={() => setConfirmarRemocao(null)}
+          onMouseDown={(e) => {
+            overlayMouseDownRef.current = e.target === e.currentTarget;
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && overlayMouseDownRef.current) {
+              setConfirmarRemocao(null);
+            }
+            overlayMouseDownRef.current = false;
+          }}
         >
           <div
             className="trf-modal trf-modal-confirm"

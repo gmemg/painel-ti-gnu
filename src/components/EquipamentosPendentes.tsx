@@ -22,6 +22,7 @@ export default function EquipamentosPendentes() {
     null,
   );
   const salvandoRef = useRef(false);
+  const overlayMouseDownRef = useRef(false);
 
   const carregar = useCallback(async () => {
     const data = await getEquipamentosPendentes();
@@ -213,7 +214,18 @@ export default function EquipamentosPendentes() {
       </div>
 
       {confirmarDevolucao && (
-        <div className="ep-overlay" onClick={() => setConfirmarDevolucao(null)}>
+        <div
+          className="ep-overlay"
+          onMouseDown={(e) => {
+            overlayMouseDownRef.current = e.target === e.currentTarget;
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && overlayMouseDownRef.current) {
+              setConfirmarDevolucao(null);
+            }
+            overlayMouseDownRef.current = false;
+          }}
+        >
           <div
             className="ep-modal"
             role="dialog"
@@ -246,7 +258,18 @@ export default function EquipamentosPendentes() {
       )}
 
       {confirmarConclusao && (
-        <div className="ep-overlay" onClick={() => setConfirmarConclusao(null)}>
+        <div
+          className="ep-overlay"
+          onMouseDown={(e) => {
+            overlayMouseDownRef.current = e.target === e.currentTarget;
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && overlayMouseDownRef.current) {
+              setConfirmarConclusao(null);
+            }
+            overlayMouseDownRef.current = false;
+          }}
+        >
           <div
             className="ep-modal"
             role="dialog"

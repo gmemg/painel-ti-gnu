@@ -209,6 +209,7 @@ const InventarioMontagem = () => {
   const [search, setSearch] = useState("");
   const [colapsados, setColapsados] = useState<Set<string>>(new Set());
   const fieldStartValuesRef = useRef<Record<string, string>>({});
+  const overlayMouseDownRef = useRef(false);
 
   const inventarioListRef = useRef<HTMLDivElement>(null);
   const prevPositionsRef = useRef<Record<string, DOMRect>>({});
@@ -1342,7 +1343,15 @@ const InventarioMontagem = () => {
         <div
           className="inventario-modal-overlay"
           role="presentation"
-          onClick={handleCancelarItem}
+          onMouseDown={(e) => {
+            overlayMouseDownRef.current = e.target === e.currentTarget;
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && overlayMouseDownRef.current) {
+              handleCancelarItem();
+            }
+            overlayMouseDownRef.current = false;
+          }}
         >
           <div
             className="inventario-modal"
@@ -1386,7 +1395,15 @@ const InventarioMontagem = () => {
         <div
           className="inventario-modal-overlay"
           role="presentation"
-          onClick={handleCancelarRemocaoItem}
+          onMouseDown={(e) => {
+            overlayMouseDownRef.current = e.target === e.currentTarget;
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && overlayMouseDownRef.current) {
+              handleCancelarRemocaoItem();
+            }
+            overlayMouseDownRef.current = false;
+          }}
         >
           <div
             className="inventario-modal"
@@ -1439,7 +1456,15 @@ const InventarioMontagem = () => {
         <div
           className="inventario-modal-overlay"
           role="presentation"
-          onClick={() => setHistoricoAberto(null)}
+          onMouseDown={(e) => {
+            overlayMouseDownRef.current = e.target === e.currentTarget;
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && overlayMouseDownRef.current) {
+              setHistoricoAberto(null);
+            }
+            overlayMouseDownRef.current = false;
+          }}
         >
           <div
             className="inventario-modal inventario-history-modal"

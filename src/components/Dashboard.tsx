@@ -15,6 +15,11 @@ interface Pessoa {
   id: string;
   nome: string;
   chamados: number;
+  abertos?: number;
+  fechados?: number;
+  total?: number;
+  abertosMes?: number;
+  fechadosMes?: number;
   cor: string;
 }
 
@@ -62,6 +67,7 @@ export default function Dashboard() {
   const [totalComputadores, setTotalComputadores] = useState<number>(0);
   const [totalImpressoras, setTotalImpressoras] = useState<number>(0);
   const [filtroRanking, setFiltroRanking] = useState<"mensal" | "geral">("mensal");
+  const [filtroRequerente, setFiltroRequerente] = useState<"mensal" | "geral">("mensal");
   const [carregandoGlpi, setCarregandoGlpi] = useState<boolean>(true);
 
   // Estados para contagens dinâmicas
@@ -586,9 +592,30 @@ export default function Dashboard() {
 
         {/* Widget 2: Chamados por Requerente */}
         <div className="db-tech-widget">
-          <div className="db-widget-header">
+          <div className="db-widget-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
             <div className="db-widget-title-group">
               <h3>Chamados por requerente</h3>
+              <p>
+                {filtroRequerente === "mensal"
+                  ? "Chamados fechados no mês atual (GLPI)"
+                  : "Total de chamados fechados (GLPI)"}
+              </p>
+            </div>
+            <div className="db-tab-group">
+              <button
+                type="button"
+                className={`db-tab-btn ${filtroRequerente === "mensal" ? "active" : ""}`}
+                onClick={() => setFiltroRequerente("mensal")}
+              >
+                Mês Atual
+              </button>
+              <button
+                type="button"
+                className={`db-tab-btn ${filtroRequerente === "geral" ? "active" : ""}`}
+                onClick={() => setFiltroRequerente("geral")}
+              >
+                Geral
+              </button>
             </div>
           </div>
 
@@ -604,18 +631,26 @@ export default function Dashboard() {
           ) : (
             <div className="db-sector-list">
               {[...pessoas]
-                .sort((a, b) => b.chamados - a.chamados)
-                .map((pessoa) => (
-                  <div key={pessoa.id} className="db-sector-item">
-                    <div className="db-sector-info-row">
-                      <span className="db-sector-name">{pessoa.nome}</span>
-                      <span className="db-sector-count">
-                        <strong>{pessoa.chamados}</strong> fechados
-                      </span>
+                .sort((a, b) =>
+                  filtroRequerente === "mensal"
+                    ? (b.fechadosMes ?? 0) - (a.fechadosMes ?? 0)
+                    : (b.fechados ?? b.chamados) - (a.fechados ?? a.chamados)
+                )
+                .map((pessoa) => {
+                  const valorExibido = filtroRequerente === "mensal" ? (pessoa.fechadosMes ?? 0) : (pessoa.fechados ?? pessoa.chamados);
+                  const labelExibido = filtroRequerente === "mensal" ? "fechados no mês" : "fechados";
+                  return (
+                    <div key={pessoa.id} className="db-sector-item">
+                      <div className="db-sector-info-row">
+                        <span className="db-sector-name">{pessoa.nome}</span>
+                        <span className="db-sector-count">
+                          <strong>{valorExibido}</strong> {labelExibido}
+                        </span>
+                      </div>
+                      <div className="db-sector-divider" />
                     </div>
-                    <div className="db-sector-divider" />
-                  </div>
-                ))}
+                  );
+                })}
             </div>
           )}
         </div>

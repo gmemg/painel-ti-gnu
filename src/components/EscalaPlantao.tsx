@@ -476,6 +476,7 @@ export default function EscalaPlantao() {
   const [salvando, setSalvando] = useState(false);
   const [erroSalvar, setErroSalvar] = useState<string | null>(null);
   const primeiroInputRef = useRef<HTMLInputElement>(null);
+  const overlayMouseDownRef = useRef(false);
 
   // Fila manual
   const [verFila, setVerFila] = useState(false);
@@ -1372,7 +1373,15 @@ xmlns="http://www.w3.org/TR/REC-html40">
       {modalAberto && (
         <div
           className="esc-modal-overlay"
-          onClick={fecharModal}
+          onMouseDown={(e) => {
+            overlayMouseDownRef.current = e.target === e.currentTarget;
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && overlayMouseDownRef.current) {
+              fecharModal();
+            }
+            overlayMouseDownRef.current = false;
+          }}
           onKeyDown={(e) => e.key === "Escape" && fecharModal()}
         >
           <div
@@ -1570,7 +1579,18 @@ xmlns="http://www.w3.org/TR/REC-html40">
 
       {/* Modal: Nova / Editar pessoa */}
       {pessoaModal && (
-        <div className="esc-modal-overlay" onClick={() => setPessoaModal(null)}>
+        <div
+          className="esc-modal-overlay"
+          onMouseDown={(e) => {
+            overlayMouseDownRef.current = e.target === e.currentTarget;
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && overlayMouseDownRef.current) {
+              setPessoaModal(null);
+            }
+            overlayMouseDownRef.current = false;
+          }}
+        >
           <div
             className="esc-modal esc-modal-confirm"
             role="dialog"
@@ -1743,7 +1763,15 @@ xmlns="http://www.w3.org/TR/REC-html40">
       {feriadosAberto && (
         <div
           className="esc-modal-overlay"
-          onClick={() => setFeriadosAberto(false)}
+          onMouseDown={(e) => {
+            overlayMouseDownRef.current = e.target === e.currentTarget;
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && overlayMouseDownRef.current) {
+              setFeriadosAberto(false);
+            }
+            overlayMouseDownRef.current = false;
+          }}
         >
           <div
             className="esc-modal esc-modal-wide"
@@ -1883,7 +1911,15 @@ xmlns="http://www.w3.org/TR/REC-html40">
       {feriasResumoAberto && (
         <div
           className="esc-modal-overlay"
-          onClick={() => setFeriasResumoAberto(false)}
+          onMouseDown={(e) => {
+            overlayMouseDownRef.current = e.target === e.currentTarget;
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && overlayMouseDownRef.current) {
+              setFeriasResumoAberto(false);
+            }
+            overlayMouseDownRef.current = false;
+          }}
         >
           <div
             className="esc-modal"
@@ -1982,7 +2018,15 @@ xmlns="http://www.w3.org/TR/REC-html40">
       {confirmarRemocao && (
         <div
           className="esc-modal-overlay"
-          onClick={() => setConfirmarRemocao(null)}
+          onMouseDown={(e) => {
+            overlayMouseDownRef.current = e.target === e.currentTarget;
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && overlayMouseDownRef.current) {
+              setConfirmarRemocao(null);
+            }
+            overlayMouseDownRef.current = false;
+          }}
         >
           <div
             className="esc-modal esc-modal-confirm"
@@ -2021,7 +2065,15 @@ xmlns="http://www.w3.org/TR/REC-html40">
       {avisoFeriasEscala && (
         <div
           className="esc-modal-overlay"
-          onClick={() => setAvisoFeriasEscala(null)}
+          onMouseDown={(e) => {
+            overlayMouseDownRef.current = e.target === e.currentTarget;
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && overlayMouseDownRef.current) {
+              setAvisoFeriasEscala(null);
+            }
+            overlayMouseDownRef.current = false;
+          }}
         >
           <div
             className="esc-modal esc-modal-confirm"

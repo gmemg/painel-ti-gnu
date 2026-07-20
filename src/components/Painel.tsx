@@ -36,6 +36,7 @@ const Painel = () => {
   );
   const [confirmarRemocao, setConfirmarRemocao] = useState<Evento | null>(null);
   const salvandoRef = useRef(false);
+  const overlayMouseDownRef = useRef(false);
 
   useEffect(() => {
     // Carrega apenas eventos ativos para reduzir ruído na tela principal.
@@ -480,7 +481,15 @@ const Painel = () => {
       {confirmarConclusao && (
         <div
           className="popup-overlay"
-          onClick={() => setConfirmarConclusao(null)}
+          onMouseDown={(e) => {
+            overlayMouseDownRef.current = e.target === e.currentTarget;
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && overlayMouseDownRef.current) {
+              setConfirmarConclusao(null);
+            }
+            overlayMouseDownRef.current = false;
+          }}
         >
           <div
             className="popup-modal"
@@ -517,7 +526,15 @@ const Painel = () => {
       {confirmarPendente && (
         <div
           className="popup-overlay"
-          onClick={() => setConfirmarPendente(null)}
+          onMouseDown={(e) => {
+            overlayMouseDownRef.current = e.target === e.currentTarget;
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && overlayMouseDownRef.current) {
+              setConfirmarPendente(null);
+            }
+            overlayMouseDownRef.current = false;
+          }}
         >
           <div
             className="popup-modal"
@@ -553,7 +570,15 @@ const Painel = () => {
       {confirmarRemocao && (
         <div
           className="popup-overlay"
-          onClick={() => setConfirmarRemocao(null)}
+          onMouseDown={(e) => {
+            overlayMouseDownRef.current = e.target === e.currentTarget;
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && overlayMouseDownRef.current) {
+              setConfirmarRemocao(null);
+            }
+            overlayMouseDownRef.current = false;
+          }}
         >
           <div
             className="popup-modal"

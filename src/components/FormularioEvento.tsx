@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Evento } from "../types";
 import { getDiaSemana } from "../utils/dateUtils";
 import "./FormularioEvento.css";
@@ -137,9 +137,22 @@ const FormularioEvento = ({
     }
   };
 
+  const overlayMouseDownRef = useRef(false);
+
   return (
-    <div className="formulario-overlay">
-      <div className="formulario-container">
+    <div
+      className="formulario-overlay"
+      onMouseDown={(e) => {
+        overlayMouseDownRef.current = e.target === e.currentTarget;
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget && overlayMouseDownRef.current) {
+          onCancelar();
+        }
+        overlayMouseDownRef.current = false;
+      }}
+    >
+      <div className="formulario-container" onClick={(e) => e.stopPropagation()}>
         <h3>{evento ? "Editar Evento" : "Adicionar Novo Evento"}</h3>
         <form onSubmit={handleSubmit}>
           <div className="form-group">

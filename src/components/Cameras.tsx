@@ -132,6 +132,7 @@ const Cameras = () => {
   const [search, setSearch] = useState("");
 
   const fieldStartValuesRef = useRef<Record<string, string>>({});
+  const overlayMouseDownRef = useRef(false);
 
   useEffect(() => {
     getCameras()
@@ -562,7 +563,15 @@ const Cameras = () => {
         <div
           className="inventario-modal-overlay"
           role="presentation"
-          onClick={() => setHistoricoAberto(null)}
+          onMouseDown={(e) => {
+            overlayMouseDownRef.current = e.target === e.currentTarget;
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && overlayMouseDownRef.current) {
+              setHistoricoAberto(null);
+            }
+            overlayMouseDownRef.current = false;
+          }}
         >
           <div
             className="inventario-modal inventario-history-modal"

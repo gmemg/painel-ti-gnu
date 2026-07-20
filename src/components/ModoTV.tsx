@@ -610,6 +610,7 @@ export default function ModoTV() {
   telasAtivasRef.current = telasAtivas;
 
   const tbodyWrapRef = useRef<HTMLDivElement>(null);
+  const overlayMouseDownRef = useRef(false);
 
   const defAtual = CATALOGO.find((t) => t.id === tela);
 
@@ -989,7 +990,18 @@ export default function ModoTV() {
 
       {/* ─── Painel de configuração ────────────────────────────────── */}
       {configAberta && (
-        <div className="tv-cfg-overlay" onClick={() => setConfigAberta(false)}>
+        <div
+          className="tv-cfg-overlay"
+          onMouseDown={(e) => {
+            overlayMouseDownRef.current = e.target === e.currentTarget;
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && overlayMouseDownRef.current) {
+              setConfigAberta(false);
+            }
+            overlayMouseDownRef.current = false;
+          }}
+        >
           <div
             className="tv-cfg-panel"
             role="dialog"

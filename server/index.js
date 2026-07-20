@@ -1929,35 +1929,90 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
         pessoasList = await Promise.all(
           top15PessoasRaw.map(async (p, index) => {
             let totalFechados = p.count;
+            let totalGeral = p.count;
+            let abertos = 0;
+            let fechadosMes = 0;
+            let abertosMes = 0;
             try {
-              const countRes = await fetch(
-                `${GLPI_API_URL}/search/Ticket?criteria[0][field]=4&criteria[0][searchtype]=equals&criteria[0][value]=${p.id}` +
-                `&criteria[1][link]=AND&criteria[1][field]=12&criteria[1][searchtype]=equals&criteria[1][value]=6` +
-                `&range=0-1`,
-                {
-                  headers: {
-                    "App-Token": GLPI_APP_TOKEN,
-                    "Session-Token": sessionToken
+              const [resTotal, resFechados, resFechadosMes, resCriadosMes] = await Promise.all([
+                fetch(
+                  `${GLPI_API_URL}/search/Ticket?criteria[0][field]=4&criteria[0][searchtype]=equals&criteria[0][value]=${p.id}&range=0-1`,
+                  {
+                    headers: {
+                      "App-Token": GLPI_APP_TOKEN,
+                      "Session-Token": sessionToken
+                    }
                   }
-                }
-              );
-              if (countRes.ok) {
-                const countData = await countRes.json();
-                totalFechados = countData.totalcount || 0;
+                ),
+                fetch(
+                  `${GLPI_API_URL}/search/Ticket?criteria[0][field]=4&criteria[0][searchtype]=equals&criteria[0][value]=${p.id}` +
+                  `&criteria[1][link]=AND&criteria[1][field]=12&criteria[1][searchtype]=equals&criteria[1][value]=6&range=0-1`,
+                  {
+                    headers: {
+                      "App-Token": GLPI_APP_TOKEN,
+                      "Session-Token": sessionToken
+                    }
+                  }
+                ),
+                fetch(
+                  `${GLPI_API_URL}/search/Ticket?criteria[0][field]=4&criteria[0][searchtype]=equals&criteria[0][value]=${p.id}` +
+                  `&criteria[1][link]=AND&criteria[1][field]=12&criteria[1][searchtype]=equals&criteria[1][value]=6` +
+                  `&criteria[2][link]=AND&criteria[2][field]=17&criteria[2][searchtype]=morethan&criteria[2][value]=${encodeURIComponent(firstDayOfMonth)}` +
+                  `&range=0-1`,
+                  {
+                    headers: {
+                      "App-Token": GLPI_APP_TOKEN,
+                      "Session-Token": sessionToken
+                    }
+                  }
+                ),
+                fetch(
+                  `${GLPI_API_URL}/search/Ticket?criteria[0][field]=4&criteria[0][searchtype]=equals&criteria[0][value]=${p.id}` +
+                  `&criteria[1][link]=AND&criteria[1][field]=15&criteria[1][searchtype]=morethan&criteria[1][value]=${encodeURIComponent(firstDayOfMonth)}` +
+                  `&range=0-1`,
+                  {
+                    headers: {
+                      "App-Token": GLPI_APP_TOKEN,
+                      "Session-Token": sessionToken
+                    }
+                  }
+                )
+              ]);
+              if (resTotal.ok) {
+                const dataTotal = await resTotal.json();
+                totalGeral = dataTotal.totalcount || 0;
               }
+              if (resFechados.ok) {
+                const dataFechados = await resFechados.json();
+                totalFechados = dataFechados.totalcount || 0;
+              }
+              if (resFechadosMes.ok) {
+                const dataFechadosMes = await resFechadosMes.json();
+                fechadosMes = dataFechadosMes.totalcount || 0;
+              }
+              if (resCriadosMes.ok) {
+                const dataCriadosMes = await resCriadosMes.json();
+                abertosMes = dataCriadosMes.totalcount || 0;
+              }
+              abertos = Math.max(0, totalGeral - totalFechados);
             } catch (err) {
-              console.error(`[GLPI] Erro ao buscar total de chamados fechados para requerente ${p.nome}:`, err.message);
+              console.error(`[GLPI] Erro ao buscar chamados para requerente ${p.nome}:`, err.message);
             }
             
             return {
               id: p.nome.toLowerCase().replace(/\s+/g, '-'),
               nome: p.nome,
               chamados: totalFechados,
+              abertos: abertos,
+              fechados: totalFechados,
+              total: totalGeral,
+              abertosMes: abertosMes,
+              fechadosMes: fechadosMes,
               cor: coresSetores[index % coresSetores.length]
             };
           })
         );
-        pessoasList.sort((a, b) => b.chamados - a.chamados);
+        pessoasList.sort((a, b) => b.fechadosMes - a.fechadosMes || b.fechados - a.fechados);
       }
     } catch (e) {
       console.error("[GLPI] Erro ao buscar chamados para ranking:", e.message);

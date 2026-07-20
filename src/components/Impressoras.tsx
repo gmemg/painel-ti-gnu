@@ -361,6 +361,7 @@ export default function Impressoras() {
   const primeiroInputRef = useRef<HTMLInputElement>(null);
   const tonersLoadedRef = useRef(false);
   const tonerSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const overlayMouseDownRef = useRef(false);
 
   // Estados para integração GLPI
   const [syncStatus, setSyncStatus] = useState<GlpiSyncStatus | null>(null);
@@ -758,7 +759,15 @@ export default function Impressoras() {
       {modalAberto && (
         <div
           className="imp-modal-overlay"
-          onClick={fecharModal}
+          onMouseDown={(e) => {
+            overlayMouseDownRef.current = e.target === e.currentTarget;
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && overlayMouseDownRef.current) {
+              fecharModal();
+            }
+            overlayMouseDownRef.current = false;
+          }}
           onKeyDown={(e) => e.key === "Escape" && fecharModal()}
         >
           <div
@@ -1071,7 +1080,15 @@ export default function Impressoras() {
       {confirmarRemocao && (
         <div
           className="imp-modal-overlay"
-          onClick={() => setConfirmarRemocao(null)}
+          onMouseDown={(e) => {
+            overlayMouseDownRef.current = e.target === e.currentTarget;
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && overlayMouseDownRef.current) {
+              setConfirmarRemocao(null);
+            }
+            overlayMouseDownRef.current = false;
+          }}
         >
           <div
             className="imp-modal imp-modal-confirm"
