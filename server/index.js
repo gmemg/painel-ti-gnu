@@ -1375,7 +1375,25 @@ async function initGlpiSession() {
     throw new Error(`Erro ao autenticar no GLPI (${res.status}): ${text}`);
   }
   const data = await res.json();
-  return data.session_token;
+  const sessionToken = data.session_token;
+
+  // Alterna para a entidade do setor de TI (padrão Entidade ID 1 "GNU > TI", ou a definida no .env)
+  const entityId = process.env.GLPI_ENTITY_ID || "1";
+  try {
+    await fetch(`${GLPI_API_URL}/changeActiveEntities`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "App-Token": GLPI_APP_TOKEN,
+        "Session-Token": sessionToken,
+      },
+      body: JSON.stringify({ entities_id: Number(entityId), is_recursive: true }),
+    });
+  } catch (err) {
+    console.error("[GLPI] Erro ao alternar entidade ativa para TI:", err.message);
+  }
+
+  return sessionToken;
 }
 
 async function killGlpiSession(sessionToken) {
@@ -1674,6 +1692,7 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
       { name: "atribuidos", code: 2 },
       { name: "planejados", code: 3 },
       { name: "pendentes", code: 4 },
+      { name: "solucionados", code: 5 },
       { name: "fechados", code: 6 }
     ];
     
@@ -1701,6 +1720,27 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
         }
       })
     );
+    
+    let totalComputadores = 0;
+    let totalImpressorasGlpi = 0;
+    try {
+      const compRes = await fetch(`${GLPI_API_URL}/search/Computer?range=0-1`, {
+        headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken }
+      });
+      if (compRes.ok) {
+        const compData = await compRes.json();
+        totalComputadores = compData.totalcount || 0;
+      }
+      const printRes = await fetch(`${GLPI_API_URL}/search/Printer?range=0-1`, {
+        headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken }
+      });
+      if (printRes.ok) {
+        const printData = await printRes.json();
+        totalImpressorasGlpi = printData.totalcount || 0;
+      }
+    } catch (e) {
+      console.error("[GLPI] Erro ao buscar total de computadores/impressoras:", e.message);
+    }
     
     let tecnicosList = [];
     let pessoasList = [];
@@ -1750,31 +1790,33 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
         const contagemPessoas = {};  // id -> { nome, count }
         
         tickets.forEach(ticket => {
-          const tecnicoId = String(ticket["5"] || "");
+          const rawTech = ticket["5"];
+          const techIds = Array.isArray(rawTech) ? rawTech.map(String) : [String(rawTech || "")];
           const pessoaId = String(ticket["4"] || "");
           const statusVal = Number(ticket["12"]);
           const grupoNome = String(ticket["8"] || "");
           
-          const tecnicoNome = typeof usersMap[tecnicoId] === "string" ? usersMap[tecnicoId] : null;
           const pessoaNome = typeof usersMap[pessoaId] === "string" ? usersMap[pessoaId] : null;
           
-          const lowerGrupo = grupoNome.toLowerCase().trim();
-          const isITGroup = lowerGrupo === "infraestrutura" || lowerGrupo === "sistemas" || lowerGrupo === "infra/sistemas";
-          
-          if (tecnicoNome && statusVal === 6) {
-            const lowerNome = tecnicoNome.toLowerCase().trim();
-            if (
-              lowerNome !== "infraestrutura" &&
-              lowerNome !== "sistemas" &&
-              lowerNome !== "infra/sistemas"
-            ) {
-              if (!contagemTecnicos[tecnicoId]) {
-                contagemTecnicos[tecnicoId] = { nome: tecnicoNome, count: 0 };
+          if (statusVal === 6) {
+            techIds.forEach(tecnicoId => {
+              const tecnicoNome = typeof usersMap[tecnicoId] === "string" ? usersMap[tecnicoId] : null;
+              if (tecnicoNome) {
+                const lowerNome = tecnicoNome.toLowerCase().trim();
+                if (
+                  lowerNome !== "infraestrutura" &&
+                  lowerNome !== "sistemas" &&
+                  lowerNome !== "infra/sistemas"
+                ) {
+                  if (!contagemTecnicos[tecnicoId]) {
+                    contagemTecnicos[tecnicoId] = { nome: tecnicoNome, count: 0 };
+                  }
+                  contagemTecnicos[tecnicoId].count++;
+                }
               }
-              contagemTecnicos[tecnicoId].count++;
-            }
+            });
           }
-          if (pessoaNome && isITGroup) {
+          if (pessoaNome && statusVal === 6) {
             const lowerNome = pessoaNome.toLowerCase().trim();
             if (
               lowerNome !== "infraestrutura" &&
@@ -1789,17 +1831,63 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
           }
         });
         
-        const top10Raw = Object.entries(contagemTecnicos)
-          .map(([id, item]) => ({ id, nome: item.nome, count: item.count }))
-          .sort((a, b) => b.count - a.count)
-          .slice(0, 10);
-           
+        // Buscar chamados fechados do mês atual para o ranking mensal
+        const now = new Date();
+        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0] + ' 00:00:00';
+        const contagemTecnicosMes = {};
+
+        try {
+          const ticketsMesRes = await fetch(
+            `${GLPI_API_URL}/search/Ticket?sort=17&order=DESC` +
+            `&forcedisplay[0]=5&forcedisplay[1]=12` +
+            `&criteria[0][field]=12&criteria[0][searchtype]=equals&criteria[0][value]=6` +
+            `&criteria[1][link]=AND&criteria[1][field]=17&criteria[1][searchtype]=morethan&criteria[1][value]=${encodeURIComponent(firstDayOfMonth)}` +
+            `&range=0-1000`,
+            {
+              headers: {
+                "App-Token": GLPI_APP_TOKEN,
+                "Session-Token": sessionToken
+              }
+            }
+          );
+          if (ticketsMesRes.ok) {
+            const dataMes = await ticketsMesRes.json();
+            (dataMes.data || []).forEach(t => {
+              const rawTech = t["5"];
+              const techIds = Array.isArray(rawTech) ? rawTech.map(String) : [String(rawTech || "")];
+
+              techIds.forEach(techId => {
+                if (techId && usersMap[techId]) {
+                  const name = usersMap[techId];
+                  const lowerName = name.toLowerCase().trim();
+                  if (lowerName !== "infraestrutura" && lowerName !== "sistemas" && lowerName !== "infra/sistemas") {
+                    if (!contagemTecnicosMes[techId]) {
+                      contagemTecnicosMes[techId] = { nome: name, count: 0 };
+                    }
+                    contagemTecnicosMes[techId].count++;
+                  }
+                }
+              });
+            });
+          }
+        } catch (err) {
+          console.error("[GLPI] Erro ao buscar chamados do mês para técnicos:", err.message);
+        }
+
+        const allTechIds = Array.from(new Set([
+          ...Object.keys(contagemTecnicos),
+          ...Object.keys(contagemTecnicosMes)
+        ]));
+
         tecnicosList = await Promise.all(
-          top10Raw.map(async (tech) => {
-            let totalResolvidos = tech.count;
+          allTechIds.map(async (techId) => {
+            const nome = contagemTecnicos[techId]?.nome || contagemTecnicosMes[techId]?.nome || `User ${techId}`;
+            const countMes = contagemTecnicosMes[techId]?.count || 0;
+            let totalResolvidos = 0;
+
             try {
               const countRes = await fetch(
-                `${GLPI_API_URL}/search/Ticket?criteria[0][field]=5&criteria[0][searchtype]=equals&criteria[0][value]=${tech.id}` +
+                `${GLPI_API_URL}/search/Ticket?criteria[0][field]=5&criteria[0][searchtype]=equals&criteria[0][value]=${techId}` +
                 `&criteria[1][link]=AND&criteria[1][field]=12&criteria[1][searchtype]=equals&criteria[1][value]=6` +
                 `&range=0-1`,
                 {
@@ -1814,65 +1902,57 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
                 totalResolvidos = countData.totalcount || 0;
               }
             } catch (err) {
-              console.error(`[GLPI] Erro ao buscar total de chamados para técnico ${tech.nome}:`, err.message);
+              console.error(`[GLPI] Erro ao buscar total de chamados para técnico ${nome}:`, err.message);
             }
-            
+
             return {
-              id: tech.nome.toLowerCase().replace(/\s+/g, '-'),
-              nome: tech.nome,
-              avatar: tech.nome.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
+              id: nome.toLowerCase().replace(/\s+/g, '-'),
+              nome: nome,
+              avatar: nome.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
               role: "Técnico de Suporte",
-              resolvidos: totalResolvidos
+              resolvidos: totalResolvidos,
+              resolvidosMes: countMes
             };
           })
         );
-        tecnicosList.sort((a, b) => b.resolvidos - a.resolvidos);
+        tecnicosList.sort((a, b) => b.resolvidosMes - a.resolvidosMes || b.resolvidos - a.resolvidos);
           
-        const top10PessoasRaw = Object.entries(contagemPessoas)
+        const top15PessoasRaw = Object.entries(contagemPessoas)
           .map(([id, item]) => ({ id, nome: item.nome, count: item.count }))
           .sort((a, b) => b.count - a.count)
-          .slice(0, 10);
+          .slice(0, 15);
 
         const coresSetores = [
           "#2b8ffb", "#10b981", "#eab308", "#f97316", "#a855f7", 
           "#ef4444", "#6366f1", "#14b8a6", "#ec4899", "#f43f5e"
         ];
         pessoasList = await Promise.all(
-          top10PessoasRaw.map(async (p, index) => {
-            let totalAbertos = 0;
+          top15PessoasRaw.map(async (p, index) => {
+            let totalFechados = p.count;
             try {
-              const idsGrupos = [1, 2, 4]; // Infraestrutura, Sistemas, Infra/sistemas
-              const counts = await Promise.all(
-                idsGrupos.map(async (gid) => {
-                  try {
-                    const countRes = await fetch(
-                      `${GLPI_API_URL}/search/Ticket?criteria[0][field]=4&criteria[0][searchtype]=equals&criteria[0][value]=${p.id}` +
-                      `&criteria[1][link]=AND&criteria[1][field]=8&criteria[1][searchtype]=equals&criteria[1][value]=${gid}` +
-                      `&range=0-1`,
-                      {
-                        headers: {
-                          "App-Token": GLPI_APP_TOKEN,
-                          "Session-Token": sessionToken
-                        }
-                      }
-                    );
-                    if (countRes.ok) {
-                      const countData = await countRes.json();
-                      return countData.totalcount || 0;
-                    }
-                  } catch (e) {}
-                  return 0;
-                })
+              const countRes = await fetch(
+                `${GLPI_API_URL}/search/Ticket?criteria[0][field]=4&criteria[0][searchtype]=equals&criteria[0][value]=${p.id}` +
+                `&criteria[1][link]=AND&criteria[1][field]=12&criteria[1][searchtype]=equals&criteria[1][value]=6` +
+                `&range=0-1`,
+                {
+                  headers: {
+                    "App-Token": GLPI_APP_TOKEN,
+                    "Session-Token": sessionToken
+                  }
+                }
               );
-              totalAbertos = counts.reduce((acc, curr) => acc + curr, 0);
+              if (countRes.ok) {
+                const countData = await countRes.json();
+                totalFechados = countData.totalcount || 0;
+              }
             } catch (err) {
-              console.error(`[GLPI] Erro ao buscar total de chamados abertos para requerente ${p.nome}:`, err.message);
+              console.error(`[GLPI] Erro ao buscar total de chamados fechados para requerente ${p.nome}:`, err.message);
             }
             
             return {
               id: p.nome.toLowerCase().replace(/\s+/g, '-'),
               nome: p.nome,
-              chamados: totalAbertos,
+              chamados: totalFechados,
               cor: coresSetores[index % coresSetores.length]
             };
           })
@@ -1886,7 +1966,9 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
     res.json({
       kpis: statusCounts,
       tecnicos: tecnicosList,
-      pessoas: pessoasList
+      pessoas: pessoasList,
+      totalComputadores,
+      totalImpressoras: totalImpressorasGlpi
     });
   } catch (error) {
     next(error);

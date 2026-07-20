@@ -8,6 +8,7 @@
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -78,6 +79,7 @@
     transform: scale(1);
     opacity: 0.8;
   }
+
   100% {
     transform: scale(2.6);
     opacity: 0;
@@ -98,11 +100,12 @@
   border-radius: 12px;
   padding: 1.25rem;
   box-shadow: 0 4px 12px var(--shadow);
-  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), 
-              border-color 0.22s ease, 
-              box-shadow 0.22s ease;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.22s ease,
+    box-shadow 0.22s ease;
   position: relative;
-  overflow: visible; /* Permitir exibir o popover flutuante */
+  overflow: visible;
+  /* Permitir exibir o popover flutuante */
 }
 
 /* Barra lateral esquerda usando variável inline customizável */
@@ -133,6 +136,7 @@
   0% {
     border-color: var(--border);
   }
+
   100% {
     border-color: rgba(43, 143, 251, 0.25);
   }
@@ -228,7 +232,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0; /* Invisível por padrão no desktop */
+  opacity: 0;
+  /* Invisível por padrão no desktop */
   transition: opacity 0.2s, background-color 0.2s, color 0.2s;
 }
 
@@ -268,6 +273,7 @@
     opacity: 0;
     transform: translateY(4px) scale(0.96);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -584,7 +590,8 @@ html[data-theme="light"] .db-preset-circle.active {
   }
 
   .db-card-color-btn {
-    opacity: 0.5; /* Deixa o botão um pouco visível no mobile */
+    opacity: 0.5;
+    /* Deixa o botão um pouco visível no mobile */
   }
 }
 
@@ -768,23 +775,13 @@ html[data-theme="light"] .db-ranking-item {
   color: var(--text-strong);
 }
 
-.db-sector-bar-bg {
+.db-sector-divider {
   width: 100%;
-  height: 8px;
-  background: var(--surface-3);
-  border-radius: 4px;
-  overflow: hidden;
-  border: 1px solid var(--border);
-}
-
-.db-sector-bar-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-html[data-theme="light"] .db-sector-bar-bg {
-  background: rgba(0, 0, 0, 0.05);
+  height: 2px;
+  background-color: #00ccee;
+  opacity: 0.55;
+  border-radius: 2px;
+  margin-top: 0.2rem;
 }
 
 /* ─── Widget Loading State ───────────────────────────────────── */
@@ -824,6 +821,7 @@ html[data-theme="light"] .db-sector-bar-bg {
   0% {
     left: -45%;
   }
+
   100% {
     left: 100%;
   }
@@ -836,3 +834,40 @@ html[data-theme="light"] .db-sector-bar-bg {
   font-size: 0.875rem;
 }
 
+/* ─── Tab Group Selector ─────────────────────────────────────── */
+.db-tab-group {
+  display: flex;
+  background: var(--surface-3);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  gap: 2px;
+}
+
+.db-tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.db-tab-btn.active {
+  background: var(--blue);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(43, 143, 251, 0.3);
+}
+
+.db-tab-btn:hover:not(.active) {
+  color: var(--text-strong);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+html[data-theme="light"] .db-tab-group {
+  background: rgba(0, 0, 0, 0.04);
+}

@@ -8,6 +8,7 @@ interface Tecnico {
   avatar: string;
   role: string;
   resolvidos: number;
+  resolvidosMes?: number;
 }
 
 interface Pessoa {
@@ -22,6 +23,7 @@ const DEFAULT_COLORS: Record<string, string> = {
   atribuidos: "#6366f1",
   pendentes: "#eab308",
   planejados: "#a855f7",
+  solucionados: "#10b981",
   fechados: "#9ca3af",
   impressoras: "#14b8a6",
   computadores: "#2b8ffb",
@@ -45,17 +47,21 @@ const PRESET_COLORS = [
 
 export default function Dashboard() {
   const [currentTime, setCurrentTime] = useState<string>("");
-  
+
   // Estados do GLPI
   const [kpis, setKpis] = useState<Record<string, number>>({
-    novos: 6,
-    atribuidos: 14,
-    pendentes: 18,
-    planejados: 4,
-    fechados: 142,
+    novos: 0,
+    atribuidos: 0,
+    pendentes: 0,
+    planejados: 0,
+    solucionados: 0,
+    fechados: 0,
   });
   const [tecnicos, setTecnicos] = useState<Tecnico[]>([]);
   const [pessoas, setPessoas] = useState<Pessoa[]>([]);
+  const [totalComputadores, setTotalComputadores] = useState<number>(0);
+  const [totalImpressoras, setTotalImpressoras] = useState<number>(0);
+  const [filtroRanking, setFiltroRanking] = useState<"mensal" | "geral">("mensal");
   const [carregandoGlpi, setCarregandoGlpi] = useState<boolean>(true);
 
   // Estados para contagens dinâmicas
@@ -139,13 +145,15 @@ export default function Dashboard() {
         if (data.kpis) setKpis(data.kpis);
         if (data.tecnicos && data.tecnicos.length > 0) setTecnicos(data.tecnicos);
         if (data.pessoas && data.pessoas.length > 0) setPessoas(data.pessoas);
+        if (typeof data.totalComputadores === "number") setTotalComputadores(data.totalComputadores);
+        if (typeof data.totalImpressoras === "number") setTotalImpressoras(data.totalImpressoras);
       } catch (error) {
         console.error("Erro ao carregar dados do GLPI:", error);
       } finally {
         setCarregandoGlpi(false);
       }
     };
-    
+
     carregarGlpi();
     const interval = setInterval(carregarGlpi, 60000); // Atualiza a cada 1 minuto
     return () => clearInterval(interval);
@@ -170,7 +178,7 @@ export default function Dashboard() {
   const renderColorPicker = (cardId: string) => {
     const isOpened = activePickerId === cardId;
     const currentColor = cardColors[cardId] || DEFAULT_COLORS[cardId];
-    
+
     return (
       <div className="db-color-popover-wrapper">
         <button
@@ -184,14 +192,14 @@ export default function Dashboard() {
           aria-label="Personalizar cor do card"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 14.7255 3.09032 17.1962 4.85857 19C4.85857 19 4.5 20 5.5 21C6.5 22 8 22 8 22M12 22C11.5 22 10.5 22 10.5 20.5C10.5 19 12 18.5 12 17.5C12 16.5 10.5 16 9.5 16C8.5 16 7.5 16.5 6.5 16C5.5 15.5 5 14 5 12C5 8.13401 8.13401 5 12 5C15.866 5 19 8.13401 19 12C19 15.866 15.866 19 12 19" strokeLinecap="round" strokeLinejoin="round"/>
-            <circle cx="7.5" cy="10.5" r="1.2" fill="currentColor"/>
-            <circle cx="11.5" cy="7.5" r="1.2" fill="currentColor"/>
-            <circle cx="16.5" cy="9.5" r="1.2" fill="currentColor"/>
-            <circle cx="15.5" cy="14.5" r="1.2" fill="currentColor"/>
+            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 14.7255 3.09032 17.1962 4.85857 19C4.85857 19 4.5 20 5.5 21C6.5 22 8 22 8 22M12 22C11.5 22 10.5 22 10.5 20.5C10.5 19 12 18.5 12 17.5C12 16.5 10.5 16 9.5 16C8.5 16 7.5 16.5 6.5 16C5.5 15.5 5 14 5 12C5 8.13401 8.13401 5 12 5C15.866 5 19 8.13401 19 12C19 15.866 15.866 19 12 19" strokeLinecap="round" strokeLinejoin="round" />
+            <circle cx="7.5" cy="10.5" r="1.2" fill="currentColor" />
+            <circle cx="11.5" cy="7.5" r="1.2" fill="currentColor" />
+            <circle cx="16.5" cy="9.5" r="1.2" fill="currentColor" />
+            <circle cx="15.5" cy="14.5" r="1.2" fill="currentColor" />
           </svg>
         </button>
-        
+
         {isOpened && (
           <div className="db-color-popover" onClick={(e) => e.stopPropagation()}>
             <div className="db-color-popover-title">Cor de Destaque</div>
@@ -203,9 +211,9 @@ export default function Dashboard() {
                   className={`db-preset-circle ${currentColor === preset.value ? "active" : ""}`}
                   style={{ backgroundColor: preset.value }}
                   onClick={() => {
-                     const updated = { ...cardColors, [cardId]: preset.value };
-                     saveColors(updated);
-                     setActivePickerId(null);
+                    const updated = { ...cardColors, [cardId]: preset.value };
+                    saveColors(updated);
+                    setActivePickerId(null);
                   }}
                   title={preset.name}
                   aria-label={preset.name}
@@ -219,8 +227,8 @@ export default function Dashboard() {
                 type="color"
                 value={currentColor}
                 onChange={(e) => {
-                   const updated = { ...cardColors, [cardId]: e.target.value };
-                   saveColors(updated);
+                  const updated = { ...cardColors, [cardId]: e.target.value };
+                  saveColors(updated);
                 }}
               />
             </div>
@@ -228,9 +236,9 @@ export default function Dashboard() {
               type="button"
               className="db-color-reset-btn"
               onClick={() => {
-                 const updated = { ...cardColors, [cardId]: DEFAULT_COLORS[cardId] };
-                 saveColors(updated);
-                 setActivePickerId(null);
+                const updated = { ...cardColors, [cardId]: DEFAULT_COLORS[cardId] };
+                saveColors(updated);
+                setActivePickerId(null);
               }}
             >
               Restaurar Padrão
@@ -340,6 +348,25 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Chamados Solucionados */}
+        <div className="db-card kpi-solucionados" style={getCardStyle("solucionados")}>
+          <div className="db-card-header">
+            <div className="db-card-icon-wrap var-accent-bg-dim">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="db-card-icon var-accent-color">
+                <polyline points="20 6 9 17 4 12" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <div className="db-card-header-actions">
+              <span className="db-card-trend trend-up">Concluídos</span>
+              {renderColorPicker("solucionados")}
+            </div>
+          </div>
+          <div className="db-card-body">
+            <h3 className="db-card-value">{carregandoGlpi ? "..." : (kpis.solucionados ?? 0)}</h3>
+            <p className="db-card-title">Chamados Solucionados</p>
+          </div>
+        </div>
+
         {/* Chamados Fechados */}
         <div className="db-card kpi-fechados" style={getCardStyle("fechados")}>
           <div className="db-card-header">
@@ -374,7 +401,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="db-card-body">
-            <h3 className="db-card-value">20</h3>
+            <h3 className="db-card-value">{carregandoGlpi ? "..." : totalImpressoras}</h3>
             <p className="db-card-title">Total Impressoras</p>
           </div>
         </div>
@@ -395,7 +422,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="db-card-body">
-            <h3 className="db-card-value">245</h3>
+            <h3 className="db-card-value">{carregandoGlpi ? "..." : totalComputadores}</h3>
             <p className="db-card-title">Total Computadores</p>
           </div>
         </div>
@@ -416,7 +443,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="db-card-body">
-            <h3 className="db-card-value">14</h3>
+            <h3 className="db-card-value">-</h3>
             <p className="db-card-title">Total de Totens</p>
           </div>
         </div>
@@ -486,10 +513,30 @@ export default function Dashboard() {
       <div className="db-lower-section">
         {/* Widget 1: Ranking de Produtividade dos Técnicos */}
         <div className="db-tech-widget">
-          <div className="db-widget-header">
+          <div className="db-widget-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
             <div className="db-widget-title-group">
               <h3>Ranking TI</h3>
-              <p>Maior volume de chamados solucionados (GLPI)</p>
+              <p>
+                {filtroRanking === "mensal"
+                  ? "Chamados fechados no mês atual (GLPI)"
+                  : "Total de chamados fechados (GLPI)"}
+              </p>
+            </div>
+            <div className="db-tab-group">
+              <button
+                type="button"
+                className={`db-tab-btn ${filtroRanking === "mensal" ? "active" : ""}`}
+                onClick={() => setFiltroRanking("mensal")}
+              >
+                Mês Atual
+              </button>
+              <button
+                type="button"
+                className={`db-tab-btn ${filtroRanking === "geral" ? "active" : ""}`}
+                onClick={() => setFiltroRanking("geral")}
+              >
+                Geral
+              </button>
             </div>
           </div>
 
@@ -505,10 +552,16 @@ export default function Dashboard() {
           ) : (
             <div className="db-ranking-list">
               {[...tecnicos]
-                .sort((a, b) => b.resolvidos - a.resolvidos)
+                .sort((a, b) =>
+                  filtroRanking === "mensal"
+                    ? (b.resolvidosMes ?? 0) - (a.resolvidosMes ?? 0) || b.resolvidos - a.resolvidos
+                    : b.resolvidos - a.resolvidos
+                )
                 .map((tech, index) => {
                   const isTop3 = index < 3;
                   const medalColor = index === 0 ? "gold" : index === 1 ? "silver" : "bronze";
+                  const valorExibido = filtroRanking === "mensal" ? (tech.resolvidosMes ?? 0) : tech.resolvidos;
+                  const labelExibido = filtroRanking === "mensal" ? "no mês" : "total";
                   return (
                     <div key={tech.id} className="db-ranking-item">
                       <div className="db-ranking-position-wrap">
@@ -519,11 +572,10 @@ export default function Dashboard() {
                       <div className="db-ranking-avatar">{tech.avatar}</div>
                       <div className="db-ranking-info">
                         <span className="db-ranking-name">{tech.nome}</span>
-                        <span className="db-ranking-role">{tech.role}</span>
                       </div>
                       <div className="db-ranking-value-wrap">
-                        <span className="db-ranking-value">{tech.resolvidos}</span>
-                        <span className="db-ranking-label">resolvidos</span>
+                        <span className="db-ranking-value">{valorExibido}</span>
+                        <span className="db-ranking-label">{labelExibido}</span>
                       </div>
                     </div>
                   );
@@ -532,12 +584,11 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Widget 2: Chamados por Pessoa */}
+        {/* Widget 2: Chamados por Requerente */}
         <div className="db-tech-widget">
           <div className="db-widget-header">
             <div className="db-widget-title-group">
-              <h3>Chamados por Pessoa</h3>
-              <p>Quem mais abriu chamados (GLPI)</p>
+              <h3>Chamados por requerente</h3>
             </div>
           </div>
 
@@ -549,34 +600,22 @@ export default function Dashboard() {
               </div>
             </div>
           ) : pessoas.length === 0 ? (
-            <div className="db-widget-empty">Nenhuma pessoa encontrada no GLPI.</div>
+            <div className="db-widget-empty">Nenhum requerente encontrado no GLPI.</div>
           ) : (
             <div className="db-sector-list">
               {[...pessoas]
                 .sort((a, b) => b.chamados - a.chamados)
-                .map((pessoa) => {
-                  const maxChamados = Math.max(...pessoas.map((p) => p.chamados));
-                  const percentage = maxChamados > 0 ? (pessoa.chamados / maxChamados) * 100 : 0;
-                  return (
-                    <div key={pessoa.id} className="db-sector-item">
-                      <div className="db-sector-info-row">
-                        <span className="db-sector-name">{pessoa.nome}</span>
-                        <span className="db-sector-count">
-                          <strong>{pessoa.chamados}</strong> chamados
-                        </span>
-                      </div>
-                      <div className="db-sector-bar-bg">
-                        <div
-                          className="db-sector-bar-fill"
-                          style={{
-                            width: `${percentage}%`,
-                            backgroundColor: pessoa.cor,
-                          }}
-                        />
-                      </div>
+                .map((pessoa) => (
+                  <div key={pessoa.id} className="db-sector-item">
+                    <div className="db-sector-info-row">
+                      <span className="db-sector-name">{pessoa.nome}</span>
+                      <span className="db-sector-count">
+                        <strong>{pessoa.chamados}</strong> fechados
+                      </span>
                     </div>
-                  );
-                })}
+                    <div className="db-sector-divider" />
+                  </div>
+                ))}
             </div>
           )}
         </div>

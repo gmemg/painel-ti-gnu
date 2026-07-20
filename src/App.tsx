@@ -20,6 +20,7 @@ import EquipamentosPendentes from "./components/EquipamentosPendentes";
 import Cameras from "./components/Cameras";
 import NumeroManutencao from "./components/NumeroManutencao";
 import Login from "./components/Login";
+import GlobalSearch from "./components/GlobalSearch";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import "./App.css";
 
@@ -108,6 +109,7 @@ function AppLayout() {
             alt="Logo GNU"
           />
           <h1 className="header-title">PAINEL T.I. GNU</h1>
+          <GlobalSearch />
           <div className="header-actions">
             <Link
               to="/tv"

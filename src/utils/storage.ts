@@ -340,6 +340,7 @@ export interface GlpiDashboardData {
     atribuidos: number;
     planejados: number;
     pendentes: number;
+    solucionados: number;
     fechados: number;
   };
   tecnicos: Array<{
@@ -348,6 +349,7 @@ export interface GlpiDashboardData {
     avatar: string;
     role: string;
     resolvidos: number;
+    resolvidosMes?: number;
   }>;
   pessoas: Array<{
     id: string;
@@ -355,6 +357,8 @@ export interface GlpiDashboardData {
     chamados: number;
     cor: string;
   }>;
+  totalComputadores?: number;
+  totalImpressoras?: number;
 }
 
 export interface GlpiPrinterAvailable {
