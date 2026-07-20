@@ -158,9 +158,9 @@ const FORM_VAZIO: Omit<Impressora, "id" | "updatedAt"> = {
   mac: "",
   link: "",
   tonerPreto: 100,
-  tonerCiano: 100,
-  tonerMagenta: 100,
-  tonerAmarelo: 100,
+  tonerCiano: null,
+  tonerMagenta: null,
+  tonerAmarelo: null,
 };
 
 function gerarId(): string {
@@ -865,7 +865,7 @@ export default function Impressoras() {
                           type="button"
                           className="imp-btn-import"
                           disabled={importandoId === p.glpiId}
-                          onClick={() => handleImportPrinter(p.glpiId)}
+                          onClick={() => handleImportPrinter(p.glpiId, p.nome)}
                         >
                           {importandoId === p.glpiId ? "Importando..." : "Importar"}
                         </button>
@@ -961,8 +961,44 @@ export default function Impressoras() {
                 </div>
 
                 <div className="imp-form-toners">
-                  <div className="imp-form-toners-title">Nível de Toner</div>
-                  {TONERS.map(({ key, label, cor }) => (
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+                    <div className="imp-form-toners-title" style={{ margin: 0 }}>Nível de Toner</div>
+                    <div style={{ display: "flex", gap: "1rem", fontSize: "0.825rem", color: "var(--text)" }}>
+                      <label style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                        <input
+                          type="radio"
+                          name="tipoImpressora"
+                          checked={form.tonerCiano === null}
+                          onChange={() =>
+                            setForm((f) => ({
+                              ...f,
+                              tonerCiano: null,
+                              tonerMagenta: null,
+                              tonerAmarelo: null,
+                            }))
+                          }
+                        />
+                        Monocromática
+                      </label>
+                      <label style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                        <input
+                          type="radio"
+                          name="tipoImpressora"
+                          checked={form.tonerCiano !== null}
+                          onChange={() =>
+                            setForm((f) => ({
+                              ...f,
+                              tonerCiano: f.tonerCiano ?? 100,
+                              tonerMagenta: f.tonerMagenta ?? 100,
+                              tonerAmarelo: f.tonerAmarelo ?? 100,
+                            }))
+                          }
+                        />
+                        Colorida
+                      </label>
+                    </div>
+                  </div>
+                  {TONERS.filter(({ key }) => key === "tonerPreto" || form.tonerCiano !== null).map(({ key, label, cor }) => (
                     <div key={key} className="imp-form-toner-row">
                       <span
                         className="imp-form-toner-dot"

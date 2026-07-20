@@ -418,9 +418,9 @@ const rowToImpressora = (row) => ({
   mac: row.mac || "",
   link: row.link || "",
   tonerPreto: row.toner_preto ?? 100,
-  tonerCiano: row.toner_ciano ?? 100,
-  tonerMagenta: row.toner_magenta ?? 100,
-  tonerAmarelo: row.toner_amarelo ?? 100,
+  tonerCiano: row.toner_ciano !== null && row.toner_ciano !== undefined ? Number(row.toner_ciano) : null,
+  tonerMagenta: row.toner_magenta !== null && row.toner_magenta !== undefined ? Number(row.toner_magenta) : null,
+  tonerAmarelo: row.toner_amarelo !== null && row.toner_amarelo !== undefined ? Number(row.toner_amarelo) : null,
   updatedAt: new Date(row.updated_at).toISOString(),
 });
 
@@ -900,9 +900,9 @@ app.put("/api/impressoras", async (req, res, next) => {
           imp.mac || "",
           imp.link || "",
           imp.tonerPreto ?? 100,
-          imp.tonerCiano ?? 100,
-          imp.tonerMagenta ?? 100,
-          imp.tonerAmarelo ?? 100,
+          imp.tonerCiano ?? null,
+          imp.tonerMagenta ?? null,
+          imp.tonerAmarelo ?? null,
           imp.updatedAt,
         ],
       );
@@ -2016,7 +2016,7 @@ app.post("/api/impressoras/importar", async (req, res, next) => {
       [
         novaId,
         glpiId,
-        local || p["3"] || "Importada do GLPI",
+        local || p["1"] || p["3"] || "Impressora GLPI",
         sede || "AP",
         p["23"] || "",
         p["40"] || p["1"] || "",

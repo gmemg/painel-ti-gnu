@@ -54,21 +54,8 @@ export default function Dashboard() {
     planejados: 4,
     fechados: 142,
   });
-  const [tecnicos, setTecnicos] = useState<Tecnico[]>([
-    { id: "gm", nome: "Guilherme Machado", avatar: "GM", role: "Analista de Suporte", resolvidos: 47 },
-    { id: "js", nome: "João Silva", avatar: "JS", role: "Técnico de Campo", resolvidos: 38 },
-    { id: "mo", nome: "Maria Oliveira", avatar: "MO", role: "Analista de Redes", resolvidos: 42 },
-    { id: "ps", nome: "Pedro Santos", avatar: "PS", role: "Técnico de Suporte", resolvidos: 29 },
-    { id: "lc", nome: "Lucas Costa", avatar: "LC", role: "Técnico de Hardware", resolvidos: 31 },
-  ]);
-  const [pessoas, setPessoas] = useState<Pessoa[]>([
-    { id: "p1", nome: "Guilherme Machado", chamados: 25, cor: "#2b8ffb" },
-    { id: "p2", nome: "Ana Costa", chamados: 18, cor: "#10b981" },
-    { id: "p3", nome: "Carlos Souza", chamados: 15, cor: "#eab308" },
-    { id: "p4", nome: "Mariana Lima", chamados: 12, cor: "#f97316" },
-    { id: "p5", nome: "Paulo Reis", chamados: 9, cor: "#a855f7" },
-    { id: "p6", nome: "Juliana Dias", chamados: 6, cor: "#ef4444" },
-  ]);
+  const [tecnicos, setTecnicos] = useState<Tecnico[]>([]);
+  const [pessoas, setPessoas] = useState<Pessoa[]>([]);
   const [carregandoGlpi, setCarregandoGlpi] = useState<boolean>(true);
 
   // Estados para contagens dinâmicas
@@ -506,32 +493,43 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="db-ranking-list">
-            {[...tecnicos]
-              .sort((a, b) => b.resolvidos - a.resolvidos)
-              .map((tech, index) => {
-                const isTop3 = index < 3;
-                const medalColor = index === 0 ? "gold" : index === 1 ? "silver" : "bronze";
-                return (
-                  <div key={tech.id} className="db-ranking-item">
-                    <div className="db-ranking-position-wrap">
-                      <span className={`db-ranking-position ${isTop3 ? `medal-${medalColor}` : ""}`}>
-                        {index + 1}
-                      </span>
+          {carregandoGlpi ? (
+            <div className="db-widget-loading">
+              <span>Carregando...</span>
+              <div className="db-loading-bar-wrap">
+                <div className="db-loading-bar-fill" />
+              </div>
+            </div>
+          ) : tecnicos.length === 0 ? (
+            <div className="db-widget-empty">Nenhum técnico encontrado no GLPI.</div>
+          ) : (
+            <div className="db-ranking-list">
+              {[...tecnicos]
+                .sort((a, b) => b.resolvidos - a.resolvidos)
+                .map((tech, index) => {
+                  const isTop3 = index < 3;
+                  const medalColor = index === 0 ? "gold" : index === 1 ? "silver" : "bronze";
+                  return (
+                    <div key={tech.id} className="db-ranking-item">
+                      <div className="db-ranking-position-wrap">
+                        <span className={`db-ranking-position ${isTop3 ? `medal-${medalColor}` : ""}`}>
+                          {index + 1}
+                        </span>
+                      </div>
+                      <div className="db-ranking-avatar">{tech.avatar}</div>
+                      <div className="db-ranking-info">
+                        <span className="db-ranking-name">{tech.nome}</span>
+                        <span className="db-ranking-role">{tech.role}</span>
+                      </div>
+                      <div className="db-ranking-value-wrap">
+                        <span className="db-ranking-value">{tech.resolvidos}</span>
+                        <span className="db-ranking-label">resolvidos</span>
+                      </div>
                     </div>
-                    <div className="db-ranking-avatar">{tech.avatar}</div>
-                    <div className="db-ranking-info">
-                      <span className="db-ranking-name">{tech.nome}</span>
-                      <span className="db-ranking-role">{tech.role}</span>
-                    </div>
-                    <div className="db-ranking-value-wrap">
-                      <span className="db-ranking-value">{tech.resolvidos}</span>
-                      <span className="db-ranking-label">resolvidos</span>
-                    </div>
-                  </div>
-                );
-              })}
-          </div>
+                  );
+                })}
+            </div>
+          )}
         </div>
 
         {/* Widget 2: Chamados por Pessoa */}
@@ -543,33 +541,44 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="db-sector-list">
-            {[...pessoas]
-              .sort((a, b) => b.chamados - a.chamados)
-              .map((pessoa) => {
-                const maxChamados = Math.max(...pessoas.map((p) => p.chamados));
-                const percentage = maxChamados > 0 ? (pessoa.chamados / maxChamados) * 100 : 0;
-                return (
-                  <div key={pessoa.id} className="db-sector-item">
-                    <div className="db-sector-info-row">
-                      <span className="db-sector-name">{pessoa.nome}</span>
-                      <span className="db-sector-count">
-                        <strong>{pessoa.chamados}</strong> chamados
-                      </span>
+          {carregandoGlpi ? (
+            <div className="db-widget-loading">
+              <span>Carregando...</span>
+              <div className="db-loading-bar-wrap">
+                <div className="db-loading-bar-fill" />
+              </div>
+            </div>
+          ) : pessoas.length === 0 ? (
+            <div className="db-widget-empty">Nenhuma pessoa encontrada no GLPI.</div>
+          ) : (
+            <div className="db-sector-list">
+              {[...pessoas]
+                .sort((a, b) => b.chamados - a.chamados)
+                .map((pessoa) => {
+                  const maxChamados = Math.max(...pessoas.map((p) => p.chamados));
+                  const percentage = maxChamados > 0 ? (pessoa.chamados / maxChamados) * 100 : 0;
+                  return (
+                    <div key={pessoa.id} className="db-sector-item">
+                      <div className="db-sector-info-row">
+                        <span className="db-sector-name">{pessoa.nome}</span>
+                        <span className="db-sector-count">
+                          <strong>{pessoa.chamados}</strong> chamados
+                        </span>
+                      </div>
+                      <div className="db-sector-bar-bg">
+                        <div
+                          className="db-sector-bar-fill"
+                          style={{
+                            width: `${percentage}%`,
+                            backgroundColor: pessoa.cor,
+                          }}
+                        />
+                      </div>
                     </div>
-                    <div className="db-sector-bar-bg">
-                      <div
-                        className="db-sector-bar-fill"
-                        style={{
-                          width: `${percentage}%`,
-                          backgroundColor: pessoa.cor,
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-          </div>
+                  );
+                })}
+            </div>
+          )}
         </div>
       </div>
     </div>
