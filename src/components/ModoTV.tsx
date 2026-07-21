@@ -11,6 +11,7 @@ import {
   getHistoricoTarefas,
   getImpressoras,
   getInventario,
+  getGlpiDashboard,
   getTvConfig,
   saveTvConfig,
   TvConfig,
@@ -560,6 +561,155 @@ const CATALOGO: TelaDef[] = [
       }) as Record<string, unknown>[];
     },
   },
+  {
+    id: "ranking-ti",
+    label: "RANKING TI",
+    accent: "azul",
+    vazioMsg: "Nenhum técnico encontrado no GLPI.",
+    colunas: [],
+    load: async () => {
+      try {
+        const dashboard = await getGlpiDashboard();
+        return asRows(dashboard.tecnicos || []);
+      } catch (err) {
+        console.error("Erro ao carregar ranking no Modo TV:", err);
+        return [];
+      }
+    },
+    renderCustom: (rows) => {
+      const tecnicos = rows as unknown as Array<{
+        id: string;
+        glpiId?: string;
+        nome: string;
+        avatar: string;
+        role: string;
+        resolvidos: number;
+        resolvidosMes?: number;
+        resolvidosAno?: number;
+      }>;
+
+      let excluidos: string[] = [];
+      try {
+        const saved = localStorage.getItem("dashboard_ranking_excluidos");
+        excluidos = saved ? JSON.parse(saved) : [];
+      } catch {
+        excluidos = [];
+      }
+
+      let adicionadosTecnicos: typeof tecnicos = [];
+      try {
+        const saved = localStorage.getItem("dashboard_ranking_adicionados_tecnicos");
+        adicionadosTecnicos = saved ? JSON.parse(saved) : [];
+      } catch {
+        adicionadosTecnicos = [];
+      }
+
+      const tecnicosFiltrados = [...tecnicos, ...adicionadosTecnicos]
+        .filter((t, idx, self) => self.findIndex((x) => x.id === t.id || x.nome.toLowerCase() === t.nome.toLowerCase()) === idx)
+        .filter((t) => !excluidos.includes(t.id) && !excluidos.includes(t.nome) && !excluidos.includes(String(t.glpiId || "")));
+
+      const formatarNomeCurto = (nomeCompleto: string): string => {
+        if (!nomeCompleto) return "";
+        const partes = nomeCompleto.trim().split(/\s+/);
+        if (partes.length <= 2) return nomeCompleto;
+        return `${partes[0]} ${partes[1]}`;
+      };
+
+      const ordenadosMes = [...tecnicosFiltrados].sort(
+        (a, b) => (b.resolvidosMes ?? 0) - (a.resolvidosMes ?? 0) || (b.resolvidosAno ?? 0) - (a.resolvidosAno ?? 0) || b.resolvidos - a.resolvidos
+      );
+
+      return (
+        <div className="tv-ranking-container">
+          {/* Podium Top 3 Mensal */}
+          <div className="tv-podium-grid">
+            {ordenadosMes.slice(0, 3).map((tech, index) => {
+              const classePodio = index === 0 ? "tv-podio-gold" : index === 1 ? "tv-podio-silver" : "tv-podio-bronze";
+              const nomeExibicao = formatarNomeCurto(tech.nome);
+              const tituloTrofeu = index === 0 ? "1º Lugar - Troféu de Ouro" : index === 1 ? "2º Lugar - Troféu de Prata" : "3º Lugar - Troféu de Bronze";
+              return (
+                <div key={tech.id} className={`tv-podio-card ${classePodio}`}>
+                  <div className="tv-podio-header">
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", minWidth: 0, flex: 1 }}>
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        width="20"
+                        height="20"
+                        className={`tv-trophy-icon ${index === 0 ? "gold" : index === 1 ? "silver" : "bronze"}`}
+                        aria-label={tituloTrofeu}
+                      >
+                        <title>{tituloTrofeu}</title>
+                        <path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94A5.01 5.01 0 0 0 11 15.9V18H8v2h8v-2h-3v-2.1c1.94-.31 3.61-1.63 4.39-3.94C19.08 11.63 21 9.55 21 7V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z" />
+                      </svg>
+                      <h3 className="tv-podio-nome" title={tech.nome}>{nomeExibicao}</h3>
+                    </div>
+                    <div className="tv-podio-avatar">{tech.avatar}</div>
+                  </div>
+                  <div className="tv-podio-metrics">
+                    <div className="tv-podio-metric">
+                      <span className="tv-podio-val" style={{ color: "#2b8ffb", fontSize: "1.2rem" }}>
+                        {tech.resolvidosMes ?? 0}
+                      </span>
+                      <span className="tv-podio-lbl">Mês Atual</span>
+                    </div>
+                    <div className="tv-podio-metric">
+                      <span className="tv-podio-val">{tech.resolvidosAno ?? 0}</span>
+                      <span className="tv-podio-lbl">No Ano</span>
+                    </div>
+                    <div className="tv-podio-metric">
+                      <span className="tv-podio-val">{tech.resolvidos}</span>
+                      <span className="tv-podio-lbl">Total Geral</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Ranking Table List */}
+          <div className="tv-ranking-table-wrap">
+            <table className="tv-tabela tv-ranking-table">
+              <thead>
+                <tr>
+                  <th style={{ width: "10%", textAlign: "center" }}>Pos.</th>
+                  <th style={{ width: "50%" }}>Técnico T.I</th>
+                  <th style={{ width: "20%", textAlign: "right" }}>No Mês</th>
+                  <th style={{ width: "20%", textAlign: "right" }}>No Ano</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ordenadosMes.map((tech, index) => {
+                  const nomeExibicao = formatarNomeCurto(tech.nome);
+                  return (
+                    <tr key={tech.id} className={index < 3 ? "tv-row-top" : ""}>
+                      <td style={{ textAlign: "center", fontWeight: 700 }}>
+                        <span className={`tv-pos-badge ${index === 0 ? "gold" : index === 1 ? "silver" : index === 2 ? "bronze" : ""}`}>
+                          #{index + 1}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                          <div className="tv-avatar-sm">{tech.avatar}</div>
+                          <span className="tv-tech-name" title={tech.nome}>{nomeExibicao}</span>
+                        </div>
+                      </td>
+                      <td style={{ textAlign: "right", fontWeight: 800, color: "#2b8ffb", fontSize: "1.15rem" }}>
+                        {tech.resolvidosMes ?? 0}
+                      </td>
+                      <td style={{ textAlign: "right", fontWeight: 700, color: "#00ccee" }}>
+                        {tech.resolvidosAno ?? 0}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+  },
 ];
 
 const ACCENT_CLASSE: Record<Accent, string> = {
@@ -572,7 +722,7 @@ const ACCENT_CLASSE: Record<Accent, string> = {
 };
 
 /* Telas ativas por padrão (preserva o comportamento original). */
-const PADRAO_ATIVAS = new Set(["montagens", "tarefas", "equipamentos"]);
+const PADRAO_ATIVAS = new Set(["montagens", "tarefas", "equipamentos", "ranking-ti"]);
 
 function configPadrao(): { id: string; ativo: boolean }[] {
   return CATALOGO.map((t) => ({ id: t.id, ativo: PADRAO_ATIVAS.has(t.id) }));

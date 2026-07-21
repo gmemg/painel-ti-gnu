@@ -494,7 +494,7 @@ export default function Dashboard() {
 
   const tecnicosExibidos = [...tecnicos, ...adicionadosTecnicos]
     .filter((t, idx, self) => self.findIndex((x) => x.id === t.id || x.nome.toLowerCase() === t.nome.toLowerCase()) === idx)
-    .filter((t) => !excluidosRanking.includes(t.id) && !excluidosRanking.includes(t.nome));
+    .filter((t) => !excluidosRanking.includes(t.id) && !excluidosRanking.includes(t.nome) && !excluidosRanking.includes(String(t.glpiId || "")));
 
   const pessoasExibidas = [...pessoas, ...adicionadosPessoas]
     .filter((p, idx, self) => self.findIndex((x) => x.id === p.id || x.nome.toLowerCase() === p.nome.toLowerCase()) === idx)

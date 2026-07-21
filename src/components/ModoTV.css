@@ -801,3 +801,239 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* ─── Ranking TI no Modo TV ───────────────────────────────────────── */
+.tv-ranking-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.5rem 1rem;
+}
+
+.tv-podium-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.tv-podio-card {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 0.6rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+}
+
+.tv-podio-gold {
+  border: 1px solid rgba(234, 179, 8, 0.95);
+  background: linear-gradient(135deg, rgba(234, 179, 8, 0.25) 0%, rgba(15, 23, 42, 0.9) 100%);
+  box-shadow: 0 0 20px rgba(234, 179, 8, 0.45), 0 0 35px rgba(234, 179, 8, 0.2), inset 0 0 15px rgba(234, 179, 8, 0.18);
+  animation: tvAuraGold 3s infinite alternate ease-in-out;
+}
+
+.tv-podio-silver {
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: linear-gradient(135deg, rgba(203, 213, 225, 0.22) 0%, rgba(15, 23, 42, 0.9) 100%);
+  box-shadow: 0 0 20px rgba(203, 213, 225, 0.4), 0 0 35px rgba(203, 213, 225, 0.18), inset 0 0 15px rgba(203, 213, 225, 0.16);
+  animation: tvAuraSilver 3s infinite alternate ease-in-out;
+}
+
+.tv-podio-bronze {
+  border: 1px solid rgba(249, 115, 22, 0.9);
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.22) 0%, rgba(15, 23, 42, 0.9) 100%);
+  box-shadow: 0 0 20px rgba(249, 115, 22, 0.4), 0 0 35px rgba(249, 115, 22, 0.18), inset 0 0 15px rgba(249, 115, 22, 0.16);
+  animation: tvAuraBronze 3s infinite alternate ease-in-out;
+}
+
+@keyframes tvAuraGold {
+  0% {
+    box-shadow: 0 0 15px rgba(234, 179, 8, 0.35), 0 0 25px rgba(234, 179, 8, 0.15), inset 0 0 10px rgba(234, 179, 8, 0.12);
+    border-color: rgba(234, 179, 8, 0.75);
+  }
+  100% {
+    box-shadow: 0 0 30px rgba(234, 179, 8, 0.65), 0 0 50px rgba(234, 179, 8, 0.3), inset 0 0 20px rgba(234, 179, 8, 0.25);
+    border-color: rgba(254, 240, 138, 1);
+  }
+}
+
+@keyframes tvAuraSilver {
+  0% {
+    box-shadow: 0 0 15px rgba(203, 213, 225, 0.3), 0 0 25px rgba(203, 213, 225, 0.12), inset 0 0 10px rgba(203, 213, 225, 0.1);
+    border-color: rgba(203, 213, 225, 0.7);
+  }
+  100% {
+    box-shadow: 0 0 28px rgba(203, 213, 225, 0.55), 0 0 45px rgba(203, 213, 225, 0.25), inset 0 0 18px rgba(203, 213, 225, 0.22);
+    border-color: rgba(255, 255, 255, 1);
+  }
+}
+
+@keyframes tvAuraBronze {
+  0% {
+    box-shadow: 0 0 15px rgba(249, 115, 22, 0.3), 0 0 25px rgba(249, 115, 22, 0.12), inset 0 0 10px rgba(249, 115, 22, 0.1);
+    border-color: rgba(249, 115, 22, 0.7);
+  }
+  100% {
+    box-shadow: 0 0 28px rgba(249, 115, 22, 0.55), 0 0 45px rgba(249, 115, 22, 0.25), inset 0 0 18px rgba(249, 115, 22, 0.22);
+    border-color: rgba(253, 186, 116, 1);
+  }
+}
+
+.tv-podio-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tv-trophy-icon {
+  flex-shrink: 0;
+}
+
+.tv-trophy-icon.gold {
+  color: #eab308;
+  filter: drop-shadow(0 0 6px rgba(234, 179, 8, 0.7));
+}
+
+.tv-trophy-icon.silver {
+  color: #cbd5e1;
+  filter: drop-shadow(0 0 6px rgba(203, 213, 225, 0.7));
+}
+
+.tv-trophy-icon.bronze {
+  color: #f97316;
+  filter: drop-shadow(0 0 6px rgba(249, 115, 22, 0.7));
+}
+
+.tv-podio-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2b8ffb, #1d4ed8);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.88rem;
+  box-shadow: 0 3px 8px rgba(43, 143, 251, 0.35);
+}
+
+.tv-podio-nome {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tv-podio-metrics {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.4rem;
+  margin-top: 0.2rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tv-podio-metric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.tv-podio-val {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #00ccee;
+}
+
+.tv-podio-lbl {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+}
+
+.tv-ranking-table-wrap {
+  width: 100%;
+}
+
+.tv-avatar-sm {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(43, 143, 251, 0.25);
+  color: #2b8ffb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.88rem;
+  border: 1px solid rgba(43, 143, 251, 0.4);
+}
+
+.tv-tech-name {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.tv-bar-container {
+  position: relative;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
+.tv-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2b8ffb 0%, #00ccee 100%);
+  border-radius: 6px;
+  transition: width 0.5s ease;
+}
+
+.tv-bar-text {
+  position: absolute;
+  right: 10px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+}
+
+.tv-pos-badge {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+}
+
+.tv-pos-badge.gold {
+  background: rgba(234, 179, 8, 0.25);
+  color: #eab308;
+  border: 1px solid rgba(234, 179, 8, 0.4);
+}
+
+.tv-pos-badge.silver {
+  background: rgba(148, 163, 184, 0.25);
+  color: #cbd5e1;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+.tv-pos-badge.bronze {
+  background: rgba(217, 119, 6, 0.25);
+  color: #f97316;
+  border: 1px solid rgba(217, 119, 6, 0.4);
+}
