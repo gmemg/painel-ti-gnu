@@ -1063,6 +1063,11 @@ html[data-theme="light"] .db-tab-group {
   cursor: pointer;
 }
 
+.db-report-field select option {
+  background-color: #1e293b;
+  color: #f8fafc;
+}
+
 .db-report-field select:focus {
   border-color: var(--blue);
 }
@@ -1113,6 +1118,29 @@ html[data-theme="light"] .db-tab-group {
 .db-report-submit-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.db-select-filtro {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-strong);
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.db-select-filtro option {
+  background-color: #1e293b;
+  color: #f8fafc;
+}
+
+.db-select-filtro:hover,
+.db-select-filtro:focus {
+  border-color: var(--blue, #2b8ffb);
 }
 
 /* Botão Detalhes no Ranking TI */

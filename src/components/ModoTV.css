@@ -1037,3 +1037,97 @@
   color: #f97316;
   border: 1px solid rgba(217, 119, 6, 0.4);
 }
+
+/* ─── Destaque Top 1, 2 e 3 (Ouro, Prata e Bronze Brilhantes) ────────────── */
+
+.tv-ranking-table {
+  border-collapse: separate;
+  border-spacing: 0 6px;
+}
+
+@keyframes tvPulseGlowGold {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(234, 179, 8, 0.4), inset 0 0 6px rgba(234, 179, 8, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.85), inset 0 0 12px rgba(255, 215, 0, 0.3);
+  }
+}
+
+@keyframes tvPulseGlowSilver {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(203, 213, 225, 0.4), inset 0 0 6px rgba(203, 213, 225, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.85), inset 0 0 12px rgba(226, 232, 240, 0.3);
+  }
+}
+
+@keyframes tvPulseGlowBronze {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(249, 115, 22, 0.4), inset 0 0 6px rgba(249, 115, 22, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(253, 186, 116, 0.85), inset 0 0 12px rgba(249, 115, 22, 0.3);
+  }
+}
+
+/* Ouro - Top 1 */
+.tv-row-rank.tv-rank-gold td {
+  background: rgba(234, 179, 8, 0.12);
+  border-top: 2px solid #ffd700;
+  border-bottom: 2px solid #ffd700;
+}
+.tv-row-rank.tv-rank-gold td:first-child {
+  border-left: 2px solid #ffd700;
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+}
+.tv-row-rank.tv-rank-gold td:last-child {
+  border-right: 2px solid #ffd700;
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+.tv-row-rank.tv-rank-gold {
+  animation: tvPulseGlowGold 2.5s infinite ease-in-out;
+}
+
+/* Prata - Top 2 */
+.tv-row-rank.tv-rank-silver td {
+  background: rgba(148, 163, 184, 0.12);
+  border-top: 2px solid #e2e8f0;
+  border-bottom: 2px solid #e2e8f0;
+}
+.tv-row-rank.tv-rank-silver td:first-child {
+  border-left: 2px solid #e2e8f0;
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+}
+.tv-row-rank.tv-rank-silver td:last-child {
+  border-right: 2px solid #e2e8f0;
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+.tv-row-rank.tv-rank-silver {
+  animation: tvPulseGlowSilver 3s infinite ease-in-out;
+}
+
+/* Bronze - Top 3 */
+.tv-row-rank.tv-rank-bronze td {
+  background: rgba(249, 115, 22, 0.12);
+  border-top: 2px solid #f97316;
+  border-bottom: 2px solid #f97316;
+}
+.tv-row-rank.tv-rank-bronze td:first-child {
+  border-left: 2px solid #f97316;
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+}
+.tv-row-rank.tv-rank-bronze td:last-child {
+  border-right: 2px solid #f97316;
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+.tv-row-rank.tv-rank-bronze {
+  animation: tvPulseGlowBronze 3.5s infinite ease-in-out;
+}

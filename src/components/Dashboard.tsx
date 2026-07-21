@@ -78,8 +78,16 @@ export default function Dashboard() {
   const [pessoas, setPessoas] = useState<Pessoa[]>([]);
   const [totalComputadores, setTotalComputadores] = useState<number>(0);
   const [totalImpressoras, setTotalImpressoras] = useState<number>(0);
-  const [filtroRanking, setFiltroRanking] = useState<"mensal" | "anual" | "geral">("mensal");
-  const [filtroRequerente, setFiltroRequerente] = useState<"mensal" | "anual" | "geral">("mensal");
+  const [filtroRankingMode, setFiltroRankingMode] = useState<"especifico" | "geral">("especifico");
+  const [mesRanking, setMesRanking] = useState<number>(new Date().getMonth() + 1);
+  const [anoRanking, setAnoRanking] = useState<number>(new Date().getFullYear());
+  const [dadosRankingCustom, setDadosRankingCustom] = useState<Record<string, number> | null>(null);
+
+  const [filtroRequerenteMode, setFiltroRequerenteMode] = useState<"especifico" | "geral">("especifico");
+  const [mesRequerente, setMesRequerente] = useState<number>(new Date().getMonth() + 1);
+  const [anoRequerente, setAnoRequerente] = useState<number>(new Date().getFullYear());
+  const [dadosRequerenteCustom, setDadosRequerenteCustom] = useState<Record<string, number> | null>(null);
+
   const [carregandoGlpi, setCarregandoGlpi] = useState<boolean>(true);
 
   // Estados para Modal de Relatório PDF
@@ -401,7 +409,44 @@ export default function Dashboard() {
     const interval = setInterval(carregarGlpi, 60000); // Atualiza a cada 1 minuto
     return () => clearInterval(interval);
   }, []);
+  // Efeitos para carregar dados de mês/ano customizados para os rankings
+  useEffect(() => {
+    if (filtroRankingMode === "geral") return;
+    const token = getToken();
+    fetch(`/api/glpi/relatorio?tipo=mensal&mes=${mesRanking}&ano=${anoRanking}`, {
+      headers: { Authorization: token ? `Bearer ${token}` : "" }
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && data.tecnicos) {
+          const map: Record<string, number> = {};
+          data.tecnicos.forEach((t: any) => {
+            if (t.nome) map[t.nome.toLowerCase().trim()] = t.count;
+          });
+          setDadosRankingCustom(map);
+        }
+      })
+      .catch((err) => console.error("Erro ao filtrar ranking por mes/ano:", err));
+  }, [mesRanking, anoRanking, filtroRankingMode]);
 
+  useEffect(() => {
+    if (filtroRequerenteMode === "geral") return;
+    const token = getToken();
+    fetch(`/api/glpi/relatorio?tipo=mensal&mes=${mesRequerente}&ano=${anoRequerente}`, {
+      headers: { Authorization: token ? `Bearer ${token}` : "" }
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && data.requerentes) {
+          const map: Record<string, number> = {};
+          data.requerentes.forEach((p: any) => {
+            if (p.nome) map[p.nome.toLowerCase().trim()] = p.count;
+          });
+          setDadosRequerenteCustom(map);
+        }
+      })
+      .catch((err) => console.error("Erro ao filtrar requerentes por mes/ano:", err));
+  }, [mesRequerente, anoRequerente, filtroRequerenteMode]);
   const saveColors = (newColors: Record<string, string>) => {
     setCardColors(newColors);
     localStorage.setItem("dashboard_card_colors", JSON.stringify(newColors));
@@ -782,35 +827,51 @@ export default function Dashboard() {
             <div className="db-widget-title-group">
               <h3>Ranking TI</h3>
               <p>
-                {filtroRanking === "mensal"
-                  ? "Chamados fechados no mês atual (GLPI)"
-                  : filtroRanking === "anual"
-                  ? "Chamados fechados no ano atual (GLPI)"
-                  : "Total de chamados fechados (GLPI)"}
+                {filtroRankingMode === "geral"
+                  ? "Total de chamados fechados no histórico (GLPI)"
+                  : `Chamados fechados em ${["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"][mesRanking - 1]} de ${anoRanking} (GLPI)`}
               </p>
             </div>
             <div className="db-tab-group" style={{ display: "flex", gap: "0.4rem", alignItems: "center", flexWrap: "wrap" }}>
-              <button
-                type="button"
-                className={`db-tab-btn ${filtroRanking === "mensal" ? "active" : ""}`}
-                onClick={() => setFiltroRanking("mensal")}
+              <select
+                className="db-select-filtro"
+                value={filtroRankingMode === "geral" ? "geral" : mesRanking}
+                onChange={(e) => {
+                  if (e.target.value === "geral") {
+                    setFiltroRankingMode("geral");
+                  } else {
+                    setFiltroRankingMode("especifico");
+                    setMesRanking(Number(e.target.value));
+                  }
+                }}
               >
-                Mês Atual
-              </button>
-              <button
-                type="button"
-                className={`db-tab-btn ${filtroRanking === "anual" ? "active" : ""}`}
-                onClick={() => setFiltroRanking("anual")}
-              >
-                Ano
-              </button>
-              <button
-                type="button"
-                className={`db-tab-btn ${filtroRanking === "geral" ? "active" : ""}`}
-                onClick={() => setFiltroRanking("geral")}
-              >
-                Geral
-              </button>
+                <option value={1}>Janeiro</option>
+                <option value={2}>Fevereiro</option>
+                <option value={3}>Março</option>
+                <option value={4}>Abril</option>
+                <option value={5}>Maio</option>
+                <option value={6}>Junho</option>
+                <option value={7}>Julho</option>
+                <option value={8}>Agosto</option>
+                <option value={9}>Setembro</option>
+                <option value={10}>Outubro</option>
+                <option value={11}>Novembro</option>
+                <option value={12}>Dezembro</option>
+                <option value="geral">Histórico Geral</option>
+              </select>
+
+              {filtroRankingMode !== "geral" && (
+                <select
+                  className="db-select-filtro"
+                  value={anoRanking}
+                  onChange={(e) => setAnoRanking(Number(e.target.value))}
+                >
+                  <option value={2024}>2024</option>
+                  <option value={2025}>2025</option>
+                  <option value={2026}>2026</option>
+                  <option value={2027}>2027</option>
+                </select>
+              )}
               <button
                 type="button"
                 className="db-btn-add-person"
@@ -855,28 +916,27 @@ export default function Dashboard() {
           ) : (
             <div className="db-ranking-list">
               {[...tecnicosExibidos]
-                .sort((a, b) =>
-                  filtroRanking === "mensal"
-                    ? (b.resolvidosMes ?? 0) - (a.resolvidosMes ?? 0) || b.resolvidos - a.resolvidos
-                    : filtroRanking === "anual"
-                    ? (b.resolvidosAno ?? 0) - (a.resolvidosAno ?? 0) || b.resolvidos - a.resolvidos
-                    : b.resolvidos - a.resolvidos
-                )
+                .map((tech) => {
+                  let val = 0;
+                  if (filtroRankingMode === "geral") {
+                    val = tech.resolvidos;
+                  } else if (dadosRankingCustom) {
+                    val = dadosRankingCustom[tech.nome.toLowerCase().trim()] ?? 0;
+                  } else {
+                    val = tech.resolvidosMes ?? 0;
+                  }
+                  return { ...tech, val };
+                })
+                .sort((a, b) => b.val - a.val)
                 .map((tech, index) => {
                   const isTop3 = index < 3;
                   const medalColor = index === 0 ? "gold" : index === 1 ? "silver" : "bronze";
-                  const valorExibido =
-                    filtroRanking === "mensal"
-                      ? (tech.resolvidosMes ?? 0)
-                      : filtroRanking === "anual"
-                      ? (tech.resolvidosAno ?? 0)
-                      : tech.resolvidos;
+                  const valorExibido = tech.val;
+                  const siglaMeses = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
                   const labelExibido =
-                    filtroRanking === "mensal"
-                      ? "no mês"
-                      : filtroRanking === "anual"
-                      ? "no ano"
-                      : "total";
+                    filtroRankingMode === "geral"
+                      ? "total"
+                      : `${siglaMeses[mesRanking - 1]}/${anoRanking}`;
                   return (
                     <div key={tech.id} className="db-ranking-item">
                       <div className="db-ranking-position-wrap">
@@ -951,35 +1011,51 @@ export default function Dashboard() {
             <div className="db-widget-title-group">
               <h3>Chamados por requerente</h3>
               <p>
-                {filtroRequerente === "mensal"
-                  ? "Chamados fechados no mês atual (GLPI)"
-                  : filtroRequerente === "anual"
-                  ? "Chamados fechados no ano atual (GLPI)"
-                  : "Total de chamados fechados (GLPI)"}
+                {filtroRequerenteMode === "geral"
+                  ? "Total de chamados fechados no histórico (GLPI)"
+                  : `Chamados fechados em ${["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"][mesRequerente - 1]} de ${anoRequerente} (GLPI)`}
               </p>
             </div>
             <div className="db-tab-group" style={{ display: "flex", gap: "0.4rem", alignItems: "center", flexWrap: "wrap" }}>
-              <button
-                type="button"
-                className={`db-tab-btn ${filtroRequerente === "mensal" ? "active" : ""}`}
-                onClick={() => setFiltroRequerente("mensal")}
+              <select
+                className="db-select-filtro"
+                value={filtroRequerenteMode === "geral" ? "geral" : mesRequerente}
+                onChange={(e) => {
+                  if (e.target.value === "geral") {
+                    setFiltroRequerenteMode("geral");
+                  } else {
+                    setFiltroRequerenteMode("especifico");
+                    setMesRequerente(Number(e.target.value));
+                  }
+                }}
               >
-                Mês Atual
-              </button>
-              <button
-                type="button"
-                className={`db-tab-btn ${filtroRequerente === "anual" ? "active" : ""}`}
-                onClick={() => setFiltroRequerente("anual")}
-              >
-                Ano
-              </button>
-              <button
-                type="button"
-                className={`db-tab-btn ${filtroRequerente === "geral" ? "active" : ""}`}
-                onClick={() => setFiltroRequerente("geral")}
-              >
-                Geral
-              </button>
+                <option value={1}>Janeiro</option>
+                <option value={2}>Fevereiro</option>
+                <option value={3}>Março</option>
+                <option value={4}>Abril</option>
+                <option value={5}>Maio</option>
+                <option value={6}>Junho</option>
+                <option value={7}>Julho</option>
+                <option value={8}>Agosto</option>
+                <option value={9}>Setembro</option>
+                <option value={10}>Outubro</option>
+                <option value={11}>Novembro</option>
+                <option value={12}>Dezembro</option>
+                <option value="geral">Histórico Geral</option>
+              </select>
+
+              {filtroRequerenteMode !== "geral" && (
+                <select
+                  className="db-select-filtro"
+                  value={anoRequerente}
+                  onChange={(e) => setAnoRequerente(Number(e.target.value))}
+                >
+                  <option value={2024}>2024</option>
+                  <option value={2025}>2025</option>
+                  <option value={2026}>2026</option>
+                  <option value={2027}>2027</option>
+                </select>
+              )}
               <button
                 type="button"
                 className="db-btn-add-person"
@@ -1024,26 +1100,25 @@ export default function Dashboard() {
           ) : (
             <div className="db-sector-list">
               {[...pessoasExibidas]
-                .sort((a, b) =>
-                  filtroRequerente === "mensal"
-                    ? (b.fechadosMes ?? 0) - (a.fechadosMes ?? 0)
-                    : filtroRequerente === "anual"
-                    ? (b.fechadosAno ?? 0) - (a.fechadosAno ?? 0)
-                    : (b.fechados ?? b.chamados) - (a.fechados ?? a.chamados)
-                )
                 .map((pessoa) => {
-                  const valorExibido =
-                    filtroRequerente === "mensal"
-                      ? (pessoa.fechadosMes ?? 0)
-                      : filtroRequerente === "anual"
-                      ? (pessoa.fechadosAno ?? 0)
-                      : (pessoa.fechados ?? pessoa.chamados);
+                  let val = 0;
+                  if (filtroRequerenteMode === "geral") {
+                    val = pessoa.fechados ?? pessoa.chamados;
+                  } else if (dadosRequerenteCustom) {
+                    val = dadosRequerenteCustom[pessoa.nome.toLowerCase().trim()] ?? 0;
+                  } else {
+                    val = pessoa.fechadosMes ?? 0;
+                  }
+                  return { ...pessoa, val };
+                })
+                .sort((a, b) => b.val - a.val)
+                .map((pessoa) => {
+                  const valorExibido = pessoa.val;
+                  const siglaMeses = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
                   const labelExibido =
-                    filtroRequerente === "mensal"
-                      ? "fechados no mês"
-                      : filtroRequerente === "anual"
-                      ? "fechados no ano"
-                      : "fechados";
+                    filtroRequerenteMode === "geral"
+                      ? "fechados"
+                      : `em ${siglaMeses[mesRequerente - 1]}/${anoRequerente}`;
                   return (
                     <div key={pessoa.id} className="db-sector-item">
                       <div className="db-sector-info-row">

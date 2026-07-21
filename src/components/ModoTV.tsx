@@ -623,28 +623,36 @@ const CATALOGO: TelaDef[] = [
 
       const kpis = (rows as any).__kpis || {};
       const abertosMes = kpis.abertosMes || 0;
+      const fechadosMes = kpis.fechadosMes || 0;
       const abertosAno = kpis.abertosAno || 0;
+      const fechadosAno = kpis.fechadosAno || 0;
       const abertosGeral = kpis.abertosGeral || 0;
+      const fechadosGeral = kpis.fechados || 0;
 
       const cardStyle = {
         border: "2px solid #00ccee",
-        boxShadow: "0 0 15px rgba(0, 204, 238, 0.3)",
-        padding: "1rem"
+        boxShadow: "0 0 12px rgba(0, 204, 238, 0.3)",
+        padding: "0.5rem 0.75rem",
+        borderRadius: "8px"
       };
 
       return (
         <div className="tv-ranking-container">
           {/* Totais do Setor T.I */}
-          <div className="tv-totais-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+          <div className="tv-totais-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
             {/* Mensal */}
             <div className="tv-podio-card" style={cardStyle}>
               <div className="tv-podio-header" style={{ justifyContent: 'center' }}>
-                <h3 className="tv-podio-nome" style={{ fontSize: '1.5rem', margin: 0, color: '#00ccee' }}>TOTAL MENSAL</h3>
+                <h3 className="tv-podio-nome" style={{ fontSize: '1.1rem', margin: 0, color: '#00ccee', letterSpacing: '0.5px' }}>TOTAL MENSAL</h3>
               </div>
-              <div className="tv-podio-metrics" style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(0, 204, 238, 0.5)', display: 'flex', justifyContent: 'center' }}>
-                <div className="tv-podio-metric">
-                  <span className="tv-podio-val" style={{ color: "#00ccee", fontSize: "2.5rem", fontWeight: "bold" }}>{abertosMes}</span>
-                  <span className="tv-podio-lbl" style={{ fontSize: "1.2rem", fontWeight: 600 }}>Abertos</span>
+              <div className="tv-podio-metrics" style={{ marginTop: '0.35rem', paddingTop: '0.35rem', borderTop: '1px solid rgba(0, 204, 238, 0.5)', display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
+                <div className="tv-podio-metric" style={{ textAlign: 'center' }}>
+                  <span className="tv-podio-val" style={{ color: "#00ccee", fontSize: "1.75rem", fontWeight: "bold", display: "block", lineHeight: 1.1 }}>{abertosMes}</span>
+                  <span className="tv-podio-lbl" style={{ fontSize: "0.85rem", fontWeight: 600 }}>Abertos</span>
+                </div>
+                <div className="tv-podio-metric" style={{ textAlign: 'center' }}>
+                  <span className="tv-podio-val" style={{ color: "#00ccee", fontSize: "1.75rem", fontWeight: "bold", display: "block", lineHeight: 1.1 }}>{fechadosMes}</span>
+                  <span className="tv-podio-lbl" style={{ fontSize: "0.85rem", fontWeight: 600 }}>Fechados</span>
                 </div>
               </div>
             </div>
@@ -652,12 +660,16 @@ const CATALOGO: TelaDef[] = [
             {/* Anual */}
             <div className="tv-podio-card" style={cardStyle}>
               <div className="tv-podio-header" style={{ justifyContent: 'center' }}>
-                <h3 className="tv-podio-nome" style={{ fontSize: '1.5rem', margin: 0, color: '#00ccee' }}>TOTAL ANUAL</h3>
+                <h3 className="tv-podio-nome" style={{ fontSize: '1.1rem', margin: 0, color: '#00ccee', letterSpacing: '0.5px' }}>TOTAL ANUAL</h3>
               </div>
-              <div className="tv-podio-metrics" style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(0, 204, 238, 0.5)', display: 'flex', justifyContent: 'center' }}>
-                <div className="tv-podio-metric">
-                  <span className="tv-podio-val" style={{ color: "#00ccee", fontSize: "2.5rem", fontWeight: "bold" }}>{abertosAno}</span>
-                  <span className="tv-podio-lbl" style={{ fontSize: "1.2rem", fontWeight: 600 }}>Abertos</span>
+              <div className="tv-podio-metrics" style={{ marginTop: '0.35rem', paddingTop: '0.35rem', borderTop: '1px solid rgba(0, 204, 238, 0.5)', display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
+                <div className="tv-podio-metric" style={{ textAlign: 'center' }}>
+                  <span className="tv-podio-val" style={{ color: "#00ccee", fontSize: "1.75rem", fontWeight: "bold", display: "block", lineHeight: 1.1 }}>{abertosAno}</span>
+                  <span className="tv-podio-lbl" style={{ fontSize: "0.85rem", fontWeight: 600 }}>Abertos</span>
+                </div>
+                <div className="tv-podio-metric" style={{ textAlign: 'center' }}>
+                  <span className="tv-podio-val" style={{ color: "#00ccee", fontSize: "1.75rem", fontWeight: "bold", display: "block", lineHeight: 1.1 }}>{fechadosAno}</span>
+                  <span className="tv-podio-lbl" style={{ fontSize: "0.85rem", fontWeight: 600 }}>Fechados</span>
                 </div>
               </div>
             </div>
@@ -665,12 +677,16 @@ const CATALOGO: TelaDef[] = [
             {/* Geral */}
             <div className="tv-podio-card" style={cardStyle}>
               <div className="tv-podio-header" style={{ justifyContent: 'center' }}>
-                <h3 className="tv-podio-nome" style={{ fontSize: '1.5rem', margin: 0, color: '#00ccee' }}>TOTAL GERAL</h3>
+                <h3 className="tv-podio-nome" style={{ fontSize: '1.1rem', margin: 0, color: '#00ccee', letterSpacing: '0.5px' }}>TOTAL GERAL</h3>
               </div>
-              <div className="tv-podio-metrics" style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(0, 204, 238, 0.5)', display: 'flex', justifyContent: 'center' }}>
-                <div className="tv-podio-metric">
-                  <span className="tv-podio-val" style={{ color: "#00ccee", fontSize: "2.5rem", fontWeight: "bold" }}>{abertosGeral}</span>
-                  <span className="tv-podio-lbl" style={{ fontSize: "1.2rem", fontWeight: 600 }}>Abertos</span>
+              <div className="tv-podio-metrics" style={{ marginTop: '0.35rem', paddingTop: '0.35rem', borderTop: '1px solid rgba(0, 204, 238, 0.5)', display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
+                <div className="tv-podio-metric" style={{ textAlign: 'center' }}>
+                  <span className="tv-podio-val" style={{ color: "#00ccee", fontSize: "1.75rem", fontWeight: "bold", display: "block", lineHeight: 1.1 }}>{abertosGeral}</span>
+                  <span className="tv-podio-lbl" style={{ fontSize: "0.85rem", fontWeight: 600 }}>Abertos</span>
+                </div>
+                <div className="tv-podio-metric" style={{ textAlign: 'center' }}>
+                  <span className="tv-podio-val" style={{ color: "#00ccee", fontSize: "1.75rem", fontWeight: "bold", display: "block", lineHeight: 1.1 }}>{fechadosGeral}</span>
+                  <span className="tv-podio-lbl" style={{ fontSize: "0.85rem", fontWeight: 600 }}>Fechados</span>
                 </div>
               </div>
             </div>
@@ -691,7 +707,18 @@ const CATALOGO: TelaDef[] = [
                 {ordenadosMes.map((tech, index) => {
                   const nomeExibicao = formatarNomeCurto(tech.nome);
                   return (
-                    <tr key={tech.id} className={index < 3 ? "tv-row-top" : ""}>
+                    <tr
+                      key={tech.id}
+                      className={
+                        index === 0
+                          ? "tv-row-rank tv-rank-gold"
+                          : index === 1
+                            ? "tv-row-rank tv-rank-silver"
+                            : index === 2
+                              ? "tv-row-rank tv-rank-bronze"
+                              : ""
+                      }
+                    >
                       <td style={{ textAlign: "center", fontWeight: 700 }}>
                         <span className={`tv-pos-badge ${index === 0 ? "gold" : index === 1 ? "silver" : index === 2 ? "bronze" : ""}`}>
                           #{index + 1}
