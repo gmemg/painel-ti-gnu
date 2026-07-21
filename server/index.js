@@ -1845,9 +1845,14 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
         
         const contagemTecnicosMes = {};
         const contagemTecnicosAno = {};
+        let abertosMes = 0;
+        let fechadosMes = 0;
+        let abertosAno = 0;
+        let fechadosAno = 0;
+        let abertosGeral = 0;
 
         try {
-          const [ticketsMesRes, ticketsAnoRes] = await Promise.all([
+          const [ticketsMesRes, ticketsAnoRes, abertosMesRes, abertosAnoRes, abertosGeralRes] = await Promise.all([
             fetch(
               `${GLPI_API_URL}/search/Ticket?sort=17&order=DESC` +
               `&forcedisplay[0]=5&forcedisplay[1]=12&forcedisplay[2]=17&forcedisplay[3]=16&forcedisplay[4]=15` +
@@ -1875,11 +1880,56 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
                   "Session-Token": sessionToken
                 }
               }
+            ),
+            fetch(
+              `${GLPI_API_URL}/search/Ticket?criteria[0][field]=15&criteria[0][searchtype]=morethan&criteria[0][value]=${encodeURIComponent(firstDayOfMonth)}` +
+              `&criteria[1][link]=AND&criteria[1][field]=15&criteria[1][searchtype]=lessthan&criteria[1][value]=${encodeURIComponent(lastDayOfMonth)}` +
+              `&range=0-1`,
+              {
+                headers: {
+                  "App-Token": GLPI_APP_TOKEN,
+                  "Session-Token": sessionToken
+                }
+              }
+            ),
+            fetch(
+              `${GLPI_API_URL}/search/Ticket?criteria[0][field]=15&criteria[0][searchtype]=morethan&criteria[0][value]=${encodeURIComponent(firstDayOfYear)}` +
+              `&criteria[1][link]=AND&criteria[1][field]=15&criteria[1][searchtype]=lessthan&criteria[1][value]=${encodeURIComponent(lastDayOfYear)}` +
+              `&range=0-1`,
+              {
+                headers: {
+                  "App-Token": GLPI_APP_TOKEN,
+                  "Session-Token": sessionToken
+                }
+              }
+            ),
+            fetch(
+              `${GLPI_API_URL}/search/Ticket?range=0-1`,
+              {
+                headers: {
+                  "App-Token": GLPI_APP_TOKEN,
+                  "Session-Token": sessionToken
+                }
+              }
             )
           ]);
 
+          if (abertosMesRes && abertosMesRes.ok) {
+            const data = await abertosMesRes.json();
+            abertosMes = data.totalcount || 0;
+          }
+          if (abertosAnoRes && abertosAnoRes.ok) {
+            const data = await abertosAnoRes.json();
+            abertosAno = data.totalcount || 0;
+          }
+          if (abertosGeralRes && abertosGeralRes.ok) {
+            const data = await abertosGeralRes.json();
+            abertosGeral = data.totalcount || 0;
+          }
+
           if (ticketsMesRes.ok) {
             const dataMes = await ticketsMesRes.json();
+            fechadosMes = dataMes.totalcount || 0;
             (dataMes.data || []).forEach(t => {
               const dateStr = t["17"] || t["16"] || t["15"] || "";
               if (dateStr) {
@@ -1911,6 +1961,7 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
 
           if (ticketsAnoRes.ok) {
             const dataAno = await ticketsAnoRes.json();
+            fechadosAno = dataAno.totalcount || 0;
             (dataAno.data || []).forEach(t => {
               const dateStr = t["17"] || t["16"] || t["15"] || "";
               if (dateStr) {
@@ -1941,6 +1992,12 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
         } catch (err) {
           console.error("[GLPI] Erro ao buscar chamados do mês/ano para técnicos:", err.message);
         }
+
+        statusCounts.abertosMes = abertosMes;
+        statusCounts.fechadosMes = fechadosMes;
+        statusCounts.abertosAno = abertosAno;
+        statusCounts.fechadosAno = fechadosAno;
+        statusCounts.abertosGeral = abertosGeral;
 
         const allTechIds = Array.from(new Set([
           ...Object.keys(contagemTecnicos),

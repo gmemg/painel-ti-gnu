@@ -342,6 +342,11 @@ export interface GlpiDashboardData {
     pendentes: number;
     solucionados: number;
     fechados: number;
+    abertosMes?: number;
+    fechadosMes?: number;
+    abertosAno?: number;
+    fechadosAno?: number;
+    abertosGeral?: number;
   };
   tecnicos: Array<{
     id: string;

@@ -563,14 +563,16 @@ const CATALOGO: TelaDef[] = [
   },
   {
     id: "ranking-ti",
-    label: "RANKING TI",
+    label: "CHAMADOS",
     accent: "azul",
     vazioMsg: "Nenhum técnico encontrado no GLPI.",
     colunas: [],
     load: async () => {
       try {
         const dashboard = await getGlpiDashboard();
-        return asRows(dashboard.tecnicos || []);
+        const rows = asRows(dashboard.tecnicos || []);
+        (rows as any).__kpis = dashboard.kpis;
+        return rows;
       } catch (err) {
         console.error("Erro ao carregar ranking no Modo TV:", err);
         return [];
@@ -619,52 +621,59 @@ const CATALOGO: TelaDef[] = [
         (a, b) => (b.resolvidosMes ?? 0) - (a.resolvidosMes ?? 0) || (b.resolvidosAno ?? 0) - (a.resolvidosAno ?? 0) || b.resolvidos - a.resolvidos
       );
 
+      const kpis = (rows as any).__kpis || {};
+      const abertosMes = kpis.abertosMes || 0;
+      const abertosAno = kpis.abertosAno || 0;
+      const abertosGeral = kpis.abertosGeral || 0;
+
+      const cardStyle = {
+        border: "2px solid #00ccee",
+        boxShadow: "0 0 15px rgba(0, 204, 238, 0.3)",
+        padding: "1rem"
+      };
+
       return (
         <div className="tv-ranking-container">
-          {/* Podium Top 3 Mensal */}
-          <div className="tv-podium-grid">
-            {ordenadosMes.slice(0, 3).map((tech, index) => {
-              const classePodio = index === 0 ? "tv-podio-gold" : index === 1 ? "tv-podio-silver" : "tv-podio-bronze";
-              const nomeExibicao = formatarNomeCurto(tech.nome);
-              const tituloTrofeu = index === 0 ? "1º Lugar - Troféu de Ouro" : index === 1 ? "2º Lugar - Troféu de Prata" : "3º Lugar - Troféu de Bronze";
-              return (
-                <div key={tech.id} className={`tv-podio-card ${classePodio}`}>
-                  <div className="tv-podio-header">
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", minWidth: 0, flex: 1 }}>
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        width="20"
-                        height="20"
-                        className={`tv-trophy-icon ${index === 0 ? "gold" : index === 1 ? "silver" : "bronze"}`}
-                        aria-label={tituloTrofeu}
-                      >
-                        <title>{tituloTrofeu}</title>
-                        <path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94A5.01 5.01 0 0 0 11 15.9V18H8v2h8v-2h-3v-2.1c1.94-.31 3.61-1.63 4.39-3.94C19.08 11.63 21 9.55 21 7V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z" />
-                      </svg>
-                      <h3 className="tv-podio-nome" title={tech.nome}>{nomeExibicao}</h3>
-                    </div>
-                    <div className="tv-podio-avatar">{tech.avatar}</div>
-                  </div>
-                  <div className="tv-podio-metrics">
-                    <div className="tv-podio-metric">
-                      <span className="tv-podio-val" style={{ color: "#2b8ffb", fontSize: "1.2rem" }}>
-                        {tech.resolvidosMes ?? 0}
-                      </span>
-                      <span className="tv-podio-lbl">Mês Atual</span>
-                    </div>
-                    <div className="tv-podio-metric">
-                      <span className="tv-podio-val">{tech.resolvidosAno ?? 0}</span>
-                      <span className="tv-podio-lbl">No Ano</span>
-                    </div>
-                    <div className="tv-podio-metric">
-                      <span className="tv-podio-val">{tech.resolvidos}</span>
-                      <span className="tv-podio-lbl">Total Geral</span>
-                    </div>
-                  </div>
+          {/* Totais do Setor T.I */}
+          <div className="tv-totais-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+            {/* Mensal */}
+            <div className="tv-podio-card" style={cardStyle}>
+              <div className="tv-podio-header" style={{ justifyContent: 'center' }}>
+                <h3 className="tv-podio-nome" style={{ fontSize: '1.5rem', margin: 0, color: '#00ccee' }}>TOTAL MENSAL</h3>
+              </div>
+              <div className="tv-podio-metrics" style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(0, 204, 238, 0.5)', display: 'flex', justifyContent: 'center' }}>
+                <div className="tv-podio-metric">
+                  <span className="tv-podio-val" style={{ color: "#00ccee", fontSize: "2.5rem", fontWeight: "bold" }}>{abertosMes}</span>
+                  <span className="tv-podio-lbl" style={{ fontSize: "1.2rem", fontWeight: 600 }}>Abertos</span>
                 </div>
-              );
-            })}
+              </div>
+            </div>
+
+            {/* Anual */}
+            <div className="tv-podio-card" style={cardStyle}>
+              <div className="tv-podio-header" style={{ justifyContent: 'center' }}>
+                <h3 className="tv-podio-nome" style={{ fontSize: '1.5rem', margin: 0, color: '#00ccee' }}>TOTAL ANUAL</h3>
+              </div>
+              <div className="tv-podio-metrics" style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(0, 204, 238, 0.5)', display: 'flex', justifyContent: 'center' }}>
+                <div className="tv-podio-metric">
+                  <span className="tv-podio-val" style={{ color: "#00ccee", fontSize: "2.5rem", fontWeight: "bold" }}>{abertosAno}</span>
+                  <span className="tv-podio-lbl" style={{ fontSize: "1.2rem", fontWeight: 600 }}>Abertos</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Geral */}
+            <div className="tv-podio-card" style={cardStyle}>
+              <div className="tv-podio-header" style={{ justifyContent: 'center' }}>
+                <h3 className="tv-podio-nome" style={{ fontSize: '1.5rem', margin: 0, color: '#00ccee' }}>TOTAL GERAL</h3>
+              </div>
+              <div className="tv-podio-metrics" style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(0, 204, 238, 0.5)', display: 'flex', justifyContent: 'center' }}>
+                <div className="tv-podio-metric">
+                  <span className="tv-podio-val" style={{ color: "#00ccee", fontSize: "2.5rem", fontWeight: "bold" }}>{abertosGeral}</span>
+                  <span className="tv-podio-lbl" style={{ fontSize: "1.2rem", fontWeight: 600 }}>Abertos</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Ranking Table List */}
@@ -673,9 +682,9 @@ const CATALOGO: TelaDef[] = [
               <thead>
                 <tr>
                   <th style={{ width: "10%", textAlign: "center" }}>Pos.</th>
-                  <th style={{ width: "50%" }}>Técnico T.I</th>
-                  <th style={{ width: "20%", textAlign: "right" }}>No Mês</th>
-                  <th style={{ width: "20%", textAlign: "right" }}>No Ano</th>
+                  <th style={{ width: "50%" }}>Técnico</th>
+                  <th style={{ width: "20%", textAlign: "center" }}>No Mês</th>
+                  <th style={{ width: "20%", textAlign: "center" }}>No Ano</th>
                 </tr>
               </thead>
               <tbody>
@@ -694,10 +703,10 @@ const CATALOGO: TelaDef[] = [
                           <span className="tv-tech-name" title={tech.nome}>{nomeExibicao}</span>
                         </div>
                       </td>
-                      <td style={{ textAlign: "right", fontWeight: 800, color: "#2b8ffb", fontSize: "1.15rem" }}>
+                      <td style={{ textAlign: "center", fontWeight: 800, color: "#00ccee", fontSize: "1.15rem" }}>
                         {tech.resolvidosMes ?? 0}
                       </td>
-                      <td style={{ textAlign: "right", fontWeight: 700, color: "#00ccee" }}>
+                      <td style={{ textAlign: "center", fontWeight: 700, color: "#00ccee" }}>
                         {tech.resolvidosAno ?? 0}
                       </td>
                     </tr>
