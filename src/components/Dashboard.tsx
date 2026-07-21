@@ -5,6 +5,7 @@ import {
   getGlpiDashboard,
   getGlpiTecnicoDetalhes,
   buscarGlpiUsuarios,
+  getToken,
   TecnicoDetalhesResponse,
   GlpiUsuarioBusca
 } from "../utils/storage";
@@ -83,7 +84,6 @@ export default function Dashboard() {
 
   // Estados para Modal de Relatório PDF
   const [modalReportAberto, setModalReportAberto] = useState(false);
-  const [tipoRelatorio, setTipoRelatorio] = useState<"mensal" | "anual" | "total">("mensal");
   const [mesRelatorio, setMesRelatorio] = useState<number>(new Date().getMonth() + 1);
   const [anoRelatorio, setAnoRelatorio] = useState<number>(new Date().getFullYear());
   const [gerandoPdf, setGerandoPdf] = useState(false);
@@ -1128,104 +1128,41 @@ export default function Dashboard() {
                 Selecione o tipo de relatório e o período desejado para a geração do documento em PDF:
               </p>
 
-              <div className="db-report-type-options">
-                <label className={`db-report-type-card ${tipoRelatorio === "mensal" ? "selected" : ""}`}>
-                  <input
-                    type="radio"
-                    name="tipoRelatorio"
-                    value="mensal"
-                    checked={tipoRelatorio === "mensal"}
-                    onChange={() => setTipoRelatorio("mensal")}
-                  />
-                  <div className="db-report-type-info">
-                    <strong>Relatório Mensal</strong>
-                    <span>Resumo completo do mês e ano selecionados</span>
-                  </div>
-                </label>
+              <div className="db-report-selectors-row">
+                <div className="db-report-field">
+                  <label>Selecione o Mês:</label>
+                  <select
+                    value={mesRelatorio}
+                    onChange={(e) => setMesRelatorio(Number(e.target.value))}
+                  >
+                    <option value={1}>Janeiro</option>
+                    <option value={2}>Fevereiro</option>
+                    <option value={3}>Março</option>
+                    <option value={4}>Abril</option>
+                    <option value={5}>Maio</option>
+                    <option value={6}>Junho</option>
+                    <option value={7}>Julho</option>
+                    <option value={8}>Agosto</option>
+                    <option value={9}>Setembro</option>
+                    <option value={10}>Outubro</option>
+                    <option value={11}>Novembro</option>
+                    <option value={12}>Dezembro</option>
+                  </select>
+                </div>
 
-                <label className={`db-report-type-card ${tipoRelatorio === "anual" ? "selected" : ""}`}>
-                  <input
-                    type="radio"
-                    name="tipoRelatorio"
-                    value="anual"
-                    checked={tipoRelatorio === "anual"}
-                    onChange={() => setTipoRelatorio("anual")}
-                  />
-                  <div className="db-report-type-info">
-                    <strong>Relatório Anual</strong>
-                    <span>Métricas consolidadas de todo o ano</span>
-                  </div>
-                </label>
-
-                <label className={`db-report-type-card ${tipoRelatorio === "total" ? "selected" : ""}`}>
-                  <input
-                    type="radio"
-                    name="tipoRelatorio"
-                    value="total"
-                    checked={tipoRelatorio === "total"}
-                    onChange={() => setTipoRelatorio("total")}
-                  />
-                  <div className="db-report-type-info">
-                    <strong>Relatório Total</strong>
-                    <span>Histórico completo desde o início dos registros</span>
-                  </div>
-                </label>
+                <div className="db-report-field">
+                  <label>Selecione o Ano:</label>
+                  <select
+                    value={anoRelatorio}
+                    onChange={(e) => setAnoRelatorio(Number(e.target.value))}
+                  >
+                    <option value={2024}>2024</option>
+                    <option value={2025}>2025</option>
+                    <option value={2026}>2026</option>
+                    <option value={2027}>2027</option>
+                  </select>
+                </div>
               </div>
-
-              {tipoRelatorio === "mensal" && (
-                <div className="db-report-selectors-row">
-                  <div className="db-report-field">
-                    <label>Selecione o Mês:</label>
-                    <select
-                      value={mesRelatorio}
-                      onChange={(e) => setMesRelatorio(Number(e.target.value))}
-                    >
-                      <option value={1}>Janeiro</option>
-                      <option value={2}>Fevereiro</option>
-                      <option value={3}>Março</option>
-                      <option value={4}>Abril</option>
-                      <option value={5}>Maio</option>
-                      <option value={6}>Junho</option>
-                      <option value={7}>Julho</option>
-                      <option value={8}>Agosto</option>
-                      <option value={9}>Setembro</option>
-                      <option value={10}>Outubro</option>
-                      <option value={11}>Novembro</option>
-                      <option value={12}>Dezembro</option>
-                    </select>
-                  </div>
-
-                  <div className="db-report-field">
-                    <label>Selecione o Ano:</label>
-                    <select
-                      value={anoRelatorio}
-                      onChange={(e) => setAnoRelatorio(Number(e.target.value))}
-                    >
-                      <option value={2024}>2024</option>
-                      <option value={2025}>2025</option>
-                      <option value={2026}>2026</option>
-                      <option value={2027}>2027</option>
-                    </select>
-                  </div>
-                </div>
-              )}
-
-              {tipoRelatorio === "anual" && (
-                <div className="db-report-selectors-row">
-                  <div className="db-report-field" style={{ width: "100%" }}>
-                    <label>Selecione o Ano:</label>
-                    <select
-                      value={anoRelatorio}
-                      onChange={(e) => setAnoRelatorio(Number(e.target.value))}
-                    >
-                      <option value={2024}>2024</option>
-                      <option value={2025}>2025</option>
-                      <option value={2026}>2026</option>
-                      <option value={2027}>2027</option>
-                    </select>
-                  </div>
-                </div>
-              )}
             </div>
 
             <div className="db-report-modal-footer">
@@ -1243,22 +1180,23 @@ export default function Dashboard() {
                 onClick={async () => {
                   setGerandoPdf(true);
                   try {
-                    const res = await fetch(`/api/glpi/relatorio?tipo=${tipoRelatorio}&mes=${mesRelatorio}&ano=${anoRelatorio}`);
+                    const token = getToken();
+                    const res = await fetch(`/api/glpi/relatorio?tipo=mensal&mes=${mesRelatorio}&ano=${anoRelatorio}`, {
+                      headers: { Authorization: token ? `Bearer ${token}` : "" }
+                    });
                     const data = res.ok ? await res.json() : null;
 
-                    const periodoStr = data?.periodoLabel || (
-                      tipoRelatorio === "mensal" ? `${mesRelatorio}/${anoRelatorio}` : tipoRelatorio === "anual" ? `Ano ${anoRelatorio}` : "Histórico Total"
-                    );
+                    const periodoStr = data?.periodoLabel || `${mesRelatorio}/${anoRelatorio}`;
+                    const tipoRelatorioStr = "mensal";
                     const dataEmissao = data?.dataEmissao || new Date().toLocaleString("pt-BR");
                     const totalFechados = data?.totalFechados ?? 0;
-                    const listTecnicos = data?.tecnicos || [];
                     const listRequerentes = data?.requerentes || [];
 
-                    const montagensRealizadasVal = data?.montagensRealizadas ?? montagensRealizadas;
-                    const montagensPendentesVal = data?.montagensPendentes ?? montagensPendentes;
-                    const eqPendentesVal = data?.eqPendentes ?? eqPendentes;
+                    const totalAbertosMes = data?.totalAbertosMes ?? 0;
+                    const totalAbertosAno = data?.totalAbertosAno ?? 0;
+                    const totalAbertosGeral = data?.totalAbertosGeral ?? 0;
+                    const requerentesAbertosMes = data?.requerentesAbertosMes || [];
 
-                    const topTecnico = listTecnicos.length > 0 ? listTecnicos[0] : null;
                     const topRequerente = listRequerentes.length > 0 ? listRequerentes[0] : null;
 
                     const printWindow = window.open("", "_blank");
@@ -1273,7 +1211,7 @@ export default function Dashboard() {
                       <html lang="pt-BR">
                       <head>
                         <meta charset="UTF-8">
-                        <title>Relatorio_TI_${tipoRelatorio}_${periodoStr.replace(/[^a-zA-Z0-9]/g, "_")}</title>
+                        <title>Relatorio_TI_${tipoRelatorioStr}_${periodoStr.replace(/[^a-zA-Z0-9]/g, "_")}</title>
                         <style>
                           @page { size: A4 portrait; margin: 12mm; }
                           body {
@@ -1416,6 +1354,9 @@ export default function Dashboard() {
                             grid-template-columns: repeat(4, 1fr);
                             gap: 12px;
                           }
+                          .ops-summary-box-3 {
+                            grid-template-columns: repeat(3, 1fr);
+                          }
                           .ops-item {
                             display: flex;
                             flex-direction: column;
@@ -1455,7 +1396,7 @@ export default function Dashboard() {
                         </div>
 
                         <!-- Grid de Destaques Executivos -->
-                        <div class="meta-grid">
+                        <div class="meta-grid" style="grid-template-columns: repeat(2, 1fr);">
                           <div class="meta-card">
                             <div class="val" style="color: #2b8ffb;">${totalFechados}</div>
                             <div class="lbl">Chamados Fechados TI</div>
@@ -1466,98 +1407,47 @@ export default function Dashboard() {
                             </div>
                             <div class="lbl">Maior Requerente (${topRequerente ? topRequerente.count : 0})</div>
                           </div>
-                          <div class="meta-card">
-                            <div class="val-sub" title="${topTecnico ? topTecnico.nome : 'Nenhum'}">
-                              ${topTecnico ? topTecnico.nome : 'N/A'}
-                            </div>
-                            <div class="lbl">Técnico Destaque (${topTecnico ? topTecnico.count : 0})</div>
+                        </div>
+
+                        <!-- Chamados Abertos e Requerentes -->
+                        <div class="section-title" style="margin-top: 24px;">📈 Totais de Chamados Abertos</div>
+                        <div class="ops-summary-box ops-summary-box-3">
+                          <div class="ops-item">
+                            <span class="title">Total Mensal</span>
+                            <span class="num" style="color: #f97316;">${totalAbertosMes}</span>
                           </div>
-                          <div class="meta-card">
-                            <div class="val" style="color: #10b981;">${montagensRealizadasVal}</div>
-                            <div class="lbl">Montagens Realizadas</div>
+                          <div class="ops-item">
+                            <span class="title">Total Anual</span>
+                            <span class="num" style="color: #f97316;">${totalAbertosAno}</span>
                           </div>
-                          <div class="meta-card">
-                            <div class="val" style="color: #f97316;">${montagensPendentesVal}</div>
-                            <div class="lbl">Montagens Pendentes</div>
+                          <div class="ops-item">
+                            <span class="title">Total Geral</span>
+                            <span class="num" style="color: #f97316;">${totalAbertosGeral}</span>
                           </div>
                         </div>
 
-                        <!-- Resumo Operacional Adicional -->
-                        <div class="section-title">⚙️ Resumo de Montagens e Inventário de Eletrônicos</div>
-                        <div class="ops-summary-box" style="grid-template-columns: repeat(5, 1fr);">
-                          <div class="ops-item">
-                            <span class="title">Montagens Concluídas</span>
-                            <span class="num" style="color: #10b981;">${montagensRealizadasVal}</span>
-                          </div>
-                          <div class="ops-item">
-                            <span class="title">Montagens Pendentes</span>
-                            <span class="num" style="color: #f97316;">${montagensPendentesVal}</span>
-                          </div>
-                          <div class="ops-item">
-                            <span class="title">Eq. Pendentes (Hist.)</span>
-                            <span class="num" style="color: #eab308;">${eqPendentesVal}</span>
-                          </div>
-                          <div class="ops-item">
-                            <span class="title">Computadores GLPI</span>
-                            <span class="num" style="color: #2b8ffb;">${totalComputadores}</span>
-                          </div>
-                          <div class="ops-item">
-                            <span class="title">Impressoras GLPI</span>
-                            <span class="num" style="color: #14b8a6;">${totalImpressoras}</span>
-                          </div>
-                        </div>
-
-                        <!-- Tabelas Lado a Lado: Ranking TI e Requerentes -->
-                        <div class="two-cols">
-                          <div>
-                            <div class="section-title">🏆 Ranking de Produtividade — Técnicos da TI</div>
-                            <table>
-                              <thead>
+                        <div class="section-title">📝 Quantidade de chamados por requerente</div>
+                        <table>
+                          <thead>
+                            <tr>
+                              <th style="width: 35px; text-align: center;">#</th>
+                              <th>Requerente / Setor</th>
+                              <th style="text-align: right;">Qtd. Abertos (Mês)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            ${requerentesAbertosMes.length === 0 ? '<tr><td colspan="3" style="text-align:center; color:#94a3b8;">Nenhum chamado aberto neste mês</td></tr>' : 
+                              requerentesAbertosMes.map((p: any, i: number) => `
                                 <tr>
-                                  <th style="width: 35px; text-align: center;">#</th>
-                                  <th>Técnico de Suporte</th>
-                                  <th style="text-align: right;">Chamados Fechados</th>
+                                  <td style="text-align: center;"><span class="pos-badge ${i < 3 ? `pos-${i+1}` : ''}">${i+1}</span></td>
+                                  <td><strong>${p.nome}</strong></td>
+                                  <td style="text-align: right; font-weight: 700; color: #f97316;">${p.count}</td>
                                 </tr>
-                              </thead>
-                              <tbody>
-                                ${listTecnicos.length === 0 ? '<tr><td colspan="3" style="text-align:center; color:#94a3b8;">Nenhum chamado no período</td></tr>' : 
-                                  listTecnicos.slice(0, 15).map((t: any, i: number) => `
-                                    <tr>
-                                      <td style="text-align: center;"><span class="pos-badge ${i < 3 ? `pos-${i+1}` : ''}">${i+1}</span></td>
-                                      <td><strong>${t.nome}</strong></td>
-                                      <td style="text-align: right; font-weight: 700; color: #2b8ffb;">${t.count}</td>
-                                    </tr>
-                                  `).join('')
-                                }
-                              </tbody>
-                            </table>
-                          </div>
-
-                          <div>
-                            <div class="section-title">👥 Ranking de Solicitantes — Requerentes</div>
-                            <table>
-                              <thead>
-                                <tr>
-                                  <th style="width: 35px; text-align: center;">#</th>
-                                  <th>Requerente / Setor</th>
-                                  <th style="text-align: right;">Chamados Fechados</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                ${listRequerentes.length === 0 ? '<tr><td colspan="3" style="text-align:center; color:#94a3b8;">Nenhum chamado no período</td></tr>' : 
-                                  listRequerentes.slice(0, 15).map((p: any, i: number) => `
-                                    <tr>
-                                      <td style="text-align: center;"><span class="pos-badge ${i < 3 ? `pos-${i+1}` : ''}">${i+1}</span></td>
-                                      <td><strong>${p.nome}</strong></td>
-                                      <td style="text-align: right; font-weight: 700; color: #10b981;">${p.count}</td>
-                                    </tr>
-                                  `).join('')
-                                }
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-
+                              `).join('')
+                            }
+                          </tbody>
+                        </table>
+                        
                         <div class="footer-info">
                           <span>Painel de Gerenciamento da TI — Grêmio Náutico União</span>
                           <span>Data de Emissão: ${dataEmissao}</span>

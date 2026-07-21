@@ -2678,6 +2678,82 @@ app.get("/api/glpi/relatorio", async (req, res, next) => {
       .map(([id, count]) => ({ id, nome: usersMap[id], count }))
       .sort((a, b) => b.count - a.count);
 
+    // --- Busca de Totais Abertos (Mensal, Anual, Geral) e Requerentes do Mês ---
+    const startMes = `${ano}-${pad(mes)}-01 00:00:00`;
+    const lastDayMes = new Date(ano, mes, 0).getDate();
+    const endMes = `${ano}-${pad(mes)}-${pad(lastDayMes)} 23:59:59`;
+
+    const startAno = `${ano}-01-01 00:00:00`;
+    const endAno = `${ano}-12-31 23:59:59`;
+
+    let totalAbertosMes = 0;
+    let totalAbertosAno = 0;
+    let totalAbertosGeral = 0;
+    const reqAbertosMesCounts = {};
+
+    try {
+      // Chamadas sequenciais para evitar concorrência/lock na API do GLPI
+      const abertosMesRes = await fetch(
+        `${GLPI_API_URL}/search/Ticket?forcedisplay[0]=4&criteria[0][field]=15&criteria[0][searchtype]=morethan&criteria[0][value]=${encodeURIComponent(startMes)}` +
+        `&criteria[1][link]=AND&criteria[1][field]=15&criteria[1][searchtype]=lessthan&criteria[1][value]=${encodeURIComponent(endMes)}` +
+        `&range=0-1000`,
+        { headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken } }
+      );
+
+      const abertosAnoRes = await fetch(
+        `${GLPI_API_URL}/search/Ticket?criteria[0][field]=15&criteria[0][searchtype]=morethan&criteria[0][value]=${encodeURIComponent(startAno)}` +
+        `&criteria[1][link]=AND&criteria[1][field]=15&criteria[1][searchtype]=lessthan&criteria[1][value]=${encodeURIComponent(endAno)}` +
+        `&range=0-1`,
+        { headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken } }
+      );
+
+      const abertosGeralRes = await fetch(
+        `${GLPI_API_URL}/search/Ticket?range=0-1`,
+        { headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken } }
+      );
+
+      if (abertosMesRes.ok) {
+        const dataMes = await abertosMesRes.json();
+        totalAbertosMes = dataMes.totalcount || 0;
+        const ticketsMes = dataMes.data || [];
+        ticketsMes.forEach(t => {
+          const rawReq = t["4"];
+          const reqId = Array.isArray(rawReq) ? String(rawReq[0] || "") : String(rawReq || "");
+          if (reqId && usersMap[reqId]) {
+            const lower = usersMap[reqId].toLowerCase().trim();
+            if (lower !== "infraestrutura" && lower !== "sistemas" && lower !== "infra/sistemas") {
+              reqAbertosMesCounts[reqId] = (reqAbertosMesCounts[reqId] || 0) + 1;
+            }
+          }
+        });
+      } else {
+        const errTxt = await abertosMesRes.text();
+        console.error("[GLPI] Erro abertosMesRes:", abertosMesRes.status, errTxt);
+      }
+
+      if (abertosAnoRes.ok) {
+        const dataAno = await abertosAnoRes.json();
+        totalAbertosAno = dataAno.totalcount || 0;
+      } else {
+        const errTxt = await abertosAnoRes.text();
+        console.error("[GLPI] Erro abertosAnoRes:", abertosAnoRes.status, errTxt);
+      }
+
+      if (abertosGeralRes.ok) {
+        const dataGeral = await abertosGeralRes.json();
+        totalAbertosGeral = dataGeral.totalcount || 0;
+      } else {
+        const errTxt = await abertosGeralRes.text();
+        console.error("[GLPI] Erro abertosGeralRes:", abertosGeralRes.status, errTxt);
+      }
+    } catch (err) {
+      console.error("[GLPI] Erro ao buscar totais de abertos para PDF:", err.message);
+    }
+
+    const requerentesAbertosMes = Object.entries(reqAbertosMesCounts)
+      .map(([id, count]) => ({ id, nome: usersMap[id], count }))
+      .sort((a, b) => b.count - a.count);
+
     // Consulta de Montagens no PostgreSQL
     let montagensRealizadas = 0;
     let montagensPendentes = 0;
@@ -2711,21 +2787,22 @@ app.get("/api/glpi/relatorio", async (req, res, next) => {
       console.error("[Relatório] Erro ao buscar dados de montagens do banco:", err.message);
     }
 
-    const nowD = new Date();
-    const dataEmissaoStr = `${pad(nowD.getDate())}/${pad(nowD.getMonth() + 1)}/${nowD.getFullYear()} às ${pad(nowD.getHours())}:${pad(nowD.getMinutes())}`;
-
     res.json({
+      dataEmissao: new Date().toLocaleString("pt-BR"),
       tipo,
       mes,
       ano,
       periodoLabel,
-      dataEmissao: dataEmissaoStr,
       totalFechados,
       tecnicos,
       requerentes,
       montagensRealizadas,
       montagensPendentes,
-      eqPendentes: eqPendentesCount
+      eqPendentes: eqPendentesCount,
+      totalAbertosMes,
+      totalAbertosAno,
+      totalAbertosGeral,
+      requerentesAbertosMes
     });
   } catch (error) {
     next(error);
