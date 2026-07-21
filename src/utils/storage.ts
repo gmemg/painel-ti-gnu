@@ -345,11 +345,13 @@ export interface GlpiDashboardData {
   };
   tecnicos: Array<{
     id: string;
+    glpiId?: string;
     nome: string;
     avatar: string;
     role: string;
     resolvidos: number;
     resolvidosMes?: number;
+    resolvidosAno?: number;
   }>;
   pessoas: Array<{
     id: string;
@@ -359,6 +361,30 @@ export interface GlpiDashboardData {
   }>;
   totalComputadores?: number;
   totalImpressoras?: number;
+}
+
+export interface ChamadoDetalhe {
+  id: string;
+  titulo: string;
+  requerente: string;
+  dataAbertura?: string;
+  dataFechamento?: string;
+  status?: string;
+}
+
+export interface MesDetalhes {
+  mes: number;
+  nomeMes: string;
+  total: number;
+  chamados: ChamadoDetalhe[];
+}
+
+export interface TecnicoDetalhesResponse {
+  nome: string;
+  glpiId?: string;
+  ano: number;
+  totalAno: number;
+  meses: MesDetalhes[];
 }
 
 export interface GlpiPrinterAvailable {
@@ -381,6 +407,39 @@ export interface GlpiSyncStatus {
 export const getGlpiDashboard = (): Promise<GlpiDashboardData> =>
   requestJson<GlpiDashboardData>("/glpi/dashboard");
 
+export const getGlpiTecnicoDetalhes = (
+  nome: string,
+  glpiId?: string,
+  ano?: number
+): Promise<TecnicoDetalhesResponse> => {
+  const params = new URLSearchParams();
+  if (nome) params.append("nome", nome);
+  if (glpiId) params.append("glpiId", glpiId);
+  if (ano) params.append("ano", ano.toString());
+  return requestJson<TecnicoDetalhesResponse>(`/glpi/tecnico-detalhes?${params.toString()}`);
+};
+
+export interface GlpiUsuarioBusca {
+  id: string;
+  glpiId: string;
+  nome: string;
+  avatar?: string;
+  role?: string;
+  chamados: number;
+  fechados: number;
+  fechadosMes: number;
+  fechadosAno: number;
+  resolvidos?: number;
+  resolvidosMes?: number;
+  resolvidosAno?: number;
+  cor?: string;
+}
+
+export const buscarGlpiUsuarios = (query: string): Promise<GlpiUsuarioBusca[]> => {
+  if (!query || query.trim().length < 2) return Promise.resolve([]);
+  return requestJson<GlpiUsuarioBusca[]>(`/glpi/usuarios-busca?query=${encodeURIComponent(query.trim())}`);
+};
+
 export const getGlpiPrintersAvailable = (): Promise<GlpiPrinterAvailable[]> =>
   requestJson<GlpiPrinterAvailable[]>("/glpi/impressoras-disponiveis");
 
@@ -401,4 +460,5 @@ export const syncGlpiPrintersNow = (): Promise<{ success: boolean; lastSync: str
   requestJson<{ success: boolean; lastSync: string | null; nextSync: string | null }>("/glpi/sync-now", {
     method: "POST"
   });
+
 

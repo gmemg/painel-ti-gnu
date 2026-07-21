@@ -871,3 +871,834 @@ html[data-theme="light"] .db-ranking-item {
 html[data-theme="light"] .db-tab-group {
   background: rgba(0, 0, 0, 0.04);
 }
+
+/* ─── Botão de Relatório PDF no Header ─────────────────────── */
+.db-btn-report {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #2b8ffb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  border: none;
+  padding: 0.55rem 1.1rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(43, 143, 251, 0.35);
+  transition: all 0.2s ease;
+}
+
+.db-btn-report:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(43, 143, 251, 0.45);
+}
+
+.db-btn-report:active {
+  transform: translateY(0);
+}
+
+/* ─── Modal de Relatório PDF ──────────────────────────────── */
+.db-report-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: var(--overlay, rgba(10, 12, 18, 0.75));
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1rem;
+}
+
+.db-report-modal {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  width: 90%;
+  max-width: 520px;
+  padding: 1.75rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  animation: dbModalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  color: var(--text-strong);
+}
+
+@keyframes dbModalPop {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.db-report-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.db-report-modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.db-report-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.db-report-close-btn:hover {
+  background: var(--surface-3);
+  color: var(--text-strong);
+}
+
+.db-report-desc {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 1.25rem;
+  line-height: 1.4;
+}
+
+.db-report-type-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.db-report-type-card {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.db-report-type-card:hover {
+  border-color: var(--blue);
+  background: var(--surface-3);
+}
+
+.db-report-type-card.selected {
+  border-color: var(--blue);
+  background: rgba(43, 143, 251, 0.08);
+  box-shadow: 0 0 0 1px var(--blue);
+}
+
+.db-report-type-card input[type="radio"] {
+  accent-color: var(--blue);
+  width: 16px;
+  height: 16px;
+}
+
+.db-report-type-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.db-report-type-info strong {
+  font-size: 0.92rem;
+  color: var(--text-strong);
+}
+
+.db-report-type-info span {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.db-report-selectors-row {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  background: var(--surface-2);
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.db-report-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.db-report-field label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.db-report-field select {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-strong);
+  font-size: 0.9rem;
+  outline: none;
+  cursor: pointer;
+}
+
+.db-report-field select:focus {
+  border-color: var(--blue);
+}
+
+.db-report-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.db-report-cancel-btn {
+  padding: 0.6rem 1.2rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.db-report-cancel-btn:hover {
+  background: var(--surface-3);
+  color: var(--text-strong);
+}
+
+.db-report-submit-btn {
+  padding: 0.6rem 1.4rem;
+  background: linear-gradient(135deg, #2b8ffb 0%, #1d4ed8 100%);
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(43, 143, 251, 0.3);
+  transition: all 0.2s ease;
+}
+
+.db-report-submit-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(43, 143, 251, 0.4);
+}
+
+.db-report-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Botão Detalhes no Ranking TI */
+.db-btn-detalhes-ranking {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-main);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: 0.5rem;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.db-btn-detalhes-ranking:hover {
+  background: var(--blue-dim, rgba(43, 143, 251, 0.15));
+  border-color: var(--blue, #2b8ffb);
+  color: var(--blue, #2b8ffb);
+  transform: translateY(-1px);
+}
+
+.db-btn-detalhes-ranking svg {
+  color: var(--blue, #2b8ffb);
+}
+
+/* Modal de Detalhes do Técnico */
+.db-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  background: var(--overlay, rgba(10, 12, 18, 0.75));
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1.5rem;
+}
+
+.db-modal-content {
+  background: var(--surface-1, #12161f);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+  animation: dbModalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  color: var(--text-strong);
+  overflow: hidden;
+}
+
+.db-modal-header {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.db-modal-close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.db-modal-close:hover {
+  background: var(--surface-3);
+  color: var(--text-strong);
+}
+
+.db-modal-detalhes {
+  max-width: 920px;
+  width: 95%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.db-modal-detalhes-user {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.db-avatar-lg {
+  width: 44px;
+  height: 44px;
+  font-size: 1.1rem;
+}
+
+.db-modal-detalhes-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.db-modal-detalhes-sub {
+  margin: 0.15rem 0 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.db-year-select-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.db-select-ano {
+  background: var(--surface-3);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  color: var(--text-strong);
+  padding: 0.35rem 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+}
+
+.db-select-ano:focus {
+  border-color: var(--blue, #2b8ffb);
+}
+
+.db-modal-detalhes-body {
+  padding: 1.25rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Cards de Métricas no Modal */
+.db-detalhes-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.85rem;
+}
+
+.db-metric-card {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.db-metric-val {
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.db-metric-lbl {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+/* Campo de busca no modal */
+.db-detalhes-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.db-detalhes-search-wrap svg {
+  position: absolute;
+  left: 0.85rem;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.db-detalhes-search-input {
+  width: 100%;
+  padding: 0.6rem 2.2rem 0.6rem 2.4rem;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-strong);
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.db-detalhes-search-input:focus {
+  border-color: var(--blue, #2b8ffb);
+}
+
+.db-detalhes-search-clear {
+  position: absolute;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+/* Grade de Meses */
+.db-detalhes-months-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.db-month-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.db-month-card:hover {
+  border-color: var(--border-strong);
+}
+
+.db-month-card.open {
+  border-color: var(--blue, #2b8ffb);
+}
+
+.db-month-header {
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  background: var(--surface-3);
+}
+
+.db-month-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.db-month-name {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.db-month-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 12px;
+  background: var(--surface-1);
+  color: var(--text-muted);
+}
+
+.db-month-badge.has-items {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.db-month-header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.db-month-progress-bg {
+  width: 100px;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.db-month-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2b8ffb, #10b981);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.db-month-toggle-icon {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  width: 16px;
+  text-align: center;
+}
+
+.db-month-content {
+  padding: 0.85rem 1rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface-1);
+}
+
+.db-month-empty {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Tabela de Chamados do Mês */
+.db-tickets-table-wrap {
+  overflow-x: auto;
+}
+
+.db-tickets-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.db-tickets-table th {
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.db-tickets-table td {
+  padding: 0.55rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-main);
+  vertical-align: middle;
+}
+
+.db-tickets-table tr:last-child td {
+  border-bottom: none;
+}
+
+.db-ticket-id {
+  font-weight: 700;
+  color: #00ccee;
+  background: rgba(0, 204, 238, 0.12);
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.db-ticket-title {
+  font-weight: 500;
+  color: var(--text-strong);
+}
+
+.db-ticket-req {
+  color: var(--text-muted);
+}
+
+.db-ticket-date {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+/* Botões de Adicionar / Deletar no Ranking */
+.db-btn-add-person {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: linear-gradient(135deg, #2b8ffb 0%, #1d4ed8 100%);
+  border: none;
+  border-radius: 6px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(43, 143, 251, 0.25);
+}
+
+.db-btn-add-person:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(43, 143, 251, 0.35);
+}
+
+.db-btn-manage-hidden {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.6rem;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: #ef4444;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.db-btn-manage-hidden:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #ef4444;
+}
+
+.db-hidden-count-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(239, 68, 68, 0.18);
+  color: #ef4444;
+  padding: 0.05rem 0.4rem;
+  border-radius: 10px;
+}
+
+.db-btn-ranking-menu {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.db-btn-ranking-menu:hover,
+.db-btn-ranking-menu.active {
+  background: var(--surface-3);
+  border-color: var(--border);
+  color: var(--text-strong);
+}
+
+.db-ranking-popover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: var(--surface-1, #1e293b);
+  border: 1px solid var(--border-strong, #334155);
+  border-radius: 8px;
+  padding: 4px;
+  min-width: 120px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+  z-index: 10000;
+  animation: dbFadeIn 0.15s ease;
+}
+
+@keyframes dbFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.db-ranking-popover-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.db-ranking-popover-item.db-popover-danger {
+  color: #ef4444;
+}
+
+.db-ranking-popover-item.db-popover-danger:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.db-modal-small {
+  max-width: 480px;
+  width: 90%;
+}
+
+/* Autocomplete e Busca GLPI no Modal */
+.db-autocomplete-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 10000;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+}
+
+.db-autocomplete-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0.85rem;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.db-autocomplete-item:last-child {
+  border-bottom: none;
+}
+
+.db-autocomplete-item:hover {
+  background: var(--surface-2);
+}
+
+.db-autocomplete-name {
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--text-strong);
+}
+
+.db-autocomplete-sub {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.db-autocomplete-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #2b8ffb;
+  background: rgba(43, 143, 251, 0.12);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.db-glpi-user-badge-selected {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 0.75rem 0.85rem;
+  border-radius: 8px;
+  color: #10b981;
+}
+
+.db-glpi-user-badge-selected strong {
+  display: block;
+  font-size: 0.88rem;
+  color: var(--text-strong);
+}
+
+.db-glpi-user-badge-selected span {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 640px) {
+  .db-detalhes-metrics {
+    grid-template-columns: 1fr;
+  }
+  .db-month-progress-bg {
+    display: none;
+  }
+}
