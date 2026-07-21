@@ -89,6 +89,13 @@ export default function Dashboard() {
   const [dadosRequerenteCustom, setDadosRequerenteCustom] = useState<Record<string, number> | null>(null);
 
   const [carregandoGlpi, setCarregandoGlpi] = useState<boolean>(true);
+  const [progressoGlpi, setProgressoGlpi] = useState<number>(0);
+
+  const [carregandoRanking, setCarregandoRanking] = useState<boolean>(false);
+  const [progressoRanking, setProgressoRanking] = useState<number>(0);
+
+  const [carregandoRequerente, setCarregandoRequerente] = useState<boolean>(false);
+  const [progressoRequerente, setProgressoRequerente] = useState<number>(0);
 
   // Estados para Modal de Relatório PDF
   const [modalReportAberto, setModalReportAberto] = useState(false);
@@ -390,7 +397,13 @@ export default function Dashboard() {
 
   // Efeito para carregar dados da API do GLPI
   useEffect(() => {
+    let progressTimer: any;
     const carregarGlpi = async () => {
+      setProgressoGlpi(15);
+      progressTimer = setInterval(() => {
+        setProgressoGlpi((p) => (p < 90 ? Math.min(90, p + Math.floor(Math.random() * 10 + 5)) : p));
+      }, 250);
+
       try {
         const data = await getGlpiDashboard();
         if (data.kpis) setKpis(data.kpis);
@@ -398,20 +411,34 @@ export default function Dashboard() {
         if (data.pessoas && data.pessoas.length > 0) setPessoas(data.pessoas);
         if (typeof data.totalComputadores === "number") setTotalComputadores(data.totalComputadores);
         if (typeof data.totalImpressoras === "number") setTotalImpressoras(data.totalImpressoras);
+        setProgressoGlpi(100);
+        setTimeout(() => setCarregandoGlpi(false), 300);
       } catch (error) {
         console.error("Erro ao carregar dados do GLPI:", error);
+        setProgressoGlpi(100);
+        setTimeout(() => setCarregandoGlpi(false), 300);
       } finally {
-        setCarregandoGlpi(false);
+        clearInterval(progressTimer);
       }
     };
 
     carregarGlpi();
     const interval = setInterval(carregarGlpi, 60000); // Atualiza a cada 1 minuto
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      clearInterval(progressTimer);
+    };
   }, []);
+
   // Efeitos para carregar dados de mês/ano customizados para os rankings
   useEffect(() => {
     if (filtroRankingMode === "geral") return;
+    setCarregandoRanking(true);
+    setProgressoRanking(20);
+    const progressTimer = setInterval(() => {
+      setProgressoRanking((p) => (p < 90 ? Math.min(90, p + Math.floor(Math.random() * 12 + 6)) : p));
+    }, 200);
+
     const token = getToken();
     fetch(`/api/glpi/relatorio?tipo=mensal&mes=${mesRanking}&ano=${anoRanking}`, {
       headers: { Authorization: token ? `Bearer ${token}` : "" }
@@ -425,28 +452,66 @@ export default function Dashboard() {
           });
           setDadosRankingCustom(map);
         }
+        setProgressoRanking(100);
+        setTimeout(() => setCarregandoRanking(false), 250);
       })
-      .catch((err) => console.error("Erro ao filtrar ranking por mes/ano:", err));
+      .catch((err) => {
+        console.error("Erro ao filtrar ranking por mes/ano:", err);
+        setProgressoRanking(100);
+        setTimeout(() => setCarregandoRanking(false), 250);
+      })
+      .finally(() => clearInterval(progressTimer));
   }, [mesRanking, anoRanking, filtroRankingMode]);
 
   useEffect(() => {
     if (filtroRequerenteMode === "geral") return;
+    setCarregandoRequerente(true);
+    setProgressoRequerente(20);
+    const progressTimer = setInterval(() => {
+      setProgressoRequerente((p) => (p < 90 ? Math.min(90, p + Math.floor(Math.random() * 12 + 6)) : p));
+    }, 200);
+
     const token = getToken();
     fetch(`/api/glpi/relatorio?tipo=mensal&mes=${mesRequerente}&ano=${anoRequerente}`, {
       headers: { Authorization: token ? `Bearer ${token}` : "" }
     })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data && data.requerentes) {
+        if (data && (data.requerentesAbertosMes || data.requerentes)) {
+          const list = (data.requerentesAbertosMes && data.requerentesAbertosMes.length > 0)
+            ? data.requerentesAbertosMes
+            : data.requerentes;
           const map: Record<string, number> = {};
-          data.requerentes.forEach((p: any) => {
+          list.forEach((p: any) => {
             if (p.nome) map[p.nome.toLowerCase().trim()] = p.count;
           });
           setDadosRequerenteCustom(map);
         }
+        setProgressoRequerente(100);
+        setTimeout(() => setCarregandoRequerente(false), 250);
       })
-      .catch((err) => console.error("Erro ao filtrar requerentes por mes/ano:", err));
+      .catch((err) => {
+        console.error("Erro ao filtrar requerentes por mes/ano:", err);
+        setProgressoRequerente(100);
+        setTimeout(() => setCarregandoRequerente(false), 250);
+      })
+      .finally(() => clearInterval(progressTimer));
   }, [mesRequerente, anoRequerente, filtroRequerenteMode]);
+
+  const renderProgressBar = (label: string, pct: number) => {
+    const clampedPct = Math.min(100, Math.max(0, Math.round(pct)));
+    return (
+      <div className="db-widget-loading" style={{ padding: "2.2rem 1rem", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+        <div className="db-progress-text">
+          <span>{label}</span>
+          <span style={{ fontWeight: 800 }}>{clampedPct}%</span>
+        </div>
+        <div className="db-progress-bar-wrap">
+          <div className="db-progress-bar-fill" style={{ width: `${Math.max(5, clampedPct)}%` }} />
+        </div>
+      </div>
+    );
+  };
   const saveColors = (newColors: Record<string, string>) => {
     setCardColors(newColors);
     localStorage.setItem("dashboard_card_colors", JSON.stringify(newColors));
@@ -828,8 +893,8 @@ export default function Dashboard() {
               <h3>Ranking TI</h3>
               <p>
                 {filtroRankingMode === "geral"
-                  ? "Total de chamados fechados no histórico (GLPI)"
-                  : `Chamados fechados em ${["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"][mesRanking - 1]} de ${anoRanking} (GLPI)`}
+                  ? ""
+                  : ` ${["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"][mesRanking - 1]} de ${anoRanking} (GLPI)`}
               </p>
             </div>
             <div className="db-tab-group" style={{ display: "flex", gap: "0.4rem", alignItems: "center", flexWrap: "wrap" }}>
@@ -904,13 +969,8 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {carregandoGlpi ? (
-            <div className="db-widget-loading">
-              <span>Carregando...</span>
-              <div className="db-loading-bar-wrap">
-                <div className="db-loading-bar-fill" />
-              </div>
-            </div>
+          {carregandoGlpi || carregandoRanking ? (
+            renderProgressBar("Carregando Ranking TI...", carregandoGlpi ? progressoGlpi : progressoRanking)
           ) : tecnicosExibidos.length === 0 ? (
             <div className="db-widget-empty">Nenhum técnico encontrado.</div>
           ) : (
@@ -1012,8 +1072,8 @@ export default function Dashboard() {
               <h3>Chamados por requerente</h3>
               <p>
                 {filtroRequerenteMode === "geral"
-                  ? "Total de chamados fechados no histórico (GLPI)"
-                  : `Chamados fechados em ${["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"][mesRequerente - 1]} de ${anoRequerente} (GLPI)`}
+                  ? ""
+                  : ` ${["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"][mesRequerente - 1]} de ${anoRequerente} (GLPI)`}
               </p>
             </div>
             <div className="db-tab-group" style={{ display: "flex", gap: "0.4rem", alignItems: "center", flexWrap: "wrap" }}>
@@ -1088,13 +1148,8 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {carregandoGlpi ? (
-            <div className="db-widget-loading">
-              <span>Carregando...</span>
-              <div className="db-loading-bar-wrap">
-                <div className="db-loading-bar-fill" />
-              </div>
-            </div>
+          {carregandoGlpi || carregandoRequerente ? (
+            renderProgressBar("Carregando Requerentes...", carregandoGlpi ? progressoGlpi : progressoRequerente)
           ) : pessoasExibidas.length === 0 ? (
             <div className="db-widget-empty">Nenhum requerente encontrado.</div>
           ) : (
@@ -1272,7 +1327,7 @@ export default function Dashboard() {
                     const totalAbertosGeral = data?.totalAbertosGeral ?? 0;
                     const requerentesAbertosMes = data?.requerentesAbertosMes || [];
 
-                    const topRequerente = listRequerentes.length > 0 ? listRequerentes[0] : null;
+                    const topRequerente = requerentesAbertosMes.length > 0 ? requerentesAbertosMes[0] : (listRequerentes.length > 0 ? listRequerentes[0] : null);
 
                     const printWindow = window.open("", "_blank");
                     if (!printWindow) {
@@ -1511,15 +1566,15 @@ export default function Dashboard() {
                             </tr>
                           </thead>
                           <tbody>
-                            ${requerentesAbertosMes.length === 0 ? '<tr><td colspan="3" style="text-align:center; color:#94a3b8;">Nenhum chamado aberto neste mês</td></tr>' : 
-                              requerentesAbertosMes.map((p: any, i: number) => `
+                            ${requerentesAbertosMes.length === 0 ? '<tr><td colspan="3" style="text-align:center; color:#94a3b8;">Nenhum chamado aberto neste mês</td></tr>' :
+                        requerentesAbertosMes.map((p: any, i: number) => `
                                 <tr>
-                                  <td style="text-align: center;"><span class="pos-badge ${i < 3 ? `pos-${i+1}` : ''}">${i+1}</span></td>
+                                  <td style="text-align: center;"><span class="pos-badge ${i < 3 ? `pos-${i + 1}` : ''}">${i + 1}</span></td>
                                   <td><strong>${p.nome}</strong></td>
                                   <td style="text-align: right; font-weight: 700; color: #f97316;">${p.count}</td>
                                 </tr>
                               `).join('')
-                            }
+                      }
                           </tbody>
                         </table>
                         

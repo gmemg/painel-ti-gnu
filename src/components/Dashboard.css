@@ -798,6 +798,36 @@ html[data-theme="light"] .db-ranking-item {
   width: 100%;
 }
 
+.db-progress-text {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--blue, #2b8ffb);
+  margin-bottom: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.db-progress-bar-wrap {
+  width: 80%;
+  max-width: 260px;
+  height: 8px;
+  background: var(--surface-3);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--border);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.db-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2b8ffb 0%, #00ccee 100%);
+  border-radius: 999px;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 10px rgba(0, 204, 238, 0.5);
+}
+
 .db-loading-bar-wrap {
   width: 70%;
   max-width: 200px;
