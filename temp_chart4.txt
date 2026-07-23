@@ -1,0 +1,20 @@
+          { label: "TI Geral", sublabel: "Suporte Técnico", abertos: totalAbertosTI, concluidos: totalConcluidosTI }
+        ];
+
+    return {
+      type: "total" as const,
+      items,
+      totalAbertos: totalAbertosTI,
+      totalConcluidos: totalConcluidosTI,
+    };
+  };
+
+  const dadosGrafico = getDadosGrafico();
+
+  const mesAtualIdx = Math.min(new Date().getMonth(), dadosGrafico.items.length - 1);
+  const mediaMensalAbertos = Math.round(dadosGrafico.totalAbertos / (mesAtualIdx + 1 || 1));
+
+  // Técnico de TI com maior produção
+  const tecnicoMaisAtivo = tecnicosExibidos.reduce(
+    (max, t) => ((t.resolvidos || 0) > (max.resolvidos || 0) ? t : max),
+    tecnicosExibidos[0] || { nome: "Técnico TI", resolvidos: 0 }
