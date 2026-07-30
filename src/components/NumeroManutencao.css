@@ -45,6 +45,13 @@
 
 .nm-categoria-form input {
   flex: 1;
+  font-size: 0.82rem;
+  padding: 0.55rem 0.85rem;
+  box-sizing: border-box;
+}
+
+.nm-categoria-form input::placeholder {
+  font-size: 0.78rem;
 }
 
 .nm-categoria-erro {

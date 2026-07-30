@@ -2979,6 +2979,23 @@ app.post("/api/impressoras/importar", async (req, res, next) => {
       toners = await getGlpiPrinterToner(sessionToken, glpiId);
     }
     
+    const nomePrinter = p["1"] || "";
+    const localPrinter = p["3"] || "";
+
+    const detectarSedeServer = (txt) => {
+      if (!txt || typeof txt !== "string") return "AP";
+      const upper = txt.toUpperCase();
+      const dashMatch = upper.match(/[-\s_/()]+(AP|UP|IP|MV)\b/);
+      if (dashMatch) return dashMatch[1];
+      const wordMatch = upper.match(/\b(AP|UP|IP|MV)\b/);
+      if (wordMatch) return wordMatch[1];
+      return "AP";
+    };
+
+    const sedeCalculada = (sede && sede !== "AP")
+      ? sede
+      : detectarSedeServer(`${nomePrinter} ${localPrinter} ${local || ""}`);
+
     const novaId = `imp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     const agora = new Date().toISOString();
     
@@ -2994,10 +3011,10 @@ app.post("/api/impressoras/importar", async (req, res, next) => {
       [
         novaId,
         glpiId,
-        local || p["1"] || p["3"] || "Impressora GLPI",
-        sede || "AP",
+        local || nomePrinter || localPrinter || "Impressora GLPI",
+        sedeCalculada,
         p["23"] || "",
-        p["40"] || p["1"] || "",
+        p["40"] || nomePrinter || "",
         p["5"] || "",
         p["126"] || "",
         p["21"] || "",

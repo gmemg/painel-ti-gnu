@@ -371,6 +371,18 @@ export default function Impressoras() {
   const [glpiPrinters, setGlpiPrinters] = useState<GlpiPrinterAvailable[]>([]);
   const [carregandoGlpi, setCarregandoGlpi] = useState<boolean>(false);
   const [importandoId, setImportandoId] = useState<string | null>(null);
+  const [selectedGlpiIds, setSelectedGlpiIds] = useState<string[]>([]);
+  const [importandoLote, setImportandoLote] = useState<boolean>(false);
+
+  const detectarSedeFrontend = (texto: string): string => {
+    if (!texto) return "AP";
+    const upper = texto.toUpperCase();
+    const dashMatch = upper.match(/[-\s_/()]+(AP|UP|IP|MV)\b/);
+    if (dashMatch) return dashMatch[1];
+    const wordMatch = upper.match(/\b(AP|UP|IP|MV)\b/);
+    if (wordMatch) return wordMatch[1];
+    return "AP";
+  };
 
   useEffect(() => {
     // Inicia a lista vazia por padrão
@@ -442,6 +454,7 @@ export default function Impressoras() {
 
   const carregarImpressorasGlpi = async () => {
     setCarregandoGlpi(true);
+    setSelectedGlpiIds([]);
     try {
       const data = await getGlpiPrintersAvailable();
       setGlpiPrinters(data);
@@ -452,16 +465,84 @@ export default function Impressoras() {
     }
   };
 
-  const handleImportPrinter = async (glpiId: string, local: string = "", sede: string = "AP") => {
+  const handleToggleSelectGlpi = (glpiId: string) => {
+    setSelectedGlpiIds((prev) =>
+      prev.includes(glpiId)
+        ? prev.filter((id) => id !== glpiId)
+        : [...prev, glpiId],
+    );
+  };
+
+  const handleToggleSelectAllGlpi = () => {
+    if (selectedGlpiIds.length === glpiPrinters.length) {
+      setSelectedGlpiIds([]);
+    } else {
+      setSelectedGlpiIds(glpiPrinters.map((p) => p.glpiId));
+    }
+  };
+
+  const handleImportPrinter = async (
+    glpiId: string,
+    local: string = "",
+    sedeSugerida?: string,
+  ) => {
     setImportandoId(glpiId);
     try {
-      const nova = await importGlpiPrinter(glpiId, local, sede);
+      const printerObj = glpiPrinters.find((p) => p.glpiId === glpiId);
+      const textTarget = `${printerObj?.nome || ""} ${printerObj?.local || ""} ${local}`;
+      const sedeFinal = sedeSugerida || detectarSedeFrontend(textTarget);
+
+      const nova = await importGlpiPrinter(
+        glpiId,
+        local || printerObj?.nome || "",
+        sedeFinal,
+      );
       setImpressoras((prev) => [...prev, nova]);
-      fecharModal();
+      setGlpiPrinters((prev) => prev.filter((p) => p.glpiId !== glpiId));
+      setSelectedGlpiIds((prev) => prev.filter((id) => id !== glpiId));
     } catch (e) {
       console.error("Erro ao importar impressora:", e);
     } finally {
       setImportandoId(null);
+    }
+  };
+
+  const handleImportBatchGlpi = async () => {
+    if (selectedGlpiIds.length === 0) return;
+    setImportandoLote(true);
+    try {
+      const idsToImport = [...selectedGlpiIds];
+      const novas: Impressora[] = [];
+
+      for (const glpiId of idsToImport) {
+        const printerObj = glpiPrinters.find((p) => p.glpiId === glpiId);
+        const textTarget = `${printerObj?.nome || ""} ${printerObj?.local || ""}`;
+        const sedeCalculada = detectarSedeFrontend(textTarget);
+
+        try {
+          const nova = await importGlpiPrinter(
+            glpiId,
+            printerObj?.nome || printerObj?.local || "",
+            sedeCalculada,
+          );
+          novas.push(nova);
+        } catch (err) {
+          console.error(`Erro ao importar impressora ${glpiId}:`, err);
+        }
+      }
+
+      if (novas.length > 0) {
+        setImpressoras((prev) => [...prev, ...novas]);
+        setGlpiPrinters((prev) =>
+          prev.filter((p) => !idsToImport.includes(p.glpiId)),
+        );
+        setSelectedGlpiIds([]);
+        fecharModal();
+      }
+    } catch (e) {
+      console.error("Erro na importação em lote:", e);
+    } finally {
+      setImportandoLote(false);
     }
   };
 
@@ -860,26 +941,74 @@ export default function Impressoras() {
                     Nenhuma impressora disponível para importação no GLPI.
                   </div>
                 ) : (
-                  <div className="imp-glpi-list" style={{ clear: "both" }}>
-                    {glpiPrinters.map((p) => (
-                      <div key={p.glpiId} className="imp-glpi-item">
-                        <div className="imp-glpi-item-info">
-                          <span className="imp-glpi-item-name"><strong>{p.nome}</strong></span>
-                          <span className="imp-glpi-item-meta">
-                            {[p.marca, p.modelo, p.numeroSerie].filter(Boolean).join(" · ") || "Sem marca/modelo"}
-                          </span>
-                          <span className="imp-glpi-item-meta">IP: {p.ip || "—"} | MAC: {p.mac || "—"}</span>
-                        </div>
-                        <button
-                          type="button"
-                          className="imp-btn-import"
-                          disabled={importandoId === p.glpiId}
-                          onClick={() => handleImportPrinter(p.glpiId, p.nome)}
-                        >
-                          {importandoId === p.glpiId ? "Importando..." : "Importar"}
-                        </button>
-                      </div>
-                    ))}
+                  <div style={{ clear: "both" }}>
+                    <div className="imp-glpi-batch-header">
+                      <label className="imp-glpi-select-all">
+                        <input
+                          type="checkbox"
+                          checked={
+                            glpiPrinters.length > 0 &&
+                            selectedGlpiIds.length === glpiPrinters.length
+                          }
+                          onChange={handleToggleSelectAllGlpi}
+                        />
+                        <span>
+                          Selecionar todas ({selectedGlpiIds.length}/{glpiPrinters.length})
+                        </span>
+                      </label>
+                      <button
+                        type="button"
+                        className="imp-btn-import-batch"
+                        disabled={selectedGlpiIds.length === 0 || importandoLote}
+                        onClick={handleImportBatchGlpi}
+                      >
+                        {importandoLote
+                          ? "Importando..."
+                          : `Importar Selecionadas (${selectedGlpiIds.length})`}
+                      </button>
+                    </div>
+
+                    <div className="imp-glpi-list">
+                      {glpiPrinters.map((p) => {
+                        const isSelected = selectedGlpiIds.includes(p.glpiId);
+                        const sedeAuto = detectarSedeFrontend(`${p.nome} ${p.local}`);
+                        return (
+                          <div key={p.glpiId} className="imp-glpi-item">
+                            <div className="imp-glpi-item-left">
+                              <input
+                                type="checkbox"
+                                className="imp-glpi-item-checkbox"
+                                checked={isSelected}
+                                onChange={() => handleToggleSelectGlpi(p.glpiId)}
+                              />
+                              <div className="imp-glpi-item-info">
+                                <span className="imp-glpi-item-name">
+                                  <strong>{p.nome}</strong> (Sede: {sedeAuto})
+                                </span>
+                                <span className="imp-glpi-item-meta">
+                                  {[p.marca, p.modelo, p.numeroSerie]
+                                    .filter(Boolean)
+                                    .join(" · ") || "Sem marca/modelo"}
+                                </span>
+                                <span className="imp-glpi-item-meta">
+                                  IP: {p.ip || "—"} | MAC: {p.mac || "—"}
+                                </span>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              className="imp-btn-import"
+                              disabled={importandoId === p.glpiId || importandoLote}
+                              onClick={() =>
+                                handleImportPrinter(p.glpiId, p.nome, sedeAuto)
+                              }
+                            >
+                              {importandoId === p.glpiId ? "Importando..." : "Importar"}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
