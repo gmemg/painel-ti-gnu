@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ManutencaoRegistro } from "../types";
-import { getManutencao, saveManutencao } from "../utils/storage";
+import {
+  getManutencao,
+  getManutencaoCategorias,
+  saveManutencao,
+  saveManutencaoCategorias,
+} from "../utils/storage";
 import { useAuth } from "../context/AuthContext";
 import "./InventarioMontagem.css";
 import "./NumeroManutencao.css";
@@ -9,16 +14,6 @@ const createId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const nowIso = () => new Date().toISOString();
 
 const SEDE_OPTIONS = ["", "AP", "IP", "UP", "MV"] as const;
-
-const EQUIPAMENTO_OPTIONS = [
-  "",
-  "Cancela",
-  "Catraca",
-  "Facial",
-  "Digital",
-  "Semáforo",
-  "Totem",
-] as const;
 
 const FIELD_LABELS: Record<
   keyof Omit<ManutencaoRegistro, "id" | "updatedAt" | "equipamento" | "sede">,
@@ -78,6 +73,11 @@ const NumeroManutencao = () => {
   const [search, setSearch] = useState("");
   const fieldStartValuesRef = useRef<Record<string, string>>({});
 
+  const [equipamentoOptions, setEquipamentoOptions] = useState<string[]>([]);
+  const [modalCategoriasAberto, setModalCategoriasAberto] = useState(false);
+  const [novaCategoria, setNovaCategoria] = useState("");
+  const [erroCategoria, setErroCategoria] = useState("");
+
   useEffect(() => {
     getManutencao()
       .then((saved) => {
@@ -85,6 +85,10 @@ const NumeroManutencao = () => {
         setCarregado(true);
       })
       .catch((err) => console.error("Erro ao carregar manutenção", err));
+
+    getManutencaoCategorias()
+      .then((cats) => setEquipamentoOptions(cats))
+      .catch((err) => console.error("Erro ao carregar categorias", err));
   }, []);
 
   useEffect(() => {
@@ -184,6 +188,37 @@ const NumeroManutencao = () => {
     setUndoState(null);
   };
 
+  const handleAdicionarCategoria = () => {
+    const nomeTrim = novaCategoria.trim();
+    if (!nomeTrim) {
+      setErroCategoria("Informe o nome da categoria.");
+      return;
+    }
+    if (
+      equipamentoOptions.some(
+        (c) => c.toLowerCase() === nomeTrim.toLowerCase(),
+      )
+    ) {
+      setErroCategoria("Esta categoria já existe.");
+      return;
+    }
+    const novas = [...equipamentoOptions, nomeTrim];
+    setEquipamentoOptions(novas);
+    saveManutencaoCategorias(novas).catch((err) =>
+      console.error("Erro ao salvar categoria", err),
+    );
+    setNovaCategoria("");
+    setErroCategoria("");
+  };
+
+  const handleRemoverCategoria = (catParaRemover: string) => {
+    const novas = equipamentoOptions.filter((c) => c !== catParaRemover);
+    setEquipamentoOptions(novas);
+    saveManutencaoCategorias(novas).catch((err) =>
+      console.error("Erro ao salvar categorias", err),
+    );
+  };
+
   return (
     <div className="inventario">
       <div className="inventario-header">
@@ -196,7 +231,15 @@ const NumeroManutencao = () => {
           </div>
         </div>
         {isAdmin && (
-          <div className="inventario-actions">
+          <div className="inventario-actions nm-actions-gap">
+            <button
+              type="button"
+              className="btn-add-item btn-categoria-gerenciar"
+              onClick={() => setModalCategoriasAberto(true)}
+              title="Gerenciar Categorias de Equipamento"
+            >
+              ⚙️ Categorias
+            </button>
             <button
               type="button"
               className="btn-add-item"
@@ -272,7 +315,11 @@ const NumeroManutencao = () => {
                       }
                     }}
                   >
-                    {EQUIPAMENTO_OPTIONS.map((o) => (
+                    {r.equipamento &&
+                      !equipamentoOptions.includes(r.equipamento) && (
+                        <option value={r.equipamento}>{r.equipamento}</option>
+                      )}
+                    {["", ...equipamentoOptions].map((o) => (
                       <option key={o} value={o}>
                         {o || "—"}
                       </option>
@@ -348,6 +395,86 @@ const NumeroManutencao = () => {
           <button type="button" onClick={handleUndoRemove}>
             Desfazer
           </button>
+        </div>
+      )}
+
+      {modalCategoriasAberto && (
+        <div
+          className="inventario-modal-overlay"
+          onClick={() => setModalCategoriasAberto(false)}
+        >
+          <div
+            className="inventario-modal nm-categorias-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="inventario-modal-header nm-modal-header-flex">
+              <h3>Categorias de Equipamento</h3>
+              <button
+                type="button"
+                className="btn-remover-unidade"
+                onClick={() => setModalCategoriasAberto(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="nm-modal-body">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleAdicionarCategoria();
+                }}
+                className="nm-categoria-form"
+              >
+                <input
+                  type="text"
+                  className="unit-editor"
+                  placeholder="Nova categoria (ex: Leitor RFID)"
+                  value={novaCategoria}
+                  onChange={(e) => {
+                    setNovaCategoria(e.target.value);
+                    if (erroCategoria) setErroCategoria("");
+                  }}
+                />
+                <button type="submit" className="btn-add-item">
+                  + Adicionar
+                </button>
+              </form>
+              {erroCategoria && (
+                <div className="nm-categoria-erro">{erroCategoria}</div>
+              )}
+
+              <div className="nm-categoria-list">
+                {equipamentoOptions.length === 0 ? (
+                  <div className="empty-state">Nenhuma categoria cadastrada.</div>
+                ) : (
+                  equipamentoOptions.map((cat) => (
+                    <div key={cat} className="nm-categoria-item">
+                      <span className="nm-categoria-nome">{cat}</span>
+                      <button
+                        type="button"
+                        className="btn-remover-unidade"
+                        onClick={() => handleRemoverCategoria(cat)}
+                        title={`Remover categoria ${cat}`}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="inventario-form-actions nm-modal-footer">
+              <button
+                type="button"
+                className="btn-cancelar-item"
+                onClick={() => setModalCategoriasAberto(false)}
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -336,6 +336,12 @@ const initDatabase = async () => {
       valor TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS manutencao_categorias (
+      id SERIAL PRIMARY KEY,
+      nome TEXT UNIQUE NOT NULL,
+      ordem INT DEFAULT 0
+    );
+
     CREATE TABLE IF NOT EXISTS usuarios (
       id TEXT PRIMARY KEY,
       username TEXT UNIQUE NOT NULL,
@@ -1215,6 +1221,62 @@ app.put("/api/manutencao", async (req, res, next) => {
       "SELECT * FROM manutencao_registros ORDER BY updated_at ASC",
     );
     res.json(result.rows.map(rowToManutencao));
+  } catch (error) {
+    await client.query("ROLLBACK");
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+
+app.get("/api/manutencao/categorias", async (_req, res, next) => {
+  try {
+    const result = await pool.query(
+      "SELECT nome FROM manutencao_categorias ORDER BY ordem ASC, id ASC",
+    );
+    if (result.rows.length === 0) {
+      const defaults = [
+        "Cancela",
+        "Catraca",
+        "Facial",
+        "Digital",
+        "Semáforo",
+        "Totem",
+      ];
+      for (let i = 0; i < defaults.length; i++) {
+        await pool.query(
+          "INSERT INTO manutencao_categorias (nome, ordem) VALUES ($1, $2) ON CONFLICT (nome) DO NOTHING",
+          [defaults[i], i],
+        );
+      }
+      return res.json(defaults);
+    }
+    res.json(result.rows.map((r) => r.nome));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put("/api/manutencao/categorias", async (req, res, next) => {
+  const categorias = Array.isArray(req.body) ? req.body : [];
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("DELETE FROM manutencao_categorias");
+    for (let i = 0; i < categorias.length; i++) {
+      const nome = String(categorias[i] || "").trim();
+      if (nome) {
+        await client.query(
+          "INSERT INTO manutencao_categorias (nome, ordem) VALUES ($1, $2) ON CONFLICT (nome) DO NOTHING",
+          [nome, i],
+        );
+      }
+    }
+    await client.query("COMMIT");
+    const result = await pool.query(
+      "SELECT nome FROM manutencao_categorias ORDER BY ordem ASC, id ASC",
+    );
+    res.json(result.rows.map((r) => r.nome));
   } catch (error) {
     await client.query("ROLLBACK");
     next(error);

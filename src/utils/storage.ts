@@ -321,6 +321,42 @@ export const saveManutencao = (
     body: JSON.stringify(registros),
   });
 
+const CATEGORIAS_STORAGE_KEY = "manutencao_categorias_storage";
+const DEFAULT_MANUTENCAO_CATEGORIAS = [
+  "Cancela",
+  "Catraca",
+  "Facial",
+  "Digital",
+  "Semáforo",
+  "Totem",
+];
+
+export const getManutencaoCategorias = (): Promise<string[]> =>
+  requestJson<string[]>("/manutencao/categorias")
+    .then((cats) => {
+      localStorage.setItem(CATEGORIAS_STORAGE_KEY, JSON.stringify(cats));
+      return cats;
+    })
+    .catch(() => {
+      const stored = localStorage.getItem(CATEGORIAS_STORAGE_KEY);
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch {}
+      }
+      return DEFAULT_MANUTENCAO_CATEGORIAS;
+    });
+
+export const saveManutencaoCategorias = (
+  categorias: string[],
+): Promise<string[]> => {
+  localStorage.setItem(CATEGORIAS_STORAGE_KEY, JSON.stringify(categorias));
+  return requestJson<string[]>("/manutencao/categorias", {
+    method: "PUT",
+    body: JSON.stringify(categorias),
+  }).catch(() => categorias);
+};
+
 export const getToners = (): Promise<TonerRegistro[]> =>
   requestJson<TonerRegistro[]>("/toners");
 
