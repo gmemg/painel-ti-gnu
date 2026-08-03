@@ -2334,3 +2334,13 @@ html[data-theme="light"] .db-tab-group {
     height: 300px;
   }
 }
+
+.clickable-kpi-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.clickable-kpi-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px -8px rgba(16, 185, 129, 0.4);
+  border-color: rgba(52, 211, 153, 0.6);
+}

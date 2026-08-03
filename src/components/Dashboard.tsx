@@ -7,7 +7,8 @@ import {
   buscarGlpiUsuarios,
   getToken,
   TecnicoDetalhesResponse,
-  GlpiUsuarioBusca
+  GlpiUsuarioBusca,
+  ChamadoAntigo
 } from "../utils/storage";
 import {
   LineChart,
@@ -30,6 +31,12 @@ interface Tecnico {
   resolvidos: number;
   resolvidosMes?: number;
   resolvidosAno?: number;
+  fechadosGeral?: number;
+  fechadosAno?: number;
+  fechadosMes?: number;
+  solucionadosGeral?: number;
+  solucionadosAno?: number;
+  solucionadosMes?: number;
 }
 
 interface Pessoa {
@@ -76,7 +83,7 @@ export default function Dashboard() {
   const [currentTime, setCurrentTime] = useState<string>("");
 
   // Estados do GLPI
-  const [kpis, setKpis] = useState<Record<string, number>>({
+  const [kpis, setKpis] = useState<any>({
     novos: 0,
     atribuidos: 0,
     pendentes: 0,
@@ -88,6 +95,10 @@ export default function Dashboard() {
   const [pessoas, setPessoas] = useState<Pessoa[]>([]);
   const [totalComputadores, setTotalComputadores] = useState<number>(0);
   const [totalImpressoras, setTotalImpressoras] = useState<number>(0);
+  const [chamadosAntigos, setChamadosAntigos] = useState<ChamadoAntigo[]>([]);
+  const [modalChamadosAntigosAberto, setModalChamadosAntigosAberto] = useState<boolean>(false);
+  const [abaModalAntigos, setAbaModalAntigos] = useState<"aberto" | "interacao">("aberto");
+  const [filtroModalAntigos, setFiltroModalAntigos] = useState<string>("");
   const [filtroRankingMode, setFiltroRankingMode] = useState<"especifico" | "geral">("especifico");
   const [mesRanking, setMesRanking] = useState<number>(new Date().getMonth() + 1);
   const [anoRanking, setAnoRanking] = useState<number>(new Date().getFullYear());
@@ -425,6 +436,7 @@ export default function Dashboard() {
         if (data.pessoas && data.pessoas.length > 0) setPessoas(data.pessoas);
         if (typeof data.totalComputadores === "number") setTotalComputadores(data.totalComputadores);
         if (typeof data.totalImpressoras === "number") setTotalImpressoras(data.totalImpressoras);
+        if (data.chamadosAntigos && Array.isArray(data.chamadosAntigos)) setChamadosAntigos(data.chamadosAntigos);
         setProgressoGlpi(100);
         setTimeout(() => setCarregandoGlpi(false), 300);
       } catch (error) {
@@ -633,7 +645,7 @@ export default function Dashboard() {
 
     // Total de chamados resolvidos especificamente pela equipe de TI
     const totalResolvidosTI = tecnicosExibidos.reduce(
-      (sum, t) => sum + Math.max(0, t.resolvidos || t.resolvidosAno || 0),
+      (sum, t) => sum + Math.max(0, t.resolvidosAno || 0),
       0
     );
 
@@ -660,13 +672,30 @@ export default function Dashboard() {
       let abertosRestantes = totalAbertosTI;
       let concluidosRestantes = totalConcluidosTI;
 
+      let realTotalAbertos = 0;
+      let realTotalConcluidos = 0;
+
       const baseAbertos = Math.floor(totalAbertosTI / mesesAtivosCount);
       const baseConcluidos = Math.floor(totalConcluidosTI / mesesAtivosCount);
-      
+
       const varAbertos = [0.85, 1.15, 0.90, 1.20, 0.80, 1.10, 0.95, 1.05, 0.85, 1.10, 0.90, 1.15];
       const varConclui = [0.80, 1.20, 0.85, 1.15, 0.90, 1.10, 0.85, 1.20, 0.95, 1.05, 0.80, 1.10];
 
       const items = mesesNomes.map((mes, idx) => {
+        if (isAnoAtual && kpis.historicoMensal) {
+          const ab = kpis.historicoMensal.abertos[idx] || 0;
+          const co = kpis.historicoMensal.concluidos[idx] || 0;
+          realTotalAbertos += ab;
+          realTotalConcluidos += co;
+
+          return {
+            label: mes,
+            sublabel: `${mes}/${anoGrafico}` + (idx === mesAtualIdx ? ' (Mês Atual)' : ''),
+            abertos: ab,
+            concluidos: co,
+          };
+        }
+
         if (isAnoAtual && idx > mesAtualIdx) {
           return { label: mes, sublabel: `${mes}/${anoGrafico}`, abertos: 0, concluidos: 0 };
         }
@@ -706,8 +735,8 @@ export default function Dashboard() {
       return {
         type: "mensal" as const,
         items,
-        totalAbertos: totalAbertosTI,
-        totalConcluidos: totalConcluidosTI,
+        totalAbertos: (isAnoAtual && kpis.historicoMensal) ? realTotalAbertos : totalAbertosTI,
+        totalConcluidos: (isAnoAtual && kpis.historicoMensal) ? realTotalConcluidos : totalConcluidosTI,
       };
     }
 
@@ -741,8 +770,14 @@ export default function Dashboard() {
 
   const dadosGrafico = getDadosGrafico();
 
-  const chamadosFechadosMesTI = tecnicosExibidos.reduce((sum, t) => sum + (t.resolvidosMes || 0), 0);
-  const totalFechadosTI = kpis.fechados ?? 0;
+  const chamadosFechadosMesTI = Math.max(0, kpis.fechadosMes || 0);
+  const chamadosSolucionadosMesTI = Math.max(0, kpis.solucionadosMes || 0);
+  const totalChamadosMesTI = chamadosFechadosMesTI;
+
+  // Usa as estatísticas globais do ano (ou geral se o usuário não quiser filtrar por ano, mas as variáveis do backend são fechados/solucionados)
+  const totalFechadosAnoTI = Math.max(0, kpis.fechados ?? kpis.fechadosAno ?? 0);
+  const totalSolucionadosAnoTI = Math.max(0, kpis.solucionados ?? kpis.solucionadosAno ?? 0);
+  const totalChamadosAnoTI = totalFechadosAnoTI + totalSolucionadosAnoTI;
 
   // Lista de Técnicos do Ranking TI (ordenados conforme o filtro ativo do Ranking TI)
   const rankingTITecnicos = [...tecnicosExibidos]
@@ -762,12 +797,31 @@ export default function Dashboard() {
   // Top 3 Técnicos de TI (Puxado diretamente do Ranking TI)
   const top3Tecnicos = rankingTITecnicos.slice(0, 3);
 
-  const taxaResolucaoTI =
-    dadosGrafico.totalAbertos > 0
-      ? ((dadosGrafico.totalConcluidos / dadosGrafico.totalAbertos) * 100).toFixed(1)
-      : "0.0";
-
   const totalSemSolucaoTI = Math.max(0, (kpis.novos || 0) + (kpis.atribuidos || 0) + (kpis.pendentes || 0));
+
+  const chamadoMaisAntigo = chamadosAntigos.length > 0
+    ? [...chamadosAntigos].sort((a, b) => b.diasAberto - a.diasAberto)[0]
+    : null;
+
+  const listaAntigosOrdenada = [...chamadosAntigos].sort((a, b) => {
+    if (abaModalAntigos === "aberto") {
+      return b.diasAberto - a.diasAberto;
+    } else {
+      return b.diasSemInteracao - a.diasSemInteracao;
+    }
+  });
+
+  const listaAntigosFiltrada = listaAntigosOrdenada.filter((item) => {
+    if (!filtroModalAntigos.trim()) return true;
+    const query = filtroModalAntigos.toLowerCase();
+    return (
+      item.id.toLowerCase().includes(query) ||
+      item.titulo.toLowerCase().includes(query) ||
+      item.requerente.toLowerCase().includes(query) ||
+      item.tecnico.toLowerCase().includes(query) ||
+      item.status.toLowerCase().includes(query)
+    );
+  });
 
   return (
     <div className="db-container">
@@ -1051,7 +1105,7 @@ export default function Dashboard() {
               <h3>Volume de Chamados de T.I</h3>
               <p>Análise de performance e demanda ({visaoGrafico === "mensal" ? `Ano de ${anoGrafico}` : visaoGrafico === "anual" ? "Histórico Anual" : "Desempenho por Técnico TI"})</p>
             </div>
-            
+
             <div className="premium-chart-controls">
               <div className="premium-chart-tabs">
                 <button
@@ -1089,55 +1143,55 @@ export default function Dashboard() {
           <div className="premium-chart-body">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={dadosGrafico.items} margin={{ top: 20, right: 30, left: 10, bottom: 10 }}>
-                <XAxis 
-                  dataKey="label" 
-                  stroke="#475569" 
-                  tick={{ fill: '#94a3b8', fontSize: 13, fontWeight: 500 }} 
-                  axisLine={false} 
-                  tickLine={false} 
-                  dy={15} 
+                <XAxis
+                  dataKey="label"
+                  stroke="#475569"
+                  tick={{ fill: '#94a3b8', fontSize: 13, fontWeight: 500 }}
+                  axisLine={false}
+                  tickLine={false}
+                  dy={15}
                 />
-                <YAxis 
-                  stroke="#475569" 
-                  tick={{ fill: '#94a3b8', fontSize: 13, fontWeight: 500 }} 
-                  axisLine={false} 
-                  tickLine={false} 
-                  dx={-5} 
+                <YAxis
+                  stroke="#475569"
+                  tick={{ fill: '#94a3b8', fontSize: 13, fontWeight: 500 }}
+                  axisLine={false}
+                  tickLine={false}
+                  dx={-5}
                 />
                 <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="rgba(255, 255, 255, 0.06)" />
-                <RechartsTooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'rgba(15, 23, 42, 0.95)', 
-                    borderColor: 'rgba(255, 255, 255, 0.1)', 
-                    borderRadius: '12px', 
-                    color: '#f8fafc', 
+                <RechartsTooltip
+                  contentStyle={{
+                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                    borderRadius: '12px',
+                    color: '#f8fafc',
                     boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.5)',
                     padding: '16px'
                   }}
                   itemStyle={{ fontWeight: 600, padding: '4px 0' }}
                   labelStyle={{ color: '#94a3b8', marginBottom: '8px', fontWeight: 500, fontSize: '13px' }}
                 />
-                <Legend 
-                  iconType="circle" 
-                  wrapperStyle={{ paddingTop: '24px', paddingBottom: '8px', fontSize: '14px', fontWeight: 500 }} 
+                <Legend
+                  iconType="circle"
+                  wrapperStyle={{ paddingTop: '24px', paddingBottom: '8px', fontSize: '14px', fontWeight: 500 }}
                 />
-                <Line 
-                  type="monotone" 
-                  name="Chamados Abertos (Demanda)" 
-                  dataKey="abertos" 
-                  stroke="#ef4444" 
-                  strokeWidth={4} 
+                <Line
+                  type="monotone"
+                  name="Chamados Abertos (Demanda)"
+                  dataKey="abertos"
+                  stroke="#ef4444"
+                  strokeWidth={4}
                   dot={{ r: 4, strokeWidth: 0, fill: '#ef4444' }}
-                  activeDot={{ r: 7, strokeWidth: 0, fill: '#f87171', style: { filter: 'drop-shadow(0 0 8px rgba(239, 68, 68, 0.8))' } }} 
+                  activeDot={{ r: 7, strokeWidth: 0, fill: '#f87171', style: { filter: 'drop-shadow(0 0 8px rgba(239, 68, 68, 0.8))' } }}
                 />
-                <Line 
-                  type="monotone" 
-                  name="Chamados Concluídos (Resolução)" 
-                  dataKey="concluidos" 
-                  stroke="#10b981" 
-                  strokeWidth={4} 
+                <Line
+                  type="monotone"
+                  name="Chamados Concluídos (Resolução)"
+                  dataKey="concluidos"
+                  stroke="#10b981"
+                  strokeWidth={4}
                   dot={{ r: 4, strokeWidth: 0, fill: '#10b981' }}
-                  activeDot={{ r: 7, strokeWidth: 0, fill: '#34d399', style: { filter: 'drop-shadow(0 0 8px rgba(16, 185, 129, 0.8))' } }} 
+                  activeDot={{ r: 7, strokeWidth: 0, fill: '#34d399', style: { filter: 'drop-shadow(0 0 8px rgba(16, 185, 129, 0.8))' } }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -1150,7 +1204,11 @@ export default function Dashboard() {
             <div className="kpi-icon-wrap">💻</div>
             <div className="kpi-content">
               <span className="kpi-label">Total Chamados TI</span>
-              <span className="kpi-value">{carregandoGlpi ? "..." : totalFechadosTI} <small>atendimentos</small></span>
+              <span className="kpi-value">{carregandoGlpi ? "..." : totalChamadosAnoTI} <small>atendimentos</small></span>
+              <div style={{ display: 'flex', gap: '8px', fontSize: '0.82rem', marginTop: '4px', fontWeight: 600 }}>
+                <span style={{ color: '#10b981' }}>Fechados: {totalFechadosAnoTI}</span>
+                <span style={{ color: '#38bdf8' }}>Solucionados: {totalSolucionadosAnoTI}</span>
+              </div>
             </div>
           </div>
 
@@ -1171,19 +1229,44 @@ export default function Dashboard() {
           <div className="premium-kpi-card glass-purple">
             <div className="kpi-icon-wrap">📅</div>
             <div className="kpi-content">
-              <span className="kpi-label">Chamados Fechados (Mês)</span>
-              <span className="kpi-value">{chamadosFechadosMesTI} <small>resolvidos</small></span>
+              <span className="kpi-label">Chamados Concluídos (Mês)</span>
+              <span className="kpi-value">{carregandoGlpi ? "..." : totalChamadosMesTI} <small>resolvidos</small></span>
+              <div style={{ display: 'flex', gap: '8px', fontSize: '0.82rem', marginTop: '4px', fontWeight: 600 }}>
+                <span style={{ color: '#10b981' }}>Fechados: {chamadosFechadosMesTI}</span>
+                <span style={{ color: '#38bdf8' }}>Solucionados: {chamadosSolucionadosMesTI}</span>
+              </div>
             </div>
           </div>
 
-          <div className="premium-kpi-card glass-green">
-            <div className="kpi-icon-wrap">🎯</div>
-            <div className="kpi-content">
-              <span className="kpi-label">Taxa Resolução TI</span>
-              <span className="kpi-value">{taxaResolucaoTI}%</span>
+          <div
+            className="premium-kpi-card glass-green clickable-kpi-card"
+            onClick={() => setModalChamadosAntigosAberto(true)}
+            title="Clique para ver a lista de chamados mais antigos e sem interação"
+            style={{ cursor: "pointer" }}
+          >
+            <div className="kpi-icon-wrap">⏳</div>
+            <div className="kpi-content" style={{ width: '100%' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="kpi-label">Chamado Mais Antigo</span>
+                <span style={{ fontSize: '0.72rem', background: 'rgba(255,255,255,0.15)', padding: '2px 6px', borderRadius: '4px', color: '#34d399', fontWeight: 600 }}>
+                  Ver lista ↗
+                </span>
+              </div>
+              <span className="kpi-value">
+                {carregandoGlpi ? "..." : (chamadoMaisAntigo ? `${chamadoMaisAntigo.diasAberto} ${chamadoMaisAntigo.diasAberto === 1 ? 'dia' : 'dias'}` : "0 dias")}
+              </span>
+              {chamadoMaisAntigo ? (
+                <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ color: '#38bdf8', fontWeight: 600 }}>#{chamadoMaisAntigo.id}</span> • {chamadoMaisAntigo.titulo}
+                </div>
+              ) : (
+                <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '4px' }}>
+                  Nenhum chamado pendente
+                </div>
+              )}
             </div>
           </div>
-          
+
           <div className="premium-kpi-card glass-yellow">
             <div className="kpi-icon-wrap">⚡</div>
             <div className="kpi-content">
@@ -1286,78 +1369,82 @@ export default function Dashboard() {
           ) : (
             <div className="db-ranking-list">
               {rankingTITecnicos.map((tech, index) => {
-                  const isTop3 = index < 3;
-                  const medalColor = index === 0 ? "gold" : index === 1 ? "silver" : "bronze";
-                  const valorExibido = tech.val;
-                  const siglaMeses = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
-                  const labelExibido =
-                    filtroRankingMode === "geral"
-                      ? "total"
-                      : `${siglaMeses[mesRanking - 1]}/${anoRanking}`;
-                  return (
-                    <div key={tech.id} className="db-ranking-item">
-                      <div className="db-ranking-position-wrap">
-                        <span className={`db-ranking-position ${isTop3 ? `medal-${medalColor}` : ""}`}>
-                          {index + 1}
-                        </span>
-                      </div>
-                      <div className="db-ranking-avatar">{tech.avatar}</div>
-                      <div className="db-ranking-info">
-                        <span className="db-ranking-name">{tech.nome}</span>
-                      </div>
-                      <div className="db-ranking-value-wrap">
-                        <span className="db-ranking-value">{valorExibido}</span>
-                        <span className="db-ranking-label">{labelExibido}</span>
-                      </div>
-                      <button
-                        type="button"
-                        className="db-btn-detalhes-ranking"
-                        onClick={() => abrirModalDetalhes(tech)}
-                        title={`Ver chamados concluídos de ${tech.nome}`}
-                      >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13">
-                          <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" strokeLinecap="round" strokeLinejoin="round" />
-                          <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                        Detalhes
-                      </button>
-                      <div style={{ position: "relative" }}>
-                        <button
-                          type="button"
-                          className={`db-btn-ranking-menu ${activeRankingMenuId === tech.id ? "active" : ""}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActiveRankingMenuId(activeRankingMenuId === tech.id ? null : tech.id);
-                          }}
-                          title="Opções"
-                        >
-                          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                            <circle cx="12" cy="5" r="2" />
-                            <circle cx="12" cy="12" r="2" />
-                            <circle cx="12" cy="19" r="2" />
-                          </svg>
-                        </button>
-                        {activeRankingMenuId === tech.id && (
-                          <div className="db-ranking-popover" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              type="button"
-                              className="db-ranking-popover-item db-popover-danger"
-                              onClick={() => {
-                                ocultarDoRanking(tech.id);
-                                setActiveRankingMenuId(null);
-                              }}
-                            >
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-                                <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeLinecap="round" strokeLinejoin="round" />
-                              </svg>
-                              Remover
-                            </button>
-                          </div>
-                        )}
+                const isTop3 = index < 3;
+                const medalColor = index === 0 ? "gold" : index === 1 ? "silver" : "bronze";
+                const valorExibido = tech.val;
+                const siglaMeses = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+                const labelExibido =
+                  filtroRankingMode === "geral"
+                    ? "total"
+                    : `${siglaMeses[mesRanking - 1]}/${anoRanking}`;
+                return (
+                  <div key={tech.id} className="db-ranking-item">
+                    <div className="db-ranking-position-wrap">
+                      <span className={`db-ranking-position ${isTop3 ? `medal-${medalColor}` : ""}`}>
+                        {index + 1}
+                      </span>
+                    </div>
+                    <div className="db-ranking-avatar">{tech.avatar}</div>
+                    <div className="db-ranking-info">
+                      <span className="db-ranking-name">{tech.nome}</span>
+                      <div className="db-ranking-sub-breakdown" style={{ display: 'flex', gap: '6px', fontSize: '0.78rem', marginTop: '2px', fontWeight: 500 }}>
+                        <span style={{ color: '#10b981' }}>Fechados: {filtroRankingMode === "geral" ? (tech.fechadosGeral ?? tech.val) : (tech.fechadosMes ?? tech.fechadosAno ?? tech.val)}</span>
+                        <span style={{ color: '#38bdf8' }}>• Solucionados: {filtroRankingMode === "geral" ? (tech.solucionadosGeral ?? 0) : (tech.solucionadosMes ?? tech.solucionadosAno ?? 0)}</span>
                       </div>
                     </div>
-                  );
-                })}
+                    <div className="db-ranking-value-wrap">
+                      <span className="db-ranking-value">{valorExibido}</span>
+                      <span className="db-ranking-label">{labelExibido}</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="db-btn-detalhes-ranking"
+                      onClick={() => abrirModalDetalhes(tech)}
+                      title={`Ver chamados concluídos de ${tech.nome}`}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13">
+                        <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      Detalhes
+                    </button>
+                    <div style={{ position: "relative" }}>
+                      <button
+                        type="button"
+                        className={`db-btn-ranking-menu ${activeRankingMenuId === tech.id ? "active" : ""}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveRankingMenuId(activeRankingMenuId === tech.id ? null : tech.id);
+                        }}
+                        title="Opções"
+                      >
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                          <circle cx="12" cy="5" r="2" />
+                          <circle cx="12" cy="12" r="2" />
+                          <circle cx="12" cy="19" r="2" />
+                        </svg>
+                      </button>
+                      {activeRankingMenuId === tech.id && (
+                        <div className="db-ranking-popover" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            className="db-ranking-popover-item db-popover-danger"
+                            onClick={() => {
+                              ocultarDoRanking(tech.id);
+                              setActiveRankingMenuId(null);
+                            }}
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                              <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            Remover
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -2338,6 +2425,127 @@ export default function Dashboard() {
                   Concluído
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Chamados Antigos e Sem Interação */}
+      {modalChamadosAntigosAberto && (
+        <div className="db-report-overlay" onClick={() => setModalChamadosAntigosAberto(false)}>
+          <div className="db-report-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '920px', width: '92%' }}>
+            <div className="db-report-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-strong)' }}>
+                  <span>⏳</span> Chamados em Aberto & Sem Interação
+                </h3>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  Acompanhamento dos chamados com maior tempo em aberto ou sem atualizações recentes
+                </p>
+              </div>
+              <button
+                type="button"
+                className="db-report-close-btn"
+                onClick={() => setModalChamadosAntigosAberto(false)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '1.5rem', cursor: 'pointer' }}
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="db-report-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+              {/* Controles de Aba e Busca */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div className="db-tab-group" style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    className={`db-tab-btn ${abaModalAntigos === "aberto" ? "active" : ""}`}
+                    onClick={() => setAbaModalAntigos("aberto")}
+                  >
+                    ⏳ Mais Antigos ({chamadosAntigos.length})
+                  </button>
+                  <button
+                    type="button"
+                    className={`db-tab-btn ${abaModalAntigos === "interacao" ? "active" : ""}`}
+                    onClick={() => setAbaModalAntigos("interacao")}
+                  >
+                    💤 Sem Interação
+                  </button>
+                </div>
+
+                <input
+                  type="text"
+                  className="db-select-filtro"
+                  placeholder="Buscar chamado..."
+                  value={filtroModalAntigos}
+                  onChange={(e) => setFiltroModalAntigos(e.target.value)}
+                  style={{ width: '220px', padding: '0.45rem 0.75rem' }}
+                />
+              </div>
+
+              {/* Tabela de Resultados */}
+              <div style={{ overflowX: 'auto', maxHeight: '420px', overflowY: 'auto', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--surface-1)' }}>
+                {listaAntigosFiltrada.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
+                    Nenhum chamado pendente ou encontrado com o filtro aplicado.
+                  </div>
+                ) : (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+                    <thead>
+                      <tr style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)', textAlign: 'left' }}>
+                        <th style={{ padding: '10px 14px' }}>ID</th>
+                        <th style={{ padding: '10px 14px' }}>Título</th>
+                        <th style={{ padding: '10px 14px' }}>Requerente</th>
+                        <th style={{ padding: '10px 14px' }}>Técnico</th>
+                        <th style={{ padding: '10px 14px' }}>Status</th>
+                        <th style={{ padding: '10px 14px' }}>
+                          {abaModalAntigos === "aberto" ? "Tempo em Aberto" : "Tempo sem Atualizar"}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {listaAntigosFiltrada.map((item) => {
+                        const valorDias = abaModalAntigos === "aberto" ? item.diasAberto : item.diasSemInteracao;
+                        const corBadge = valorDias > 15 ? '#ef4444' : valorDias > 7 ? '#f97316' : '#eab308';
+                        const bgBadge = valorDias > 15 ? 'rgba(239, 68, 68, 0.18)' : valorDias > 7 ? 'rgba(249, 115, 22, 0.18)' : 'rgba(234, 179, 8, 0.18)';
+
+                        return (
+                          <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                            <td style={{ padding: '10px 14px', fontWeight: 700, color: '#38bdf8' }}>#{item.id}</td>
+                            <td style={{ padding: '10px 14px', color: 'var(--text-strong)', maxWidth: '280px' }}>
+                              <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={item.titulo}>
+                                {item.titulo}
+                              </div>
+                            </td>
+                            <td style={{ padding: '10px 14px', color: 'var(--text-main)' }}>{item.requerente}</td>
+                            <td style={{ padding: '10px 14px', color: 'var(--text-main)' }}>{item.tecnico}</td>
+                            <td style={{ padding: '10px 14px' }}>
+                              <span style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: '4px', background: 'var(--surface-2)', color: 'var(--text-strong)', border: '1px solid var(--border)' }}>
+                                {item.status}
+                              </span>
+                            </td>
+                            <td style={{ padding: '10px 14px' }}>
+                              <span style={{ fontSize: '0.82rem', fontWeight: 700, padding: '3px 9px', borderRadius: '12px', color: corBadge, backgroundColor: bgBadge, display: 'inline-block' }}>
+                                {valorDias} {valorDias === 1 ? 'dia' : 'dias'}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.25rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border)' }}>
+              <button
+                type="button"
+                className="db-report-submit-btn"
+                onClick={() => setModalChamadosAntigosAberto(false)}
+              >
+                Fechar
+              </button>
             </div>
           </div>
         </div>

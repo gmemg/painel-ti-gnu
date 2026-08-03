@@ -370,6 +370,19 @@ export const saveToners = (
 
 // --- INTEGRAÇÃO GLPI FRONTEND ---
 
+export interface ChamadoAntigo {
+  id: string;
+  titulo: string;
+  requerente: string;
+  tecnico: string;
+  status: string;
+  statusCode: number;
+  dataAbertura: string;
+  diasAberto: number;
+  dataModificacao: string;
+  diasSemInteracao: number;
+}
+
 export interface GlpiDashboardData {
   kpis: {
     novos: number;
@@ -402,6 +415,7 @@ export interface GlpiDashboardData {
   }>;
   totalComputadores?: number;
   totalImpressoras?: number;
+  chamadosAntigos?: ChamadoAntigo[];
 }
 
 export interface ChamadoDetalhe {

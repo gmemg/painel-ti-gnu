@@ -1806,6 +1806,7 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
     
     let tecnicosList = [];
     let pessoasList = [];
+    let chamadosAntigos = [];
     
     try {
       let usersMap = {};
@@ -1830,12 +1831,15 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
       }
 
       const ticketsResponse = await fetch(
-        `${GLPI_API_URL}/search/Ticket?sort=2&order=DESC` +
+        `${GLPI_API_URL}/search/Ticket?sort=15&order=ASC` +
         `&forcedisplay[0]=5` +  // Técnico (Usuário ID)
         `&forcedisplay[1]=4` +  // Requerente (Usuário ID)
         `&forcedisplay[2]=12` + // Status (1=Novo, 2=Atribuído, etc.)
         `&forcedisplay[3]=8` +  // Grupo Técnico (Nome)
-        `&range=0-1000`,
+        `&forcedisplay[4]=1` +  // Título (name)
+        `&forcedisplay[5]=15` + // Data de Abertura (date)
+        `&forcedisplay[6]=19` + // Data de Modificação (date_mod)
+        `&range=0-3000`,
         {
           headers: {
             "App-Token": GLPI_APP_TOKEN,
@@ -1850,6 +1854,14 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
         
         const contagemTecnicos = {}; // id -> { nome, count }
         const contagemPessoas = {};  // id -> { nome, count }
+        const chamadosAntigosList = [];
+        const now = new Date();
+        const statusMap = {
+          1: "Novo",
+          2: "Em andamento",
+          3: "Planejado",
+          4: "Pendente"
+        };
         
         tickets.forEach(ticket => {
           const rawTech = ticket["5"];
@@ -1859,6 +1871,50 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
           const grupoNome = String(ticket["8"] || "");
           
           const pessoaNome = typeof usersMap[pessoaId] === "string" ? usersMap[pessoaId] : null;
+
+          // Se for chamado em aberto (diferente de Solucionado [5] e Fechado [6])
+          if (statusVal === 1 || statusVal === 2 || statusVal === 3 || statusVal === 4 || (statusVal !== 5 && statusVal !== 6)) {
+            const ticketId = String(ticket["2"] || ticket.id || "");
+            const rawTitulo = ticket["1"] || ticket["name"] || "";
+            const titulo = typeof rawTitulo === "string" && rawTitulo.trim() ? rawTitulo.trim() : `Chamado #${ticketId}`;
+
+            const requerente = pessoaNome || (pessoaId ? `Usuário #${pessoaId}` : "Não informado");
+
+            const tecnicoNomes = techIds
+              .map(tId => typeof usersMap[tId] === "string" ? usersMap[tId] : null)
+              .filter(Boolean);
+            const tecnico = tecnicoNomes.length > 0 ? tecnicoNomes.join(", ") : "Não atribuído";
+
+            const statusText = statusMap[statusVal] || "Em aberto";
+
+            const dateAberturaStr = ticket["15"] || ticket["16"] || ticket["17"] || "";
+            const dateModStr = ticket["19"] || dateAberturaStr;
+
+            let dateAbertura = dateAberturaStr ? new Date(dateAberturaStr.replace(" ", "T")) : new Date();
+            let dateMod = dateModStr ? new Date(dateModStr.replace(" ", "T")) : dateAbertura;
+
+            if (isNaN(dateAbertura.getTime())) dateAbertura = new Date();
+            if (isNaN(dateMod.getTime())) dateMod = dateAbertura;
+
+            const diffAbertoMs = Math.max(0, now.getTime() - dateAbertura.getTime());
+            const diasAberto = Math.floor(diffAbertoMs / (1000 * 60 * 60 * 24));
+
+            const diffModMs = Math.max(0, now.getTime() - dateMod.getTime());
+            const diasSemInteracao = Math.floor(diffModMs / (1000 * 60 * 60 * 24));
+
+            chamadosAntigosList.push({
+              id: ticketId,
+              titulo,
+              requerente,
+              tecnico,
+              status: statusText,
+              statusCode: statusVal,
+              dataAbertura: dateAberturaStr,
+              diasAberto,
+              dataModificacao: dateModStr,
+              diasSemInteracao
+            });
+          }
           
           if (statusVal === 6) {
             techIds.forEach(tecnicoId => {
@@ -1892,9 +1948,10 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
             }
           }
         });
+
+        chamadosAntigos = chamadosAntigosList.sort((a, b) => b.diasAberto - a.diasAberto);
         
         // Buscar chamados fechados do mês atual e do ano atual para o ranking mensal/anual
-        const now = new Date();
         const currentYear = now.getFullYear();
         const currentMonth = now.getMonth(); // 0 - 11
         const padNum = (n) => String(n).padStart(2, '0');
@@ -1907,14 +1964,24 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
         
         const contagemTecnicosMes = {};
         const contagemTecnicosAno = {};
+        const contagemSolucionadosGeral = {};
+        const contagemSolucionadosAno = {};
+        const contagemSolucionadosMes = {};
         let abertosMes = 0;
         let fechadosMes = 0;
         let abertosAno = 0;
         let fechadosAno = 0;
         let abertosGeral = 0;
+        let solucionadosAnoGlob = 0;
+        let solucionadosMesGlob = 0;
+
+        const historicoMensal = {
+          abertos: Array(12).fill(0),
+          concluidos: Array(12).fill(0)
+        };
 
         try {
-          const [ticketsMesRes, ticketsAnoRes, abertosMesRes, abertosAnoRes, abertosGeralRes] = await Promise.all([
+          const [ticketsMesRes, ticketsAnoRes, ticketsSolucionadosRes, abertosMesRes, abertosAnoRes, abertosGeralRes] = await Promise.all([
             fetch(
               `${GLPI_API_URL}/search/Ticket?sort=17&order=DESC` +
               `&forcedisplay[0]=5&forcedisplay[1]=12&forcedisplay[2]=17&forcedisplay[3]=16&forcedisplay[4]=15` +
@@ -1922,12 +1989,7 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
               `&criteria[1][link]=AND&criteria[1][field]=17&criteria[1][searchtype]=morethan&criteria[1][value]=${encodeURIComponent(firstDayOfMonth)}` +
               `&criteria[2][link]=AND&criteria[2][field]=17&criteria[2][searchtype]=lessthan&criteria[2][value]=${encodeURIComponent(lastDayOfMonth)}` +
               `&range=0-1000`,
-              {
-                headers: {
-                  "App-Token": GLPI_APP_TOKEN,
-                  "Session-Token": sessionToken
-                }
-              }
+              { headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken } }
             ),
             fetch(
               `${GLPI_API_URL}/search/Ticket?sort=17&order=DESC` +
@@ -1935,44 +1997,31 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
               `&criteria[0][field]=12&criteria[0][searchtype]=equals&criteria[0][value]=6` +
               `&criteria[1][link]=AND&criteria[1][field]=17&criteria[1][searchtype]=morethan&criteria[1][value]=${encodeURIComponent(firstDayOfYear)}` +
               `&criteria[2][link]=AND&criteria[2][field]=17&criteria[2][searchtype]=lessthan&criteria[2][value]=${encodeURIComponent(lastDayOfYear)}` +
+              `&range=0-5000`,
+              { headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken } }
+            ),
+            fetch(
+              `${GLPI_API_URL}/search/Ticket?sort=15&order=DESC` +
+              `&forcedisplay[0]=5&forcedisplay[1]=12&forcedisplay[2]=17&forcedisplay[3]=16&forcedisplay[4]=15` +
+              `&criteria[0][field]=12&criteria[0][searchtype]=equals&criteria[0][value]=5` +
               `&range=0-1000`,
-              {
-                headers: {
-                  "App-Token": GLPI_APP_TOKEN,
-                  "Session-Token": sessionToken
-                }
-              }
+              { headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken } }
             ),
             fetch(
               `${GLPI_API_URL}/search/Ticket?criteria[0][field]=15&criteria[0][searchtype]=morethan&criteria[0][value]=${encodeURIComponent(firstDayOfMonth)}` +
               `&criteria[1][link]=AND&criteria[1][field]=15&criteria[1][searchtype]=lessthan&criteria[1][value]=${encodeURIComponent(lastDayOfMonth)}` +
               `&range=0-1`,
-              {
-                headers: {
-                  "App-Token": GLPI_APP_TOKEN,
-                  "Session-Token": sessionToken
-                }
-              }
+              { headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken } }
             ),
             fetch(
               `${GLPI_API_URL}/search/Ticket?criteria[0][field]=15&criteria[0][searchtype]=morethan&criteria[0][value]=${encodeURIComponent(firstDayOfYear)}` +
               `&criteria[1][link]=AND&criteria[1][field]=15&criteria[1][searchtype]=lessthan&criteria[1][value]=${encodeURIComponent(lastDayOfYear)}` +
-              `&range=0-1`,
-              {
-                headers: {
-                  "App-Token": GLPI_APP_TOKEN,
-                  "Session-Token": sessionToken
-                }
-              }
+              `&forcedisplay[0]=15&range=0-5000`,
+              { headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken } }
             ),
             fetch(
               `${GLPI_API_URL}/search/Ticket?range=0-1`,
-              {
-                headers: {
-                  "App-Token": GLPI_APP_TOKEN,
-                  "Session-Token": sessionToken
-                }
-              }
+              { headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken } }
             )
           ]);
 
@@ -1983,6 +2032,18 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
           if (abertosAnoRes && abertosAnoRes.ok) {
             const data = await abertosAnoRes.json();
             abertosAno = data.totalcount || 0;
+            (data.data || []).forEach(t => {
+              const dateStr = t["15"] || "";
+              if (dateStr) {
+                const parts = dateStr.split(" ")[0].split("-");
+                if (parts.length === 3) {
+                  const m = parseInt(parts[1], 10) - 1; // 0-based month
+                  if (m >= 0 && m <= 11) {
+                    historicoMensal.abertos[m]++;
+                  }
+                }
+              }
+            });
           }
           if (abertosGeralRes && abertosGeralRes.ok) {
             const data = await abertosGeralRes.json();
@@ -1991,18 +2052,7 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
 
           if (ticketsMesRes.ok) {
             const dataMes = await ticketsMesRes.json();
-            fechadosMes = dataMes.totalcount || 0;
             (dataMes.data || []).forEach(t => {
-              const dateStr = t["17"] || t["16"] || t["15"] || "";
-              if (dateStr) {
-                const parts = dateStr.split(" ")[0].split("-");
-                if (parts.length === 3) {
-                  const y = parseInt(parts[0], 10);
-                  const m = parseInt(parts[1], 10);
-                  if (y !== currentYear || m !== (currentMonth + 1)) return;
-                }
-              }
-
               const rawTech = t["5"];
               const techIds = Array.isArray(rawTech) ? rawTech.map(String) : [String(rawTech || "")];
 
@@ -2023,25 +2073,27 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
 
           if (ticketsAnoRes.ok) {
             const dataAno = await ticketsAnoRes.json();
-            fechadosAno = dataAno.totalcount || 0;
             (dataAno.data || []).forEach(t => {
+              let y = null, m = null;
               const dateStr = t["17"] || t["16"] || t["15"] || "";
               if (dateStr) {
                 const parts = dateStr.split(" ")[0].split("-");
                 if (parts.length === 3) {
-                  const y = parseInt(parts[0], 10);
-                  if (y !== currentYear) return;
+                  y = parseInt(parts[0], 10);
+                  m = parseInt(parts[1], 10) - 1;
                 }
               }
 
               const rawTech = t["5"];
               const techIds = Array.isArray(rawTech) ? rawTech.map(String) : [String(rawTech || "")];
+              let hasTITech = false;
 
               techIds.forEach(techId => {
                 if (techId && usersMap[techId]) {
                   const name = usersMap[techId];
                   const lowerName = name.toLowerCase().trim();
                   if (lowerName !== "infraestrutura" && lowerName !== "sistemas" && lowerName !== "infra/sistemas") {
+                    hasTITech = true;
                     if (!contagemTecnicosAno[techId]) {
                       contagemTecnicosAno[techId] = { nome: name, count: 0 };
                     }
@@ -2049,17 +2101,59 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
                   }
                 }
               });
+
+              if (hasTITech && y === currentYear && m !== null && m >= 0 && m <= 11) {
+                historicoMensal.concluidos[m]++;
+              }
+            });
+          }
+
+          if (ticketsSolucionadosRes && ticketsSolucionadosRes.ok) {
+            const data = await ticketsSolucionadosRes.json();
+            const ticketsSol = data.data || [];
+
+            ticketsSol.forEach(t => {
+              let ticketYear = null;
+              let ticketMonth = null;
+              const dateStr = t["16"] || t["15"] || t["17"] || "";
+              
+              if (dateStr) {
+                const parts = dateStr.split(" ")[0].split("-");
+                if (parts.length === 3) {
+                  ticketYear = parseInt(parts[0], 10);
+                  ticketMonth = parseInt(parts[1], 10);
+                }
+              }
+
+              const rawTech = t["5"];
+              const techIds = Array.isArray(rawTech) ? rawTech.map(String) : [String(rawTech || "")];
+              let hasTITech = false;
+
+              techIds.forEach(techId => {
+                if (techId && usersMap[techId]) {
+                  const name = usersMap[techId];
+                  const lowerName = name.toLowerCase().trim();
+                  if (lowerName !== "infraestrutura" && lowerName !== "sistemas" && lowerName !== "infra/sistemas") {
+                    hasTITech = true;
+                    contagemSolucionadosGeral[techId] = (contagemSolucionadosGeral[techId] || 0) + 1;
+                    if (ticketYear === currentYear) {
+                      contagemSolucionadosAno[techId] = (contagemSolucionadosAno[techId] || 0) + 1;
+                    }
+                    if (ticketYear === currentYear && ticketMonth === (currentMonth + 1)) {
+                      contagemSolucionadosMes[techId] = (contagemSolucionadosMes[techId] || 0) + 1;
+                    }
+                  }
+                }
+              });
+
+              if (hasTITech && ticketYear === currentYear && ticketMonth !== null && (ticketMonth - 1) >= 0 && (ticketMonth - 1) <= 11) {
+                historicoMensal.concluidos[ticketMonth - 1]++;
+              }
             });
           }
         } catch (err) {
           console.error("[GLPI] Erro ao buscar chamados do mês/ano para técnicos:", err.message);
         }
-
-        statusCounts.abertosMes = abertosMes;
-        statusCounts.fechadosMes = fechadosMes;
-        statusCounts.abertosAno = abertosAno;
-        statusCounts.fechadosAno = fechadosAno;
-        statusCounts.abertosGeral = abertosGeral;
 
         const allTechIds = Array.from(new Set([
           ...Object.keys(contagemTecnicos),
@@ -2070,22 +2164,20 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
         tecnicosList = await Promise.all(
           allTechIds.map(async (techId) => {
             const nome = contagemTecnicos[techId]?.nome || contagemTecnicosMes[techId]?.nome || contagemTecnicosAno[techId]?.nome || `User ${techId}`;
-            let totalResolvidos = 0;
-            let resolvidosAno = 0;
-            let resolvidosMes = 0;
+            let fechadosGeral = 0;
+            let fechadosAno = 0;
+            let fechadosMes = 0;
+            let solucionadosGeral = contagemSolucionadosGeral[techId] || 0;
+            let solucionadosAno = contagemSolucionadosAno[techId] || 0;
+            let solucionadosMes = contagemSolucionadosMes[techId] || 0;
 
             try {
-              const [countTotalRes, countAnoRes, countMesRes] = await Promise.all([
+              const [countTotalRes, countAnoRes, countMesRes, countSolGeralRes, countSolAnoRes, countSolMesRes] = await Promise.all([
                 fetch(
                   `${GLPI_API_URL}/search/Ticket?criteria[0][field]=5&criteria[0][searchtype]=equals&criteria[0][value]=${techId}` +
                   `&criteria[1][link]=AND&criteria[1][field]=12&criteria[1][searchtype]=equals&criteria[1][value]=6` +
                   `&range=0-1`,
-                  {
-                    headers: {
-                      "App-Token": GLPI_APP_TOKEN,
-                      "Session-Token": sessionToken
-                    }
-                  }
+                  { headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken } }
                 ),
                 fetch(
                   `${GLPI_API_URL}/search/Ticket?criteria[0][field]=5&criteria[0][searchtype]=equals&criteria[0][value]=${techId}` +
@@ -2093,12 +2185,7 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
                   `&criteria[2][link]=AND&criteria[2][field]=17&criteria[2][searchtype]=morethan&criteria[2][value]=${encodeURIComponent(firstDayOfYear)}` +
                   `&criteria[3][link]=AND&criteria[3][field]=17&criteria[3][searchtype]=lessthan&criteria[3][value]=${encodeURIComponent(lastDayOfYear)}` +
                   `&range=0-1`,
-                  {
-                    headers: {
-                      "App-Token": GLPI_APP_TOKEN,
-                      "Session-Token": sessionToken
-                    }
-                  }
+                  { headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken } }
                 ),
                 fetch(
                   `${GLPI_API_URL}/search/Ticket?criteria[0][field]=5&criteria[0][searchtype]=equals&criteria[0][value]=${techId}` +
@@ -2106,30 +2193,64 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
                   `&criteria[2][link]=AND&criteria[2][field]=17&criteria[2][searchtype]=morethan&criteria[2][value]=${encodeURIComponent(firstDayOfMonth)}` +
                   `&criteria[3][link]=AND&criteria[3][field]=17&criteria[3][searchtype]=lessthan&criteria[3][value]=${encodeURIComponent(lastDayOfMonth)}` +
                   `&range=0-1`,
-                  {
-                    headers: {
-                      "App-Token": GLPI_APP_TOKEN,
-                      "Session-Token": sessionToken
-                    }
-                  }
+                  { headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken } }
+                ),
+                fetch(
+                  `${GLPI_API_URL}/search/Ticket?criteria[0][field]=5&criteria[0][searchtype]=equals&criteria[0][value]=${techId}` +
+                  `&criteria[1][link]=AND&criteria[1][field]=12&criteria[1][searchtype]=equals&criteria[1][value]=5` +
+                  `&range=0-1`,
+                  { headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken } }
+                ),
+                fetch(
+                  `${GLPI_API_URL}/search/Ticket?criteria[0][field]=5&criteria[0][searchtype]=equals&criteria[0][value]=${techId}` +
+                  `&criteria[1][link]=AND&criteria[1][field]=12&criteria[1][searchtype]=equals&criteria[1][value]=5` +
+                  `&criteria[2][link]=AND&criteria[2][field]=15&criteria[2][searchtype]=morethan&criteria[2][value]=${encodeURIComponent(firstDayOfYear)}` +
+                  `&criteria[3][link]=AND&criteria[3][field]=15&criteria[3][searchtype]=lessthan&criteria[3][value]=${encodeURIComponent(lastDayOfYear)}` +
+                  `&range=0-1`,
+                  { headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken } }
+                ),
+                fetch(
+                  `${GLPI_API_URL}/search/Ticket?criteria[0][field]=5&criteria[0][searchtype]=equals&criteria[0][value]=${techId}` +
+                  `&criteria[1][link]=AND&criteria[1][field]=12&criteria[1][searchtype]=equals&criteria[1][value]=5` +
+                  `&criteria[2][link]=AND&criteria[2][field]=15&criteria[2][searchtype]=morethan&criteria[2][value]=${encodeURIComponent(firstDayOfMonth)}` +
+                  `&criteria[3][link]=AND&criteria[3][field]=15&criteria[3][searchtype]=lessthan&criteria[3][value]=${encodeURIComponent(lastDayOfMonth)}` +
+                  `&range=0-1`,
+                  { headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken } }
                 )
               ]);
 
               if (countTotalRes.ok) {
                 const countData = await countTotalRes.json();
-                totalResolvidos = countData.totalcount || 0;
+                fechadosGeral = countData.totalcount || 0;
               }
               if (countAnoRes.ok) {
                 const countAnoData = await countAnoRes.json();
-                resolvidosAno = countAnoData.totalcount || 0;
+                fechadosAno = countAnoData.totalcount || 0;
               }
               if (countMesRes.ok) {
                 const countMesData = await countMesRes.json();
-                resolvidosMes = countMesData.totalcount || 0;
+                fechadosMes = countMesData.totalcount || 0;
+              }
+
+              if (countSolGeralRes.ok) {
+                const countSolData = await countSolGeralRes.json();
+                solucionadosGeral = Math.max(solucionadosGeral, countSolData.totalcount || 0);
+              }
+              if (countSolAnoRes.ok) {
+                const countSolAnoData = await countSolAnoRes.json();
+                solucionadosAno = Math.max(solucionadosAno, countSolAnoData.totalcount || 0);
+              }
+              if (countSolMesRes.ok) {
+                const countSolMesData = await countSolMesRes.json();
+                solucionadosMes = Math.max(solucionadosMes, countSolMesData.totalcount || 0);
               }
             } catch (err) {
               console.error(`[GLPI] Erro ao buscar métricas de chamados para técnico ${nome}:`, err.message);
             }
+
+            const totalResolvidos = fechadosGeral + solucionadosGeral;
+            const resolvidosAno = fechadosAno + solucionadosAno;
+            const resolvidosMes = fechadosMes + solucionadosMes;
 
             return {
               id: nome.toLowerCase().replace(/\s+/g, '-'),
@@ -2139,10 +2260,30 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
               role: "Técnico de Suporte",
               resolvidos: totalResolvidos,
               resolvidosMes: resolvidosMes,
-              resolvidosAno: resolvidosAno
+              resolvidosAno: resolvidosAno,
+              fechadosGeral,
+              fechadosAno,
+              fechadosMes,
+              solucionadosGeral,
+              solucionadosAno,
+              solucionadosMes
             };
           })
         );
+
+        const totalFechadosMesTI = tecnicosList.reduce((sum, t) => sum + (t.fechadosMes || 0), 0);
+        const totalSolucionadosMesTI = tecnicosList.reduce((sum, t) => sum + (t.solucionadosMes || 0), 0);
+        const totalFechadosAnoTI = tecnicosList.reduce((sum, t) => sum + (t.fechadosAno || 0), 0);
+        const totalSolucionadosAnoTI = tecnicosList.reduce((sum, t) => sum + (t.solucionadosAno || 0), 0);
+
+        statusCounts.abertosMes = abertosMes;
+        statusCounts.fechadosMes = totalFechadosMesTI || fechadosMes;
+        statusCounts.abertosAno = abertosAno;
+        statusCounts.fechadosAno = totalFechadosAnoTI || fechadosAno;
+        statusCounts.solucionadosAno = totalSolucionadosAnoTI || solucionadosAnoGlob;
+        statusCounts.solucionadosMes = totalSolucionadosMesTI || solucionadosMesGlob;
+        statusCounts.abertosGeral = abertosGeral;
+        statusCounts.historicoMensal = historicoMensal;
         tecnicosList.sort((a, b) => b.resolvidosMes - a.resolvidosMes || b.resolvidosAno - a.resolvidosAno || b.resolvidos - a.resolvidos);
           
         const top15PessoasRaw = Object.entries(contagemPessoas)
@@ -2269,7 +2410,8 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
       tecnicos: tecnicosList,
       pessoas: pessoasList,
       totalComputadores,
-      totalImpressoras: totalImpressorasGlpi
+      totalImpressoras: totalImpressorasGlpi,
+      chamadosAntigos
     });
   } catch (error) {
     next(error);
