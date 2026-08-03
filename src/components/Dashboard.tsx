@@ -79,6 +79,18 @@ const PRESET_COLORS = [
   { name: "Cinza", value: "#9ca3af" },
 ];
 
+const formatNomeComInicial = (nomeCompleto: string) => {
+  if (!nomeCompleto) return "";
+  const partes = nomeCompleto.trim().split(/\s+/);
+  if (partes.length === 1) return partes[0];
+  let idx = 1;
+  const preps = ["de", "da", "do", "dos", "das"];
+  if (preps.includes(partes[idx].toLowerCase()) && partes.length > 2) {
+    idx = 2;
+  }
+  return `${partes[0]} ${partes[idx][0].toUpperCase()}.`;
+};
+
 export default function Dashboard() {
   const [currentTime, setCurrentTime] = useState<string>("");
 
@@ -797,6 +809,19 @@ export default function Dashboard() {
   // Top 3 Técnicos de TI (Puxado diretamente do Ranking TI)
   const top3Tecnicos = rankingTITecnicos.slice(0, 3);
 
+  // Top 3 Integrantes da TI que mais resolveram chamados no ano
+  const top3TecnicosAno = [...tecnicosExibidos]
+    .map((tech) => {
+      const valAno = tech.resolvidosAno ?? (
+        tech.fechadosAno != null || tech.solucionadosAno != null
+          ? (tech.fechadosAno || 0) + (tech.solucionadosAno || 0)
+          : (tech.resolvidos ?? 0)
+      );
+      return { ...tech, valAno };
+    })
+    .sort((a, b) => b.valAno - a.valAno)
+    .slice(0, 3);
+
   const totalSemSolucaoTI = Math.max(0, (kpis.novos || 0) + (kpis.atribuidos || 0) + (kpis.pendentes || 0));
 
   // Chamados sem interação há 30 dias ou mais (1 mês ou mais)
@@ -1218,11 +1243,25 @@ export default function Dashboard() {
           <div className="premium-kpi-card glass-orange">
             <div className="kpi-icon-wrap">👨‍💻</div>
             <div className="kpi-content">
-              <span className="kpi-label">Top 3 Técnicos (Ranking TI)</span>
+              <span className="kpi-label">Chamados no Mês Atual</span>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
                 {top3Tecnicos.length > 0 ? top3Tecnicos.map((t, idx) => (
                   <span key={idx} style={{ color: '#f8fafc', fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem' }}>{idx + 1}º</span> {t.nome.split(" ")[0]} <small style={{ color: '#94a3b8', fontSize: '0.85rem', fontWeight: 500 }}>({t.val || 0})</small>
+                    <span style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem' }}>{idx + 1}º</span> {formatNomeComInicial(t.nome)} <small style={{ color: '#94a3b8', fontSize: '0.85rem', fontWeight: 500 }}>({t.val || 0})</small>
+                  </span>
+                )) : <span className="kpi-value">Nenhum</span>}
+              </div>
+            </div>
+          </div>
+
+          <div className="premium-kpi-card glass-amber">
+            <div className="kpi-icon-wrap">🏆</div>
+            <div className="kpi-content">
+              <span className="kpi-label">Chamados no Ano</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
+                {top3TecnicosAno.length > 0 ? top3TecnicosAno.map((t, idx) => (
+                  <span key={idx} style={{ color: '#f8fafc', fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem' }}>{idx + 1}º</span> {formatNomeComInicial(t.nome)} <small style={{ color: '#94a3b8', fontSize: '0.85rem', fontWeight: 500 }}>({t.valAno || 0})</small>
                   </span>
                 )) : <span className="kpi-value">Nenhum</span>}
               </div>

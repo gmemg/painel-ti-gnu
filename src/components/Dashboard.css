@@ -2317,6 +2317,10 @@ html[data-theme="light"] .db-tab-group {
 .glass-orange .kpi-icon-wrap { background: rgba(249, 115, 22, 0.1); color: #f97316; }
 .glass-orange:hover { box-shadow: 0 10px 20px -10px rgba(249, 115, 22, 0.3); border-color: rgba(249, 115, 22, 0.3); }
 
+.glass-amber { border-left: 4px solid #f59e0b; }
+.glass-amber .kpi-icon-wrap { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+.glass-amber:hover { box-shadow: 0 10px 20px -10px rgba(245, 158, 11, 0.3); border-color: rgba(245, 158, 11, 0.3); }
+
 .glass-purple { border-left: 4px solid #a855f7; }
 .glass-purple .kpi-icon-wrap { background: rgba(168, 85, 247, 0.1); color: #a855f7; }
 .glass-purple:hover { box-shadow: 0 10px 20px -10px rgba(168, 85, 247, 0.3); border-color: rgba(168, 85, 247, 0.3); }
