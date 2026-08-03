@@ -91,6 +91,27 @@ const formatNomeComInicial = (nomeCompleto: string) => {
   return `${partes[0]} ${partes[idx][0].toUpperCase()}.`;
 };
 
+const renderTrofeuIcon = (idx: number) => {
+  const cores = [
+    "#fbbf24", // Ouro
+    "#cbd5e1", // Prata
+    "#d97706", // Bronze
+  ];
+  const color = cores[idx] || "#94a3b8";
+
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill={color}
+      style={{ flexShrink: 0 }}
+    >
+      <path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94A5.01 5.01 0 0 0 11 15.9V18H8v2h8v-2h-3v-2.1c2.08-.43 3.69-2.07 3.97-4.16C19.33 11.45 21 9.4 21 7V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z" />
+    </svg>
+  );
+};
+
 export default function Dashboard() {
   const [currentTime, setCurrentTime] = useState<string>("");
 
@@ -784,7 +805,9 @@ export default function Dashboard() {
 
   const chamadosFechadosMesTI = Math.max(0, kpis.fechadosMes || 0);
   const chamadosSolucionadosMesTI = Math.max(0, kpis.solucionadosMes || 0);
-  const totalChamadosMesTI = chamadosFechadosMesTI;
+  const totalChamadosMesTI = chamadosFechadosMesTI + chamadosSolucionadosMesTI;
+  const nomeMesAtual = new Date().toLocaleDateString("pt-BR", { month: "long" });
+  const nomeMesCapitalizado = nomeMesAtual.charAt(0).toUpperCase() + nomeMesAtual.slice(1);
 
   // Usa as estatísticas globais do ano (ou geral se o usuário não quiser filtrar por ano, mas as variáveis do backend são fechados/solucionados)
   const totalFechadosAnoTI = Math.max(0, kpis.fechados ?? kpis.fechadosAno ?? 0);
@@ -1229,8 +1252,7 @@ export default function Dashboard() {
         {/* Informações da TI Redesenhadas em Grid Responsivo */}
         <div className="premium-kpi-grid">
           <div className="premium-kpi-card glass-blue">
-            <div className="kpi-icon-wrap">💻</div>
-            <div className="kpi-content">
+            <div className="kpi-content" style={{ width: '100%' }}>
               <span className="kpi-label">Total Chamados TI</span>
               <span className="kpi-value">{carregandoGlpi ? "..." : totalChamadosAnoTI} <small>atendimentos</small></span>
               <div style={{ display: 'flex', gap: '8px', fontSize: '0.82rem', marginTop: '4px', fontWeight: 600 }}>
@@ -1241,13 +1263,12 @@ export default function Dashboard() {
           </div>
 
           <div className="premium-kpi-card glass-orange">
-            <div className="kpi-icon-wrap">👨‍💻</div>
-            <div className="kpi-content">
+            <div className="kpi-content" style={{ width: '100%' }}>
               <span className="kpi-label">Chamados no Mês Atual</span>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
                 {top3Tecnicos.length > 0 ? top3Tecnicos.map((t, idx) => (
                   <span key={idx} style={{ color: '#f8fafc', fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem' }}>{idx + 1}º</span> {formatNomeComInicial(t.nome)} <small style={{ color: '#94a3b8', fontSize: '0.85rem', fontWeight: 500 }}>({t.val || 0})</small>
+                    {renderTrofeuIcon(idx)} {formatNomeComInicial(t.nome)} <small style={{ color: '#94a3b8', fontSize: '0.85rem', fontWeight: 500 }}>({t.val || 0})</small>
                   </span>
                 )) : <span className="kpi-value">Nenhum</span>}
               </div>
@@ -1255,13 +1276,12 @@ export default function Dashboard() {
           </div>
 
           <div className="premium-kpi-card glass-amber">
-            <div className="kpi-icon-wrap">🏆</div>
-            <div className="kpi-content">
+            <div className="kpi-content" style={{ width: '100%' }}>
               <span className="kpi-label">Chamados no Ano</span>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
                 {top3TecnicosAno.length > 0 ? top3TecnicosAno.map((t, idx) => (
                   <span key={idx} style={{ color: '#f8fafc', fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem' }}>{idx + 1}º</span> {formatNomeComInicial(t.nome)} <small style={{ color: '#94a3b8', fontSize: '0.85rem', fontWeight: 500 }}>({t.valAno || 0})</small>
+                    {renderTrofeuIcon(idx)} {formatNomeComInicial(t.nome)} <small style={{ color: '#94a3b8', fontSize: '0.85rem', fontWeight: 500 }}>({t.valAno || 0})</small>
                   </span>
                 )) : <span className="kpi-value">Nenhum</span>}
               </div>
@@ -1269,10 +1289,11 @@ export default function Dashboard() {
           </div>
 
           <div className="premium-kpi-card glass-purple">
-            <div className="kpi-icon-wrap">📅</div>
-            <div className="kpi-content">
-              <span className="kpi-label">Chamados Concluídos (Mês)</span>
-              <span className="kpi-value">{carregandoGlpi ? "..." : totalChamadosMesTI} <small>resolvidos</small></span>
+            <div className="kpi-content" style={{ width: '100%' }}>
+              <span className="kpi-label">Chamados Concluídos ({nomeMesCapitalizado})</span>
+              <span className="kpi-value" style={{ margin: '6px 0', fontSize: '1.75rem', display: 'flex', justifyContent: 'center' }}>
+                {carregandoGlpi ? "..." : totalChamadosMesTI}
+              </span>
               <div style={{ display: 'flex', gap: '8px', fontSize: '0.82rem', marginTop: '4px', fontWeight: 600 }}>
                 <span style={{ color: '#10b981' }}>Fechados: {chamadosFechadosMesTI}</span>
                 <span style={{ color: '#38bdf8' }}>Solucionados: {chamadosSolucionadosMesTI}</span>
@@ -1286,7 +1307,6 @@ export default function Dashboard() {
             title="Clique para ver os chamados sem interação há 1 mês ou mais (30+ dias)"
             style={{ cursor: "pointer" }}
           >
-            <div className="kpi-icon-wrap">💤</div>
             <div className="kpi-content" style={{ width: '100%' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span className="kpi-label">Sem Interação (+30 dias)</span>
@@ -1310,8 +1330,7 @@ export default function Dashboard() {
           </div>
 
           <div className="premium-kpi-card glass-yellow">
-            <div className="kpi-icon-wrap">⚡</div>
-            <div className="kpi-content">
+            <div className="kpi-content" style={{ width: '100%' }}>
               <span className="kpi-label">Fila Ativa da TI</span>
               <span className="kpi-value">{totalSemSolucaoTI} <small>em andamento</small></span>
             </div>
