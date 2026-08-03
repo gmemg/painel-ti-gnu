@@ -381,6 +381,7 @@ export interface ChamadoAntigo {
   diasAberto: number;
   dataModificacao: string;
   diasSemInteracao: number;
+  url?: string;
 }
 
 export interface GlpiDashboardData {

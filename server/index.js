@@ -1863,6 +1863,8 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
           4: "Pendente"
         };
         
+        const glpiBaseWebUrl = (process.env.GLPI_WEB_URL || process.env.GLPI_URL || GLPI_API_URL.replace(/\/apirest\.php\/?$/i, "")).replace(/\/$/, "");
+
         tickets.forEach(ticket => {
           const rawTech = ticket["5"];
           const techIds = Array.isArray(rawTech) ? rawTech.map(String) : [String(rawTech || "")];
@@ -1902,6 +1904,8 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
             const diffModMs = Math.max(0, now.getTime() - dateMod.getTime());
             const diasSemInteracao = Math.floor(diffModMs / (1000 * 60 * 60 * 24));
 
+            const ticketUrl = glpiBaseWebUrl ? `${glpiBaseWebUrl}/front/ticket.form.php?id=${ticketId}` : "";
+
             chamadosAntigosList.push({
               id: ticketId,
               titulo,
@@ -1912,7 +1916,8 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
               dataAbertura: dateAberturaStr,
               diasAberto,
               dataModificacao: dateModStr,
-              diasSemInteracao
+              diasSemInteracao,
+              url: ticketUrl
             });
           }
           

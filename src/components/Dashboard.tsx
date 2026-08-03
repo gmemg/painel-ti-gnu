@@ -97,7 +97,7 @@ export default function Dashboard() {
   const [totalImpressoras, setTotalImpressoras] = useState<number>(0);
   const [chamadosAntigos, setChamadosAntigos] = useState<ChamadoAntigo[]>([]);
   const [modalChamadosAntigosAberto, setModalChamadosAntigosAberto] = useState<boolean>(false);
-  const [abaModalAntigos, setAbaModalAntigos] = useState<"aberto" | "interacao">("aberto");
+  const [abaModalAntigos, setAbaModalAntigos] = useState<"interacao_30" | "todos">("interacao_30");
   const [filtroModalAntigos, setFiltroModalAntigos] = useState<string>("");
   const [filtroRankingMode, setFiltroRankingMode] = useState<"especifico" | "geral">("especifico");
   const [mesRanking, setMesRanking] = useState<number>(new Date().getMonth() + 1);
@@ -799,17 +799,20 @@ export default function Dashboard() {
 
   const totalSemSolucaoTI = Math.max(0, (kpis.novos || 0) + (kpis.atribuidos || 0) + (kpis.pendentes || 0));
 
-  const chamadoMaisAntigo = chamadosAntigos.length > 0
-    ? [...chamadosAntigos].sort((a, b) => b.diasAberto - a.diasAberto)[0]
+  // Chamados sem interação há 30 dias ou mais (1 mês ou mais)
+  const chamadosSemInteracao30Dias = chamadosAntigos.filter(
+    (c) => c.diasSemInteracao >= 30 || c.diasAberto >= 30
+  );
+
+  const chamadoPiorInteracao = chamadosSemInteracao30Dias.length > 0
+    ? [...chamadosSemInteracao30Dias].sort((a, b) => b.diasSemInteracao - a.diasSemInteracao)[0]
+    : chamadosAntigos.length > 0
+    ? [...chamadosAntigos].sort((a, b) => b.diasSemInteracao - a.diasSemInteracao)[0]
     : null;
 
-  const listaAntigosOrdenada = [...chamadosAntigos].sort((a, b) => {
-    if (abaModalAntigos === "aberto") {
-      return b.diasAberto - a.diasAberto;
-    } else {
-      return b.diasSemInteracao - a.diasSemInteracao;
-    }
-  });
+  const listaAntigosBase = abaModalAntigos === "interacao_30" ? chamadosSemInteracao30Dias : chamadosAntigos;
+
+  const listaAntigosOrdenada = [...listaAntigosBase].sort((a, b) => b.diasSemInteracao - a.diasSemInteracao);
 
   const listaAntigosFiltrada = listaAntigosOrdenada.filter((item) => {
     if (!filtroModalAntigos.trim()) return true;
@@ -1241,27 +1244,27 @@ export default function Dashboard() {
           <div
             className="premium-kpi-card glass-green clickable-kpi-card"
             onClick={() => setModalChamadosAntigosAberto(true)}
-            title="Clique para ver a lista de chamados mais antigos e sem interação"
+            title="Clique para ver os chamados sem interação há 1 mês ou mais (30+ dias)"
             style={{ cursor: "pointer" }}
           >
-            <div className="kpi-icon-wrap">⏳</div>
+            <div className="kpi-icon-wrap">💤</div>
             <div className="kpi-content" style={{ width: '100%' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span className="kpi-label">Chamado Mais Antigo</span>
+                <span className="kpi-label">Sem Interação (+30 dias)</span>
                 <span style={{ fontSize: '0.72rem', background: 'rgba(255,255,255,0.15)', padding: '2px 6px', borderRadius: '4px', color: '#34d399', fontWeight: 600 }}>
                   Ver lista ↗
                 </span>
               </div>
               <span className="kpi-value">
-                {carregandoGlpi ? "..." : (chamadoMaisAntigo ? `${chamadoMaisAntigo.diasAberto} ${chamadoMaisAntigo.diasAberto === 1 ? 'dia' : 'dias'}` : "0 dias")}
+                {carregandoGlpi ? "..." : chamadosSemInteracao30Dias.length} <small>chamados</small>
               </span>
-              {chamadoMaisAntigo ? (
+              {chamadoPiorInteracao ? (
                 <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  <span style={{ color: '#38bdf8', fontWeight: 600 }}>#{chamadoMaisAntigo.id}</span> • {chamadoMaisAntigo.titulo}
+                  <span style={{ color: '#38bdf8', fontWeight: 600 }}>#{chamadoPiorInteracao.id}</span> • {chamadoPiorInteracao.diasSemInteracao}d s/ atualização
                 </div>
               ) : (
                 <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '4px' }}>
-                  Nenhum chamado pendente
+                  Nenhum chamado há +30d s/ resposta
                 </div>
               )}
             </div>
@@ -2437,10 +2440,10 @@ export default function Dashboard() {
             <div className="db-report-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-strong)' }}>
-                  <span>⏳</span> Chamados em Aberto & Sem Interação
+                  <span>💤</span> Chamados Sem Interação (1+ Mês)
                 </h3>
                 <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  Acompanhamento dos chamados com maior tempo em aberto ou sem atualizações recentes
+                  Chamados ativos parados há mais de 30 dias sem nenhuma atualização ou resposta
                 </p>
               </div>
               <button
@@ -2459,17 +2462,17 @@ export default function Dashboard() {
                 <div className="db-tab-group" style={{ display: 'flex', gap: '0.5rem' }}>
                   <button
                     type="button"
-                    className={`db-tab-btn ${abaModalAntigos === "aberto" ? "active" : ""}`}
-                    onClick={() => setAbaModalAntigos("aberto")}
+                    className={`db-tab-btn ${abaModalAntigos === "interacao_30" ? "active" : ""}`}
+                    onClick={() => setAbaModalAntigos("interacao_30")}
                   >
-                    ⏳ Mais Antigos ({chamadosAntigos.length})
+                    💤 Sem Interação (+30 dias) ({chamadosSemInteracao30Dias.length})
                   </button>
                   <button
                     type="button"
-                    className={`db-tab-btn ${abaModalAntigos === "interacao" ? "active" : ""}`}
-                    onClick={() => setAbaModalAntigos("interacao")}
+                    className={`db-tab-btn ${abaModalAntigos === "todos" ? "active" : ""}`}
+                    onClick={() => setAbaModalAntigos("todos")}
                   >
-                    💤 Sem Interação
+                    ⏳ Todos da Fila ({chamadosAntigos.length})
                   </button>
                 </div>
 
@@ -2499,19 +2502,34 @@ export default function Dashboard() {
                         <th style={{ padding: '10px 14px' }}>Técnico</th>
                         <th style={{ padding: '10px 14px' }}>Status</th>
                         <th style={{ padding: '10px 14px' }}>
-                          {abaModalAntigos === "aberto" ? "Tempo em Aberto" : "Tempo sem Atualizar"}
+                          {abaModalAntigos === "todos" ? "Tempo em Aberto" : "Tempo sem Atualizar"}
                         </th>
+                        <th style={{ padding: '10px 14px', textAlign: 'center' }}>Ação</th>
                       </tr>
                     </thead>
                     <tbody>
                       {listaAntigosFiltrada.map((item) => {
-                        const valorDias = abaModalAntigos === "aberto" ? item.diasAberto : item.diasSemInteracao;
-                        const corBadge = valorDias > 15 ? '#ef4444' : valorDias > 7 ? '#f97316' : '#eab308';
-                        const bgBadge = valorDias > 15 ? 'rgba(239, 68, 68, 0.18)' : valorDias > 7 ? 'rgba(249, 115, 22, 0.18)' : 'rgba(234, 179, 8, 0.18)';
+                        const valorDias = item.diasSemInteracao;
+                        const corBadge = valorDias > 30 ? '#ef4444' : valorDias > 15 ? '#f97316' : '#eab308';
+                        const bgBadge = valorDias > 30 ? 'rgba(239, 68, 68, 0.18)' : valorDias > 15 ? 'rgba(249, 115, 22, 0.18)' : 'rgba(234, 179, 8, 0.18)';
 
                         return (
                           <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                            <td style={{ padding: '10px 14px', fontWeight: 700, color: '#38bdf8' }}>#{item.id}</td>
+                            <td style={{ padding: '10px 14px', fontWeight: 700, color: '#38bdf8' }}>
+                              {item.url ? (
+                                <a
+                                  href={item.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{ color: '#38bdf8', textDecoration: 'none' }}
+                                  title="Abrir no GLPI"
+                                >
+                                  #{item.id}
+                                </a>
+                              ) : (
+                                `#${item.id}`
+                              )}
+                            </td>
                             <td style={{ padding: '10px 14px', color: 'var(--text-strong)', maxWidth: '280px' }}>
                               <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={item.titulo}>
                                 {item.titulo}
@@ -2528,6 +2546,40 @@ export default function Dashboard() {
                               <span style={{ fontSize: '0.82rem', fontWeight: 700, padding: '3px 9px', borderRadius: '12px', color: corBadge, backgroundColor: bgBadge, display: 'inline-block' }}>
                                 {valorDias} {valorDias === 1 ? 'dia' : 'dias'}
                               </span>
+                            </td>
+                            <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                              {item.url ? (
+                                <a
+                                  href={item.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    textDecoration: 'none',
+                                    padding: '5px 12px',
+                                    fontSize: '0.8rem',
+                                    background: 'rgba(56, 189, 248, 0.15)',
+                                    color: '#38bdf8',
+                                    border: '1px solid rgba(56, 189, 248, 0.35)',
+                                    borderRadius: '6px',
+                                    fontWeight: 600,
+                                    whiteSpace: 'nowrap',
+                                    transition: 'all 0.2s ease'
+                                  }}
+                                  title={`Abrir chamado #${item.id} no GLPI`}
+                                >
+                                  <span>Abrir no GLPI</span>
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13">
+                                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" strokeLinecap="round" strokeLinejoin="round" />
+                                    <polyline points="15 3 21 3 21 9" strokeLinecap="round" strokeLinejoin="round" />
+                                    <line x1="10" y1="14" x2="21" y2="3" strokeLinecap="round" strokeLinejoin="round" />
+                                  </svg>
+                                </a>
+                              ) : (
+                                <span style={{ color: '#64748b', fontSize: '0.8rem' }}>-</span>
+                              )}
                             </td>
                           </tr>
                         );
