@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   reconcileEventosAutomaticos,
   getHistorico,
@@ -148,7 +148,13 @@ export default function Dashboard() {
   const [anoAbertos, setAnoAbertos] = useState<number>(new Date().getFullYear());
   const [totalAbertosMes, setTotalAbertosMes] = useState<number | null>(null);
   const [chamadosAbertosLista, setChamadosAbertosLista] = useState<ChamadoAbertoMes[]>([]);
+  const [listaRequerentesApi, setListaRequerentesApi] = useState<{ id: string; nome: string; count: number }[]>([]);
+  const [listaTecnicosApi, setListaTecnicosApi] = useState<{ id: string; nome: string; count: number }[]>([]);
+
   const [filtroChamadosAbertos, setFiltroChamadosAbertos] = useState<string>("");
+  const [filtroRequerente, setFiltroRequerente] = useState<string>("");
+  const [filtroTecnico, setFiltroTecnico] = useState<string>("");
+  const [filtroStatus, setFiltroStatus] = useState<string>("");
 
   const [carregandoGlpi, setCarregandoGlpi] = useState<boolean>(true);
   const [progressoGlpi, setProgressoGlpi] = useState<number>(0);
@@ -545,9 +551,13 @@ export default function Dashboard() {
         if (data && typeof data.totalAbertosMes === "number") {
           setTotalAbertosMes(data.totalAbertosMes);
           setChamadosAbertosLista(data.chamadosAbertosMes || []);
+          setListaRequerentesApi(data.requerentesAbertosMes || []);
+          setListaTecnicosApi(data.tecnicos || []);
         } else {
           setTotalAbertosMes(0);
           setChamadosAbertosLista([]);
+          setListaRequerentesApi([]);
+          setListaTecnicosApi([]);
         }
         setProgressoAbertos(100);
         setTimeout(() => setCarregandoAbertos(false), 250);
@@ -809,6 +819,67 @@ export default function Dashboard() {
   const nomeMesAtual = new Date().toLocaleDateString("pt-BR", { month: "long" });
   const nomeMesCapitalizado = nomeMesAtual.charAt(0).toUpperCase() + nomeMesAtual.slice(1);
 
+  // Requerentes ordenados por quem mais abriu chamados no mês selecionado
+  const requerentesOrdenados = useMemo(() => {
+    if (listaRequerentesApi && listaRequerentesApi.length > 0) {
+      return [...listaRequerentesApi]
+        .filter((r) => r.nome)
+        .map((r) => ({ nome: r.nome, count: r.count }))
+        .sort((a, b) => b.count - a.count);
+    }
+    const counts: Record<string, number> = {};
+    chamadosAbertosLista.forEach((c) => {
+      if (c.requerente && c.requerente !== "Não informado") {
+        counts[c.requerente] = (counts[c.requerente] || 0) + 1;
+      }
+    });
+    return Object.entries(counts)
+      .map(([nome, count]) => ({ nome, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [listaRequerentesApi, chamadosAbertosLista]);
+
+  // Técnicos ordenados por quem mais resolveu chamados no mês selecionado (incluindo todos do Ranking TI)
+  const tecnicosOrdenados = useMemo(() => {
+    const apiCountsMap: Record<string, number> = {};
+    if (listaTecnicosApi && listaTecnicosApi.length > 0) {
+      listaTecnicosApi.forEach((t) => {
+        if (t.nome) {
+          apiCountsMap[t.nome.toLowerCase().trim()] = t.count;
+        }
+      });
+    }
+
+    const techMap: Map<string, { nome: string; count: number }> = new Map();
+
+    // Inclui obrigatoriamente TODOS os técnicos exibidos no Ranking TI
+    tecnicosExibidos.forEach((t) => {
+      if (t.nome) {
+        const key = t.nome.toLowerCase().trim();
+        const count = apiCountsMap[key] ?? 0;
+        techMap.set(key, { nome: t.nome, count });
+      }
+    });
+
+    // Inclui quaisquer outros técnicos retornados pela API de relatórios
+    if (listaTecnicosApi && listaTecnicosApi.length > 0) {
+      listaTecnicosApi.forEach((t) => {
+        if (t.nome) {
+          const key = t.nome.toLowerCase().trim();
+          if (!techMap.has(key)) {
+            techMap.set(key, { nome: t.nome, count: t.count });
+          }
+        }
+      });
+    }
+
+    return Array.from(techMap.values()).sort((a, b) => {
+      if (b.count !== a.count) {
+        return b.count - a.count;
+      }
+      return a.nome.localeCompare(b.nome, "pt-BR");
+    });
+  }, [tecnicosExibidos, listaTecnicosApi]);
+
   const STATUS_ORDER: Record<string, number> = {
     "Novo": 1,
     "Atribuído": 2,
@@ -820,15 +891,30 @@ export default function Dashboard() {
 
   const chamadosAbertosFiltrados = chamadosAbertosLista
     .filter((item) => {
-      if (!filtroChamadosAbertos.trim()) return true;
-      const query = filtroChamadosAbertos.toLowerCase();
-      return (
-        item.id.toLowerCase().includes(query) ||
-        (item.requerente && item.requerente.toLowerCase().includes(query)) ||
-        (item.tecnico && item.tecnico.toLowerCase().includes(query)) ||
-        (item.status && item.status.toLowerCase().includes(query)) ||
-        (item.titulo && item.titulo.toLowerCase().includes(query))
-      );
+      // Filtro específico por Requerente
+      if (filtroRequerente && !item.requerente.toLowerCase().includes(filtroRequerente.toLowerCase())) {
+        return false;
+      }
+      // Filtro específico por Técnico
+      if (filtroTecnico && !item.tecnico.toLowerCase().includes(filtroTecnico.toLowerCase())) {
+        return false;
+      }
+      // Filtro específico por Status
+      if (filtroStatus && item.status.toLowerCase() !== filtroStatus.toLowerCase()) {
+        return false;
+      }
+      // Filtro geral por busca textual
+      if (filtroChamadosAbertos.trim()) {
+        const query = filtroChamadosAbertos.toLowerCase();
+        const match =
+          item.id.toLowerCase().includes(query) ||
+          (item.requerente && item.requerente.toLowerCase().includes(query)) ||
+          (item.tecnico && item.tecnico.toLowerCase().includes(query)) ||
+          (item.status && item.status.toLowerCase().includes(query)) ||
+          (item.titulo && item.titulo.toLowerCase().includes(query));
+        if (!match) return false;
+      }
+      return true;
     })
     .sort((a, b) => {
       const weightA = STATUS_ORDER[a.status?.trim()] ?? 99;
@@ -1627,29 +1713,46 @@ export default function Dashboard() {
                       {chamadosAbertosFiltrados.length} {chamadosAbertosFiltrados.length === 1 ? "item" : "itens"}
                     </span>
                   </div>
-                  <div className="db-abertos-search-wrap">
-                    <input
-                      type="text"
-                      className="db-abertos-search-input"
-                      placeholder="Buscar por ID, requerente, técnico ou status..."
-                      value={filtroChamadosAbertos}
-                      onChange={(e) => setFiltroChamadosAbertos(e.target.value)}
-                    />
-                    {filtroChamadosAbertos && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                    {(filtroRequerente || filtroTecnico || filtroStatus || filtroChamadosAbertos) && (
                       <button
                         type="button"
-                        className="db-abertos-search-clear"
-                        onClick={() => setFiltroChamadosAbertos("")}
+                        className="db-btn-clear-filters"
+                        onClick={() => {
+                          setFiltroRequerente("");
+                          setFiltroTecnico("");
+                          setFiltroStatus("");
+                          setFiltroChamadosAbertos("");
+                        }}
+                        title="Limpar todos os filtros ativos"
                       >
-                        ✕
+                        Limpar Filtros ✕
                       </button>
                     )}
+                    <div className="db-abertos-search-wrap">
+                      <input
+                        type="text"
+                        className="db-abertos-search-input"
+                        placeholder="Buscar por ID, requerente, técnico ou status..."
+                        value={filtroChamadosAbertos}
+                        onChange={(e) => setFiltroChamadosAbertos(e.target.value)}
+                      />
+                      {filtroChamadosAbertos && (
+                        <button
+                          type="button"
+                          className="db-abertos-search-clear"
+                          onClick={() => setFiltroChamadosAbertos("")}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
 
                 {chamadosAbertosFiltrados.length === 0 ? (
                   <div className="db-widget-empty" style={{ padding: "2rem 1rem" }}>
-                    Nenhum chamado aberto encontrado{filtroChamadosAbertos ? " para o termo buscado" : " neste mês"}.
+                    Nenhum chamado aberto encontrado{(filtroRequerente || filtroTecnico || filtroStatus || filtroChamadosAbertos) ? " para os filtros selecionados" : " neste mês"}.
                   </div>
                 ) : (
                   <div className="db-abertos-table-wrapper">
@@ -1659,9 +1762,64 @@ export default function Dashboard() {
                           <th style={{ width: "45px", textAlign: "center" }}>#</th>
                           <th style={{ width: "90px" }}>ID</th>
                           <th>Título</th>
-                          <th>Requerente</th>
-                          <th>Técnico</th>
-                          <th style={{ width: "130px", textAlign: "center" }}>Status</th>
+                          <th>
+                            <div className="th-filter-header">
+                              <span>Requerente</span>
+                              <select
+                                className={`th-select-header ${filtroRequerente ? "active" : ""}`}
+                                value={filtroRequerente}
+                                onChange={(e) => setFiltroRequerente(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                title="Filtrar por Requerente (ordem de quem mais abriu)"
+                              >
+                                <option value="">Todos</option>
+                                {requerentesOrdenados.map((r, idx) => (
+                                  <option key={idx} value={r.nome}>
+                                    {idx + 1}. {r.nome} ({r.count} abertos)
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </th>
+                          <th>
+                            <div className="th-filter-header">
+                              <span>Técnico</span>
+                              <select
+                                className={`th-select-header ${filtroTecnico ? "active" : ""}`}
+                                value={filtroTecnico}
+                                onChange={(e) => setFiltroTecnico(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                title="Filtrar por Técnico (ordem de quem mais resolveu)"
+                              >
+                                <option value="">Todos</option>
+                                {tecnicosOrdenados.map((t, idx) => (
+                                  <option key={idx} value={t.nome}>
+                                    {idx + 1}. {t.nome} ({t.count} resolvidos)
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </th>
+                          <th style={{ width: "140px", textAlign: "center" }}>
+                            <div className="th-filter-header" style={{ justifyContent: "center" }}>
+                              <span>Status</span>
+                              <select
+                                className={`th-select-header ${filtroStatus ? "active" : ""}`}
+                                value={filtroStatus}
+                                onChange={(e) => setFiltroStatus(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                title="Filtrar por Status"
+                              >
+                                <option value="">Todos</option>
+                                <option value="Novo">Novo</option>
+                                <option value="Atribuído">Atribuído</option>
+                                <option value="Planejado">Planejado</option>
+                                <option value="Pendente">Pendente</option>
+                                <option value="Solucionado">Solucionado</option>
+                                <option value="Fechado">Fechado</option>
+                              </select>
+                            </div>
+                          </th>
                         </tr>
                       </thead>
                       <tbody>

@@ -2662,3 +2662,58 @@ html[data-theme="light"] .db-tab-group {
   color: #9ca3af;
   border: 1px solid rgba(156, 163, 175, 0.3);
 }
+
+/* Seletores de filtro nos cabeçalhos da tabela */
+.th-filter-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.th-select-header {
+  background: rgba(15, 23, 42, 0.8);
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  max-width: 140px;
+  transition: all 0.2s ease;
+}
+
+.th-select-header:hover {
+  border-color: #38bdf8;
+  color: #f1f5f9;
+}
+
+.th-select-header.active {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+.th-select-header option {
+  background: #0f172a;
+  color: #f1f5f9;
+  font-weight: 500;
+}
+
+.db-btn-clear-filters {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.db-btn-clear-filters:hover {
+  background: rgba(239, 68, 68, 0.22);
+  border-color: rgba(239, 68, 68, 0.4);
+}
