@@ -2665,20 +2665,21 @@ html[data-theme="light"] .db-tab-group {
   border: 1px solid rgba(156, 163, 175, 0.3);
 }
 
-/* Badge indicando que o chamado foi criado em outro mês */
-.db-badge-outro-mes {
-  display: inline-flex;
-  align-items: center;
-  padding: 1px 6px;
-  font-size: 0.68rem;
+/* Rótulo com o mês/ano de abertura do chamado (ex: "Jul/2026") logo abaixo do ID */
+.db-ticket-mes-abertura {
+  display: inline-block;
+  font-size: 0.72rem;
   font-weight: 700;
-  border-radius: 4px;
-  background: rgba(245, 158, 11, 0.18);
-  color: #f59e0b;
-  border: 1px solid rgba(245, 158, 11, 0.4);
+  line-height: 1.1;
   letter-spacing: 0.2px;
-  white-space: nowrap;
-  line-height: 1.2;
+}
+
+.db-ticket-mes-abertura.mesmo-mes {
+  color: #34d399; /* Verde se for do mês selecionado */
+}
+
+.db-ticket-mes-abertura.outro-mes {
+  color: #facc15; /* Amarelo se for de outro mês */
 }
 
 /* Seletores de filtro nos cabeçalhos da tabela */

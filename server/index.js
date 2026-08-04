@@ -2614,14 +2614,24 @@ const getMesAnoLabel = (dateStr) => {
   if (clean.includes("-")) {
     const parts = clean.split("-");
     if (parts.length === 3) {
-      year = parts[0];
-      month = parseInt(parts[1], 10);
+      if (parts[0].length === 4) {
+        year = parts[0];
+        month = parseInt(parts[1], 10);
+      } else if (parts[2].length === 4) {
+        year = parts[2];
+        month = parseInt(parts[1], 10);
+      }
     }
   } else if (clean.includes("/")) {
     const parts = clean.split("/");
     if (parts.length === 3) {
-      year = parts[2];
-      month = parseInt(parts[1], 10);
+      if (parts[2].length === 4) {
+        year = parts[2];
+        month = parseInt(parts[1], 10);
+      } else if (parts[0].length === 4) {
+        year = parts[0];
+        month = parseInt(parts[1], 10);
+      }
     }
   }
   if (year && month >= 1 && month <= 12) {
@@ -2899,7 +2909,7 @@ app.get("/api/glpi/relatorio", async (req, res, next) => {
 
     // Busca chamados fechados no período
     const searchUrl = `${GLPI_API_URL}/search/Ticket?sort=17&order=DESC` +
-      `&forcedisplay[0]=4&forcedisplay[1]=5&forcedisplay[2]=12` +
+      `&forcedisplay[0]=1&forcedisplay[1]=2&forcedisplay[2]=4&forcedisplay[3]=5&forcedisplay[4]=12&forcedisplay[5]=15&forcedisplay[6]=17` +
       `&criteria[0][field]=12&criteria[0][searchtype]=equals&criteria[0][value]=6` +
       dateCriteria + `&range=0-1000`;
 

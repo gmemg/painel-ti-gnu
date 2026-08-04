@@ -124,6 +124,82 @@ const renderTrofeuIcon = (idx: number) => {
   );
 };
 
+const getMesAnoAberturaTag = (item: { mesAnoAbertura?: string; dataAbertura?: string }) => {
+  if (item.mesAnoAbertura) return item.mesAnoAbertura;
+  if (!item.dataAbertura) return null;
+  const clean = item.dataAbertura.trim().split(" ")[0].split("T")[0];
+  let year: string | undefined, month: number | undefined;
+  if (clean.includes("-")) {
+    const parts = clean.split("-");
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        year = parts[0];
+        month = parseInt(parts[1], 10);
+      } else if (parts[2].length === 4) {
+        year = parts[2];
+        month = parseInt(parts[1], 10);
+      }
+    }
+  } else if (clean.includes("/")) {
+    const parts = clean.split("/");
+    if (parts.length === 3) {
+      if (parts[2].length === 4) {
+        year = parts[2];
+        month = parseInt(parts[1], 10);
+      } else if (parts[0].length === 4) {
+        year = parts[0];
+        month = parseInt(parts[1], 10);
+      }
+    }
+  }
+  if (year && month && month >= 1 && month <= 12) {
+    const shortMonths = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    return `${shortMonths[month - 1]}/${year}`;
+  }
+  return null;
+};
+
+const isMesIgual = (
+  item: { mesAnoAbertura?: string; dataAbertura?: string; criadoOutroMes?: boolean },
+  targetMes: number,
+  targetAno: number
+): boolean => {
+  if (typeof item.criadoOutroMes === "boolean") {
+    return !item.criadoOutroMes;
+  }
+  const dateStr = item.dataAbertura || "";
+  if (!dateStr) return true;
+  const clean = dateStr.trim().split(" ")[0].split("T")[0];
+  let year: number | undefined, month: number | undefined;
+  if (clean.includes("-")) {
+    const parts = clean.split("-");
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        year = parseInt(parts[0], 10);
+        month = parseInt(parts[1], 10);
+      } else if (parts[2].length === 4) {
+        year = parseInt(parts[2], 10);
+        month = parseInt(parts[1], 10);
+      }
+    }
+  } else if (clean.includes("/")) {
+    const parts = clean.split("/");
+    if (parts.length === 3) {
+      if (parts[2].length === 4) {
+        year = parseInt(parts[2], 10);
+        month = parseInt(parts[1], 10);
+      } else if (parts[0].length === 4) {
+        year = parseInt(parts[0], 10);
+        month = parseInt(parts[1], 10);
+      }
+    }
+  }
+  if (year && month) {
+    return year === targetAno && month === targetMes;
+  }
+  return true;
+};
+
 export default function Dashboard() {
   const [currentTime, setCurrentTime] = useState<string>("");
 
@@ -1830,17 +1906,21 @@ export default function Dashboard() {
                       <tbody>
                         {chamadosAbertosFiltrados.map((item, index) => {
                           const statusClass = item.status.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "-");
+                          const isSame = isMesIgual(item, mesAbertos, anoAbertos);
                           return (
                             <tr key={item.id}>
                               <td className="td-index" style={{ textAlign: "center" }}>
                                 {index + 1}.
                               </td>
                               <td className="td-id">
-                                <div style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
-                                  <span>#{item.id}</span>
-                                  {item.criadoOutroMes && item.mesAnoAbertura && (
-                                    <span className="db-badge-outro-mes" title={`Chamado criado em ${item.mesAnoAbertura}`}>
-                                      {item.mesAnoAbertura}
+                                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2px" }}>
+                                  <span style={{ fontWeight: 700 }}>#{item.id}</span>
+                                  {getMesAnoAberturaTag(item) && (
+                                    <span
+                                      className={`db-ticket-mes-abertura ${isSame ? "mesmo-mes" : "outro-mes"}`}
+                                      title={`Chamado criado em ${getMesAnoAberturaTag(item)}`}
+                                    >
+                                      {getMesAnoAberturaTag(item)}
                                     </span>
                                   )}
                                 </div>
@@ -2434,18 +2514,23 @@ export default function Dashboard() {
                                       </tr>
                                     </thead>
                                     <tbody>
-                                      {chamadosFiltrados.map((c) => (
-                                        <tr key={c.id}>
-                                          <td>
-                                            <div style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
-                                              <span className="db-ticket-id">#{c.id}</span>
-                                              {c.criadoOutroMes && c.mesAnoAbertura && (
-                                                <span className="db-badge-outro-mes" title={`Chamado criado em ${c.dataAbertura || c.mesAnoAbertura}`}>
-                                                  {c.mesAnoAbertura}
-                                                </span>
-                                              )}
-                                            </div>
-                                          </td>
+                                      {chamadosFiltrados.map((c) => {
+                                        const isSame = isMesIgual(c, m.mes, anoDetalhes);
+                                        return (
+                                          <tr key={c.id}>
+                                            <td>
+                                              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2px" }}>
+                                                <span className="db-ticket-id">#{c.id}</span>
+                                                {getMesAnoAberturaTag(c) && (
+                                                  <span
+                                                    className={`db-ticket-mes-abertura ${isSame ? "mesmo-mes" : "outro-mes"}`}
+                                                    title={`Chamado criado em ${c.dataAbertura || getMesAnoAberturaTag(c)}`}
+                                                  >
+                                                    {getMesAnoAberturaTag(c)}
+                                                  </span>
+                                                )}
+                                              </div>
+                                            </td>
                                           <td>
                                             <span className="db-ticket-title">{c.titulo}</span>
                                           </td>
@@ -2455,9 +2540,10 @@ export default function Dashboard() {
                                           <td style={{ textAlign: "right" }}>
                                             <span className="db-ticket-date">{c.dataFechamento || "-"}</span>
                                           </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
+                                         </tr>
+                                       );
+                                     })}
+                                   </tbody>
                                   </table>
                                 </div>
                               )}
