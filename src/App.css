@@ -374,6 +374,8 @@ html[data-theme="light"] .theme-toggle:hover {
   flex: 1;
   padding: 2rem 2.5rem 2.5rem;
   transition: margin-left 0.28s ease;
+  overflow-x: auto;
+  min-width: 0;
 }
 
 .app-body.nav-open .main-content {

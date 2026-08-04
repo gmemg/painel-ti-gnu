@@ -58,6 +58,10 @@ interface ChamadoAbertoMes {
   requerente: string;
   tecnico: string;
   status: string;
+  dataAbertura?: string;
+  dataFechamento?: string;
+  mesAnoAbertura?: string;
+  criadoOutroMes?: boolean;
 }
 
 const DEFAULT_COLORS: Record<string, string> = {
@@ -911,7 +915,8 @@ export default function Dashboard() {
           (item.requerente && item.requerente.toLowerCase().includes(query)) ||
           (item.tecnico && item.tecnico.toLowerCase().includes(query)) ||
           (item.status && item.status.toLowerCase().includes(query)) ||
-          (item.titulo && item.titulo.toLowerCase().includes(query));
+          (item.titulo && item.titulo.toLowerCase().includes(query)) ||
+          (item.mesAnoAbertura && item.mesAnoAbertura.toLowerCase().includes(query));
         if (!match) return false;
       }
       return true;
@@ -1830,7 +1835,16 @@ export default function Dashboard() {
                               <td className="td-index" style={{ textAlign: "center" }}>
                                 {index + 1}.
                               </td>
-                              <td className="td-id">#{item.id}</td>
+                              <td className="td-id">
+                                <div style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
+                                  <span>#{item.id}</span>
+                                  {item.criadoOutroMes && item.mesAnoAbertura && (
+                                    <span className="db-badge-outro-mes" title={`Chamado criado em ${item.mesAnoAbertura}`}>
+                                      {item.mesAnoAbertura}
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
                               <td className="td-titulo" title={item.titulo}>
                                 {item.titulo || "-"}
                               </td>
@@ -2367,7 +2381,8 @@ export default function Dashboard() {
                         return (
                           c.id.toLowerCase().includes(q) ||
                           c.titulo.toLowerCase().includes(q) ||
-                          c.requerente.toLowerCase().includes(q)
+                          c.requerente.toLowerCase().includes(q) ||
+                          (c.mesAnoAbertura && c.mesAnoAbertura.toLowerCase().includes(q))
                         );
                       });
 
@@ -2422,7 +2437,14 @@ export default function Dashboard() {
                                       {chamadosFiltrados.map((c) => (
                                         <tr key={c.id}>
                                           <td>
-                                            <span className="db-ticket-id">#{c.id}</span>
+                                            <div style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
+                                              <span className="db-ticket-id">#{c.id}</span>
+                                              {c.criadoOutroMes && c.mesAnoAbertura && (
+                                                <span className="db-badge-outro-mes" title={`Chamado criado em ${c.dataAbertura || c.mesAnoAbertura}`}>
+                                                  {c.mesAnoAbertura}
+                                                </span>
+                                              )}
+                                            </div>
                                           </td>
                                           <td>
                                             <span className="db-ticket-title">{c.titulo}</span>

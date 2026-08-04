@@ -1,5 +1,7 @@
 .db-container {
   width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
   animation: dbFadeIn 0.3s ease-out;
 }
 
@@ -2661,6 +2663,22 @@ html[data-theme="light"] .db-tab-group {
   background: rgba(156, 163, 175, 0.15);
   color: #9ca3af;
   border: 1px solid rgba(156, 163, 175, 0.3);
+}
+
+/* Badge indicando que o chamado foi criado em outro mês */
+.db-badge-outro-mes {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  border-radius: 4px;
+  background: rgba(245, 158, 11, 0.18);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  line-height: 1.2;
 }
 
 /* Seletores de filtro nos cabeçalhos da tabela */

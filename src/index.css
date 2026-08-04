@@ -12,7 +12,7 @@ html {
 
 html,
 body {
-  overflow-x: clip;
+  overflow-x: auto;
   max-width: 100%;
 }
 

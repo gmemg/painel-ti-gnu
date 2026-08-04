@@ -2606,6 +2606,31 @@ app.get("/api/glpi/usuarios-busca", async (req, res, next) => {
   }
 });
 
+// Helper para obter rótulo reduzido "Mês/Ano" de abertura (ex: "Jul/2026")
+const getMesAnoLabel = (dateStr) => {
+  if (!dateStr) return null;
+  const clean = String(dateStr).trim().split(" ")[0].split("T")[0];
+  let year, month;
+  if (clean.includes("-")) {
+    const parts = clean.split("-");
+    if (parts.length === 3) {
+      year = parts[0];
+      month = parseInt(parts[1], 10);
+    }
+  } else if (clean.includes("/")) {
+    const parts = clean.split("/");
+    if (parts.length === 3) {
+      year = parts[2];
+      month = parseInt(parts[1], 10);
+    }
+  }
+  if (year && month >= 1 && month <= 12) {
+    const shortMonths = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    return `${shortMonths[month - 1]}/${year}`;
+  }
+  return null;
+};
+
 // Endpoint para obter o detalhamento mensal de chamados concluídos por um técnico em determinado ano
 app.get("/api/glpi/tecnico-detalhes", async (req, res, next) => {
   let sessionToken = null;
@@ -2745,13 +2770,28 @@ app.get("/api/glpi/tecnico-detalhes", async (req, res, next) => {
             return `${d}/${m}/${y}${t ? ` às ${t}` : ""}`;
           };
 
+          const mesAnoAbertura = getMesAnoLabel(dataAberturaRaw);
+          let criadoOutroMes = false;
+          if (dataAberturaRaw) {
+            const parts = dataAberturaRaw.split(" ")[0].split("-");
+            if (parts.length === 3) {
+              const y = parseInt(parts[0], 10);
+              const m = parseInt(parts[1], 10);
+              if (y !== ano || m !== (mesIndex + 1)) {
+                criadoOutroMes = true;
+              }
+            }
+          }
+
           meses[mesIndex].chamados.push({
             id: ticketId,
             titulo: titulo,
             requerente: requerenteNome,
             dataAbertura: formatData(dataAberturaRaw),
             dataFechamento: formatData(dataFechamentoRaw),
-            status: "Fechado"
+            status: "Fechado",
+            mesAnoAbertura: mesAnoAbertura,
+            criadoOutroMes: criadoOutroMes
           });
           meses[mesIndex].total += 1;
           totalAno += 1;
@@ -2935,9 +2975,18 @@ app.get("/api/glpi/relatorio", async (req, res, next) => {
     };
 
     try {
+      const formatData = (raw) => {
+        if (!raw) return "";
+        const [datePart, timePart] = raw.split(" ");
+        if (!datePart) return raw;
+        const [y, m, d] = datePart.split("-");
+        const t = timePart ? timePart.substring(0, 5) : "";
+        return `${d}/${m}/${y}${t ? ` às ${t}` : ""}`;
+      };
+
       // Chamadas sequenciais para evitar concorrência/lock na API do GLPI
       const abertosMesRes = await fetch(
-        `${GLPI_API_URL}/search/Ticket?forcedisplay[0]=1&forcedisplay[1]=2&forcedisplay[2]=4&forcedisplay[3]=5&forcedisplay[4]=12&forcedisplay[5]=15` +
+        `${GLPI_API_URL}/search/Ticket?forcedisplay[0]=1&forcedisplay[1]=2&forcedisplay[2]=4&forcedisplay[3]=5&forcedisplay[4]=12&forcedisplay[5]=15&forcedisplay[6]=17` +
         `&criteria[0][field]=15&criteria[0][searchtype]=morethan&criteria[0][value]=${encodeURIComponent(startMes)}` +
         `&criteria[1][link]=AND&criteria[1][field]=15&criteria[1][searchtype]=lessthan&criteria[1][value]=${encodeURIComponent(endMes)}` +
         `&range=0-1000`,
@@ -2956,12 +3005,14 @@ app.get("/api/glpi/relatorio", async (req, res, next) => {
         { headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken } }
       );
 
+      const chamadosMap = new Map();
+
       if (abertosMesRes.ok) {
         const dataMes = await abertosMesRes.json();
         totalAbertosMes = dataMes.totalcount || 0;
         const ticketsMes = dataMes.data || [];
         
-        chamadosAbertosMes = ticketsMes.map(t => {
+        ticketsMes.forEach(t => {
           let rawId = t["2"];
           let rawName = t["1"] || "";
           if (isNaN(parseInt(rawId, 10)) && !isNaN(parseInt(rawName, 10))) {
@@ -2985,24 +3036,104 @@ app.get("/api/glpi/relatorio", async (req, res, next) => {
           const statusRaw = t["12"];
           const status = getStatusLabel(statusRaw);
 
+          const dataAberturaRaw = t["15"] || "";
+          const dataFechamentoRaw = t["17"] || t["16"] || "";
+          const mesAnoAbertura = getMesAnoLabel(dataAberturaRaw);
+
+          let criadoOutroMes = false;
+          if (dataAberturaRaw) {
+            const parts = dataAberturaRaw.split(" ")[0].split("-");
+            if (parts.length === 3) {
+              const y = parseInt(parts[0], 10);
+              const m = parseInt(parts[1], 10);
+              if (y !== ano || m !== mes) {
+                criadoOutroMes = true;
+              }
+            }
+          }
+
           reqIds.forEach(reqId => {
             if (reqId && usersMap[reqId]) {
               reqAbertosMesCounts[reqId] = (reqAbertosMesCounts[reqId] || 0) + 1;
             }
           });
 
-          return {
+          chamadosMap.set(id, {
             id,
             titulo,
             requerente,
             tecnico,
-            status
-          };
+            status,
+            dataAbertura: formatData(dataAberturaRaw),
+            dataFechamento: formatData(dataFechamentoRaw),
+            mesAnoAbertura,
+            criadoOutroMes
+          });
         });
       } else {
         const errTxt = await abertosMesRes.text();
         console.error("[GLPI] Erro abertosMesRes:", abertosMesRes.status, errTxt);
       }
+
+      // Adiciona também chamados fechados no mês (do searchUrl/tickets) que tenham sido abertos em outro mês
+      if (tickets && Array.isArray(tickets)) {
+        tickets.forEach(t => {
+          let rawId = t["2"] || t.id || "";
+          let rawName = t["1"] || "";
+          if (isNaN(parseInt(rawId, 10)) && !isNaN(parseInt(rawName, 10))) {
+            const temp = rawId;
+            rawId = rawName;
+            rawName = temp;
+          }
+          const id = String(rawId || t.id || "");
+          if (id && !chamadosMap.has(id)) {
+            const titulo = String(rawName || `Chamado #${id}`);
+
+            const rawReq = t["4"];
+            const reqIds = Array.isArray(rawReq) ? rawReq.map(String) : [String(rawReq || "")];
+            const reqNomes = reqIds.map(rid => usersMap[rid]).filter(Boolean);
+            const requerente = reqNomes.length > 0 ? reqNomes.join(", ") : "Não informado";
+
+            const rawTech = t["5"];
+            const techIds = Array.isArray(rawTech) ? rawTech.map(String) : [String(rawTech || "")];
+            const techNomes = techIds.map(tid => usersMap[tid]).filter(Boolean);
+            const tecnico = techNomes.length > 0 ? techNomes.join(", ") : "Não atribuído";
+
+            const statusRaw = t["12"] || 6;
+            const status = getStatusLabel(statusRaw);
+
+            const dataAberturaRaw = t["15"] || "";
+            const dataFechamentoRaw = t["17"] || t["16"] || "";
+            const mesAnoAbertura = getMesAnoLabel(dataAberturaRaw);
+
+            let criadoOutroMes = false;
+            if (dataAberturaRaw) {
+              const parts = dataAberturaRaw.split(" ")[0].split("-");
+              if (parts.length === 3) {
+                const y = parseInt(parts[0], 10);
+                const m = parseInt(parts[1], 10);
+                if (y !== ano || m !== mes) {
+                  criadoOutroMes = true;
+                }
+              }
+            }
+
+            chamadosMap.set(id, {
+              id,
+              titulo,
+              requerente,
+              tecnico,
+              status,
+              dataAbertura: formatData(dataAberturaRaw),
+              dataFechamento: formatData(dataFechamentoRaw),
+              mesAnoAbertura,
+              criadoOutroMes
+            });
+          }
+        });
+      }
+
+      chamadosAbertosMes = Array.from(chamadosMap.values());
 
       if (abertosAnoRes.ok) {
         const dataAno = await abertosAnoRes.json();

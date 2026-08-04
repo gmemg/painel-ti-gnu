@@ -432,6 +432,8 @@ export interface ChamadoDetalhe {
   dataAbertura?: string;
   dataFechamento?: string;
   status?: string;
+  mesAnoAbertura?: string;
+  criadoOutroMes?: boolean;
 }
 
 export interface MesDetalhes {
