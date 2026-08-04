@@ -52,6 +52,14 @@ interface Pessoa {
   cor: string;
 }
 
+interface ChamadoAbertoMes {
+  id: string;
+  titulo?: string;
+  requerente: string;
+  tecnico: string;
+  status: string;
+}
+
 const DEFAULT_COLORS: Record<string, string> = {
   novos: "#2b8ffb",
   atribuidos: "#6366f1",
@@ -125,7 +133,6 @@ export default function Dashboard() {
     fechados: 0,
   });
   const [tecnicos, setTecnicos] = useState<Tecnico[]>([]);
-  const [pessoas, setPessoas] = useState<Pessoa[]>([]);
   const [totalComputadores, setTotalComputadores] = useState<number>(0);
   const [totalImpressoras, setTotalImpressoras] = useState<number>(0);
   const [chamadosAntigos, setChamadosAntigos] = useState<ChamadoAntigo[]>([]);
@@ -137,10 +144,11 @@ export default function Dashboard() {
   const [anoRanking, setAnoRanking] = useState<number>(new Date().getFullYear());
   const [dadosRankingCustom, setDadosRankingCustom] = useState<Record<string, number> | null>(null);
 
-  const [filtroRequerenteMode, setFiltroRequerenteMode] = useState<"especifico" | "geral">("especifico");
-  const [mesRequerente, setMesRequerente] = useState<number>(new Date().getMonth() + 1);
-  const [anoRequerente, setAnoRequerente] = useState<number>(new Date().getFullYear());
-  const [dadosRequerenteCustom, setDadosRequerenteCustom] = useState<Record<string, number> | null>(null);
+  const [mesAbertos, setMesAbertos] = useState<number>(new Date().getMonth() + 1);
+  const [anoAbertos, setAnoAbertos] = useState<number>(new Date().getFullYear());
+  const [totalAbertosMes, setTotalAbertosMes] = useState<number | null>(null);
+  const [chamadosAbertosLista, setChamadosAbertosLista] = useState<ChamadoAbertoMes[]>([]);
+  const [filtroChamadosAbertos, setFiltroChamadosAbertos] = useState<string>("");
 
   const [carregandoGlpi, setCarregandoGlpi] = useState<boolean>(true);
   const [progressoGlpi, setProgressoGlpi] = useState<number>(0);
@@ -148,8 +156,8 @@ export default function Dashboard() {
   const [carregandoRanking, setCarregandoRanking] = useState<boolean>(false);
   const [progressoRanking, setProgressoRanking] = useState<number>(0);
 
-  const [carregandoRequerente, setCarregandoRequerente] = useState<boolean>(false);
-  const [progressoRequerente, setProgressoRequerente] = useState<number>(0);
+  const [carregandoAbertos, setCarregandoAbertos] = useState<boolean>(false);
+  const [progressoAbertos, setProgressoAbertos] = useState<number>(0);
 
   // Estados para Modal de Relatório PDF
   const [modalReportAberto, setModalReportAberto] = useState(false);
@@ -466,7 +474,6 @@ export default function Dashboard() {
         const data = await getGlpiDashboard();
         if (data.kpis) setKpis(data.kpis);
         if (data.tecnicos && data.tecnicos.length > 0) setTecnicos(data.tecnicos);
-        if (data.pessoas && data.pessoas.length > 0) setPessoas(data.pessoas);
         if (typeof data.totalComputadores === "number") setTotalComputadores(data.totalComputadores);
         if (typeof data.totalImpressoras === "number") setTotalImpressoras(data.totalImpressoras);
         if (data.chamadosAntigos && Array.isArray(data.chamadosAntigos)) setChamadosAntigos(data.chamadosAntigos);
@@ -523,39 +530,35 @@ export default function Dashboard() {
   }, [mesRanking, anoRanking, filtroRankingMode]);
 
   useEffect(() => {
-    if (filtroRequerenteMode === "geral") return;
-    setCarregandoRequerente(true);
-    setProgressoRequerente(20);
+    setCarregandoAbertos(true);
+    setProgressoAbertos(20);
     const progressTimer = setInterval(() => {
-      setProgressoRequerente((p) => (p < 90 ? Math.min(90, p + Math.floor(Math.random() * 12 + 6)) : p));
+      setProgressoAbertos((p) => (p < 90 ? Math.min(90, p + Math.floor(Math.random() * 12 + 6)) : p));
     }, 200);
 
     const token = getToken();
-    fetch(`/api/glpi/relatorio?tipo=mensal&mes=${mesRequerente}&ano=${anoRequerente}`, {
+    fetch(`/api/glpi/relatorio?tipo=mensal&mes=${mesAbertos}&ano=${anoAbertos}`, {
       headers: { Authorization: token ? `Bearer ${token}` : "" }
     })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data && (data.requerentesAbertosMes || data.requerentes)) {
-          const list = (data.requerentesAbertosMes && data.requerentesAbertosMes.length > 0)
-            ? data.requerentesAbertosMes
-            : data.requerentes;
-          const map: Record<string, number> = {};
-          list.forEach((p: any) => {
-            if (p.nome) map[p.nome.toLowerCase().trim()] = p.count;
-          });
-          setDadosRequerenteCustom(map);
+        if (data && typeof data.totalAbertosMes === "number") {
+          setTotalAbertosMes(data.totalAbertosMes);
+          setChamadosAbertosLista(data.chamadosAbertosMes || []);
+        } else {
+          setTotalAbertosMes(0);
+          setChamadosAbertosLista([]);
         }
-        setProgressoRequerente(100);
-        setTimeout(() => setCarregandoRequerente(false), 250);
+        setProgressoAbertos(100);
+        setTimeout(() => setCarregandoAbertos(false), 250);
       })
       .catch((err) => {
-        console.error("Erro ao filtrar requerentes por mes/ano:", err);
-        setProgressoRequerente(100);
-        setTimeout(() => setCarregandoRequerente(false), 250);
+        console.error("Erro ao buscar total de chamados abertos por mes/ano:", err);
+        setProgressoAbertos(100);
+        setTimeout(() => setCarregandoAbertos(false), 250);
       })
       .finally(() => clearInterval(progressTimer));
-  }, [mesRequerente, anoRequerente, filtroRequerenteMode]);
+  }, [mesAbertos, anoAbertos]);
 
   const renderProgressBar = (label: string, pct: number) => {
     const clampedPct = Math.min(100, Math.max(0, Math.round(pct)));
@@ -665,9 +668,6 @@ export default function Dashboard() {
     .filter((t, idx, self) => self.findIndex((x) => x.id === t.id || x.nome.toLowerCase() === t.nome.toLowerCase()) === idx)
     .filter((t) => !excluidosRanking.includes(t.id) && !excluidosRanking.includes(t.nome) && !excluidosRanking.includes(String(t.glpiId || "")));
 
-  const pessoasExibidas = [...pessoas, ...adicionadosPessoas]
-    .filter((p, idx, self) => self.findIndex((x) => x.id === p.id || x.nome.toLowerCase() === p.nome.toLowerCase()) === idx)
-    .filter((p) => !excluidosRanking.includes(p.id) && !excluidosRanking.includes(p.nome));
 
   // Lógica de Agregação de Dados EXCLUSIVA para Chamados da Equipe de TI
   const getDadosGrafico = () => {
@@ -808,7 +808,38 @@ export default function Dashboard() {
   const totalChamadosMesTI = chamadosFechadosMesTI + chamadosSolucionadosMesTI;
   const nomeMesAtual = new Date().toLocaleDateString("pt-BR", { month: "long" });
   const nomeMesCapitalizado = nomeMesAtual.charAt(0).toUpperCase() + nomeMesAtual.slice(1);
-  const totalAbertosMesRequerentes = pessoasExibidas.reduce((sum, p) => sum + (p.abertosMes ?? p.fechadosMes ?? 0), 0);
+
+  const STATUS_ORDER: Record<string, number> = {
+    "Novo": 1,
+    "Atribuído": 2,
+    "Planejado": 3,
+    "Pendente": 4,
+    "Solucionado": 5,
+    "Fechado": 6,
+  };
+
+  const chamadosAbertosFiltrados = chamadosAbertosLista
+    .filter((item) => {
+      if (!filtroChamadosAbertos.trim()) return true;
+      const query = filtroChamadosAbertos.toLowerCase();
+      return (
+        item.id.toLowerCase().includes(query) ||
+        (item.requerente && item.requerente.toLowerCase().includes(query)) ||
+        (item.tecnico && item.tecnico.toLowerCase().includes(query)) ||
+        (item.status && item.status.toLowerCase().includes(query)) ||
+        (item.titulo && item.titulo.toLowerCase().includes(query))
+      );
+    })
+    .sort((a, b) => {
+      const weightA = STATUS_ORDER[a.status?.trim()] ?? 99;
+      const weightB = STATUS_ORDER[b.status?.trim()] ?? 99;
+      if (weightA !== weightB) {
+        return weightA - weightB;
+      }
+      const numA = parseInt(a.id.replace(/\D/g, ""), 10) || 0;
+      const numB = parseInt(b.id.replace(/\D/g, ""), 10) || 0;
+      return numB - numA;
+    });
 
   // Usa as estatísticas globais do ano (ou geral se o usuário não quiser filtrar por ano, mas as variáveis do backend são fechados/solucionados)
   const totalFechadosAnoTI = Math.max(0, kpis.fechados ?? kpis.fechadosAno ?? 0);
@@ -1531,34 +1562,23 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Widget 2: Chamados por Requerente */}
+        {/* Widget 2: Total chamados abertos no mês */}
         <div className="db-tech-widget">
           <div className="db-widget-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
             <div className="db-widget-title-group">
               <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                <h3>Chamados por requerente</h3>
+                <h3>Total chamados abertos no mês</h3>
                 <span className="kpi-pill kpi-pill-cyan" style={{ fontSize: '0.78rem' }}>
-                  {totalAbertosMesRequerentes} {filtroRequerenteMode === "geral" ? "no histórico geral" : "abertos no mês"}
+                  {["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"][mesAbertos - 1]} / {anoAbertos}
                 </span>
               </div>
-              <p>
-                {filtroRequerenteMode === "geral"
-                  ? ""
-                  : ` ${["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"][mesRequerente - 1]} de ${anoRequerente} (GLPI)`}
-              </p>
+              <p>Quantidade total de chamados abertos no mês selecionado (GLPI)</p>
             </div>
             <div className="db-tab-group" style={{ display: "flex", gap: "0.4rem", alignItems: "center", flexWrap: "wrap" }}>
               <select
                 className="db-select-filtro"
-                value={filtroRequerenteMode === "geral" ? "geral" : mesRequerente}
-                onChange={(e) => {
-                  if (e.target.value === "geral") {
-                    setFiltroRequerenteMode("geral");
-                  } else {
-                    setFiltroRequerenteMode("especifico");
-                    setMesRequerente(Number(e.target.value));
-                  }
-                }}
+                value={mesAbertos}
+                onChange={(e) => setMesAbertos(Number(e.target.value))}
               >
                 <option value={1}>Janeiro</option>
                 <option value={2}>Fevereiro</option>
@@ -1572,127 +1592,131 @@ export default function Dashboard() {
                 <option value={10}>Outubro</option>
                 <option value={11}>Novembro</option>
                 <option value={12}>Dezembro</option>
-                <option value="geral">Histórico Geral</option>
               </select>
 
-              {filtroRequerenteMode !== "geral" && (
-                <select
-                  className="db-select-filtro"
-                  value={anoRequerente}
-                  onChange={(e) => setAnoRequerente(Number(e.target.value))}
-                >
-                  <option value={2024}>2024</option>
-                  <option value={2025}>2025</option>
-                  <option value={2026}>2026</option>
-                  <option value={2027}>2027</option>
-                </select>
-              )}
-              <button
-                type="button"
-                className="db-btn-add-person"
-                onClick={() => {
-                  setTipoPessoaAdd("requerente");
-                  setModalAddPessoaAberto(true);
-                }}
-                title="Adicionar pessoa ao Ranking de Requerentes"
+              <select
+                className="db-select-filtro"
+                value={anoAbertos}
+                onChange={(e) => setAnoAbertos(Number(e.target.value))}
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
-                  <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" strokeLinecap="round" strokeLinejoin="round" />
-                  <circle cx="8.5" cy="7" r="4" strokeLinecap="round" strokeLinejoin="round" />
-                  <line x1="20" y1="8" x2="20" y2="14" strokeLinecap="round" strokeLinejoin="round" />
-                  <line x1="17" y1="11" x2="23" y2="11" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-              {excluidosRanking.length > 0 && (
-                <button
-                  type="button"
-                  className="db-btn-manage-hidden"
-                  onClick={() => setModalGerenciarOcultosAberto(true)}
-                  title={`Pessoas ocultadas (${excluidosRanking.length})`}
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-                    <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  <span className="db-hidden-count-badge">{excluidosRanking.length}</span>
-                </button>
-              )}
+                <option value={2024}>2024</option>
+                <option value={2025}>2025</option>
+                <option value={2026}>2026</option>
+                <option value={2027}>2027</option>
+              </select>
             </div>
           </div>
 
-          {carregandoGlpi || carregandoRequerente ? (
-            renderProgressBar("Carregando Requerentes...", carregandoGlpi ? progressoGlpi : progressoRequerente)
-          ) : pessoasExibidas.length === 0 ? (
-            <div className="db-widget-empty">Nenhum requerente encontrado.</div>
+          {carregandoGlpi || carregandoAbertos ? (
+            renderProgressBar("Carregando total de chamados abertos...", carregandoGlpi ? progressoGlpi : progressoAbertos)
           ) : (
-            <div className="db-sector-list">
-              {[...pessoasExibidas]
-                .map((pessoa) => {
-                  let val = 0;
-                  if (filtroRequerenteMode === "geral") {
-                    val = pessoa.fechados ?? pessoa.chamados;
-                  } else if (dadosRequerenteCustom) {
-                    val = dadosRequerenteCustom[pessoa.nome.toLowerCase().trim()] ?? 0;
-                  } else {
-                    val = pessoa.abertosMes ?? pessoa.fechadosMes ?? 0;
-                  }
-                  return { ...pessoa, val };
-                })
-                .sort((a, b) => b.val - a.val)
-                .map((pessoa) => {
-                  const valorExibido = pessoa.val;
-                  const siglaMeses = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
-                  const labelExibido =
-                    filtroRequerenteMode === "geral"
-                      ? "fechados"
-                      : `abertos em ${siglaMeses[mesRequerente - 1]}/${anoRequerente}`;
-                  return (
-                    <div key={pessoa.id} className="db-sector-item">
-                      <div className="db-sector-info-row">
-                        <span className="db-sector-name">{pessoa.nome}</span>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                          <span className="db-sector-count">
-                            <strong>{valorExibido}</strong> {labelExibido}
-                          </span>
-                          <div style={{ position: "relative" }}>
-                            <button
-                              type="button"
-                              className={`db-btn-ranking-menu ${activeRankingMenuId === pessoa.id ? "active" : ""}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveRankingMenuId(activeRankingMenuId === pessoa.id ? null : pessoa.id);
-                              }}
-                              title="Opções"
-                            >
-                              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                                <circle cx="12" cy="5" r="2" />
-                                <circle cx="12" cy="12" r="2" />
-                                <circle cx="12" cy="19" r="2" />
-                              </svg>
-                            </button>
-                            {activeRankingMenuId === pessoa.id && (
-                              <div className="db-ranking-popover" onClick={(e) => e.stopPropagation()}>
-                                <button
-                                  type="button"
-                                  className="db-ranking-popover-item db-popover-danger"
-                                  onClick={() => {
-                                    ocultarDoRanking(pessoa.id);
-                                    setActiveRankingMenuId(null);
-                                  }}
-                                >
-                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-                                    <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeLinecap="round" strokeLinejoin="round" />
-                                  </svg>
-                                  Remover
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="db-sector-divider" />
-                    </div>
-                  );
-                })}
+            <div className="db-abertos-mes-container">
+              <div className="db-abertos-mes-card">
+                <div className="db-abertos-icon-wrap">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="36" height="36">
+                    <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M14 2V8H20" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M12 11V17" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M9 14H15" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+                <div className="db-abertos-content">
+                  <div className="db-abertos-number-wrap">
+                    <span className="db-abertos-number">{totalAbertosMes ?? 0}</span>
+                    <span className="db-abertos-unit">chamados abertos</span>
+                  </div>
+                  <p className="db-abertos-periodo">
+                    Registrados no sistema GLPI em <strong>{["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"][mesAbertos - 1]} de {anoAbertos}</strong>
+                  </p>
+                  <div className="db-abertos-badges">
+                    <span className="db-abertos-badge">
+                      <span className="db-pulse-dot" style={{ width: 6, height: 6 }} />
+                      Sistema GLPI
+                    </span>
+                    <span className="db-abertos-badge-sub">
+                      Mês selecionado
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Lista com os chamados do mês selecionado */}
+              <div className="db-abertos-lista-container">
+                <div className="db-abertos-lista-header">
+                  <div className="db-abertos-lista-title">
+                    <h4>Lista de Chamados Abertos ({["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"][mesAbertos - 1]})</h4>
+                    <span className="db-abertos-count-badge">
+                      {chamadosAbertosFiltrados.length} {chamadosAbertosFiltrados.length === 1 ? "item" : "itens"}
+                    </span>
+                  </div>
+                  <div className="db-abertos-search-wrap">
+                    <input
+                      type="text"
+                      className="db-abertos-search-input"
+                      placeholder="Buscar por ID, requerente, técnico ou status..."
+                      value={filtroChamadosAbertos}
+                      onChange={(e) => setFiltroChamadosAbertos(e.target.value)}
+                    />
+                    {filtroChamadosAbertos && (
+                      <button
+                        type="button"
+                        className="db-abertos-search-clear"
+                        onClick={() => setFiltroChamadosAbertos("")}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {chamadosAbertosFiltrados.length === 0 ? (
+                  <div className="db-widget-empty" style={{ padding: "2rem 1rem" }}>
+                    Nenhum chamado aberto encontrado{filtroChamadosAbertos ? " para o termo buscado" : " neste mês"}.
+                  </div>
+                ) : (
+                  <div className="db-abertos-table-wrapper">
+                    <table className="db-abertos-table">
+                      <thead>
+                        <tr>
+                          <th style={{ width: "45px", textAlign: "center" }}>#</th>
+                          <th style={{ width: "90px" }}>ID</th>
+                          <th>Título</th>
+                          <th>Requerente</th>
+                          <th>Técnico</th>
+                          <th style={{ width: "130px", textAlign: "center" }}>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {chamadosAbertosFiltrados.map((item, index) => {
+                          const statusClass = item.status.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "-");
+                          return (
+                            <tr key={item.id}>
+                              <td className="td-index" style={{ textAlign: "center" }}>
+                                {index + 1}.
+                              </td>
+                              <td className="td-id">#{item.id}</td>
+                              <td className="td-titulo" title={item.titulo}>
+                                {item.titulo || "-"}
+                              </td>
+                              <td className="td-requerente" title={item.requerente}>
+                                {item.requerente}
+                              </td>
+                              <td className="td-tecnico" title={item.tecnico}>
+                                {item.tecnico}
+                              </td>
+                              <td className="td-status" style={{ textAlign: "center" }}>
+                                <span className={`db-status-pill status-${statusClass}`}>
+                                  {item.status}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

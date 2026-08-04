@@ -2919,11 +2919,26 @@ app.get("/api/glpi/relatorio", async (req, res, next) => {
     let totalAbertosAno = 0;
     let totalAbertosGeral = 0;
     const reqAbertosMesCounts = {};
+    let chamadosAbertosMes = [];
+
+    const getStatusLabel = (code) => {
+      const c = parseInt(code, 10);
+      switch(c) {
+        case 1: return "Novo";
+        case 2: return "Atribuído";
+        case 3: return "Planejado";
+        case 4: return "Pendente";
+        case 5: return "Solucionado";
+        case 6: return "Fechado";
+        default: return String(code || "Desconhecido");
+      }
+    };
 
     try {
       // Chamadas sequenciais para evitar concorrência/lock na API do GLPI
       const abertosMesRes = await fetch(
-        `${GLPI_API_URL}/search/Ticket?forcedisplay[0]=4&criteria[0][field]=15&criteria[0][searchtype]=morethan&criteria[0][value]=${encodeURIComponent(startMes)}` +
+        `${GLPI_API_URL}/search/Ticket?forcedisplay[0]=1&forcedisplay[1]=2&forcedisplay[2]=4&forcedisplay[3]=5&forcedisplay[4]=12&forcedisplay[5]=15` +
+        `&criteria[0][field]=15&criteria[0][searchtype]=morethan&criteria[0][value]=${encodeURIComponent(startMes)}` +
         `&criteria[1][link]=AND&criteria[1][field]=15&criteria[1][searchtype]=lessthan&criteria[1][value]=${encodeURIComponent(endMes)}` +
         `&range=0-1000`,
         { headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken } }
@@ -2945,12 +2960,44 @@ app.get("/api/glpi/relatorio", async (req, res, next) => {
         const dataMes = await abertosMesRes.json();
         totalAbertosMes = dataMes.totalcount || 0;
         const ticketsMes = dataMes.data || [];
-        ticketsMes.forEach(t => {
-          const rawReq = t["4"];
-          const reqId = Array.isArray(rawReq) ? String(rawReq[0] || "") : String(rawReq || "");
-          if (reqId && usersMap[reqId]) {
-            reqAbertosMesCounts[reqId] = (reqAbertosMesCounts[reqId] || 0) + 1;
+        
+        chamadosAbertosMes = ticketsMes.map(t => {
+          let rawId = t["2"];
+          let rawName = t["1"] || "";
+          if (isNaN(parseInt(rawId, 10)) && !isNaN(parseInt(rawName, 10))) {
+            const temp = rawId;
+            rawId = rawName;
+            rawName = temp;
           }
+          const id = String(rawId || t.id || "");
+          const titulo = String(rawName || `Chamado #${id}`);
+
+          const rawReq = t["4"];
+          const reqIds = Array.isArray(rawReq) ? rawReq.map(String) : [String(rawReq || "")];
+          const reqNomes = reqIds.map(rid => usersMap[rid]).filter(Boolean);
+          const requerente = reqNomes.length > 0 ? reqNomes.join(", ") : "Não informado";
+
+          const rawTech = t["5"];
+          const techIds = Array.isArray(rawTech) ? rawTech.map(String) : [String(rawTech || "")];
+          const techNomes = techIds.map(tid => usersMap[tid]).filter(Boolean);
+          const tecnico = techNomes.length > 0 ? techNomes.join(", ") : "Não atribuído";
+
+          const statusRaw = t["12"];
+          const status = getStatusLabel(statusRaw);
+
+          reqIds.forEach(reqId => {
+            if (reqId && usersMap[reqId]) {
+              reqAbertosMesCounts[reqId] = (reqAbertosMesCounts[reqId] || 0) + 1;
+            }
+          });
+
+          return {
+            id,
+            titulo,
+            requerente,
+            tecnico,
+            status
+          };
         });
       } else {
         const errTxt = await abertosMesRes.text();
@@ -3028,7 +3075,8 @@ app.get("/api/glpi/relatorio", async (req, res, next) => {
       totalAbertosMes,
       totalAbertosAno,
       totalAbertosGeral,
-      requerentesAbertosMes
+      requerentesAbertosMes,
+      chamadosAbertosMes
     });
   } catch (error) {
     next(error);

@@ -2395,3 +2395,332 @@ html[data-theme="light"] .db-tab-group {
   box-shadow: 0 12px 24px -8px rgba(16, 185, 129, 0.4);
   border-color: rgba(52, 211, 153, 0.6);
 }
+
+/* Widget Total Chamados Abertos no Mês */
+.db-abertos-mes-container {
+  padding: 1.5rem 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.db-abertos-mes-card {
+  width: 100%;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.85) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 16px;
+  padding: 2rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.75rem;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+.db-abertos-mes-card:hover {
+  border-color: rgba(56, 189, 248, 0.5);
+  box-shadow: 0 16px 36px -10px rgba(56, 189, 248, 0.25);
+  transform: translateY(-2px);
+}
+
+.db-abertos-icon-wrap {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  color: #38bdf8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(56, 189, 248, 0.15);
+}
+
+.db-abertos-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.db-abertos-number-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.db-abertos-number {
+  font-size: 3.2rem;
+  font-weight: 800;
+  color: #38bdf8;
+  line-height: 1;
+  letter-spacing: -1px;
+  text-shadow: 0 0 20px rgba(56, 189, 248, 0.35);
+}
+
+.db-abertos-unit {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  text-transform: lowercase;
+}
+
+.db-abertos-periodo {
+  font-size: 0.92rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.db-abertos-periodo strong {
+  color: #f1f5f9;
+}
+
+.db-abertos-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.db-abertos-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  color: #38bdf8;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+.db-abertos-badge-sub {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+/* Ajustes no container de chamados abertos */
+.db-abertos-mes-container {
+  padding: 1.25rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Lista Container */
+.db-abertos-lista-container {
+  background: var(--surface-2, rgba(15, 23, 42, 0.6));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: 14px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.db-abertos-lista-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.db-abertos-lista-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.db-abertos-lista-title h4 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-strong, #f8fafc);
+  margin: 0;
+}
+
+.db-abertos-count-badge {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.db-abertos-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 240px;
+}
+
+.db-abertos-search-input {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 0.45rem 2rem 0.45rem 0.75rem;
+  font-size: 0.85rem;
+  color: var(--text-strong, #f1f5f9);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.db-abertos-search-input:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+}
+
+.db-abertos-search-clear {
+  position: absolute;
+  right: 8px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 2px 4px;
+}
+
+.db-abertos-search-clear:hover {
+  color: #f1f5f9;
+}
+
+/* Tabela */
+.db-abertos-table-wrapper {
+  max-height: 380px;
+  overflow-y: auto;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.db-abertos-table-wrapper::-webkit-scrollbar {
+  width: 6px;
+}
+
+.db-abertos-table-wrapper::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.db-abertos-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  text-align: left;
+}
+
+.db-abertos-table th {
+  position: sticky;
+  top: 0;
+  background: #0f172a;
+  color: #94a3b8;
+  font-weight: 700;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 1;
+}
+
+.db-abertos-table td {
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: #cbd5e1;
+  vertical-align: middle;
+}
+
+.db-abertos-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.db-abertos-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.db-abertos-table .td-index {
+  font-weight: 700;
+  color: #94a3b8;
+  font-size: 0.82rem;
+}
+
+.db-abertos-table .td-id {
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+.db-abertos-table .td-titulo {
+  font-weight: 500;
+  color: #f1f5f9;
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.db-abertos-table .td-requerente {
+  font-weight: 500;
+  color: #cbd5e1;
+}
+
+.db-abertos-table .td-tecnico {
+  color: #94a3b8;
+}
+
+/* Status Pills */
+.db-status-pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.status-novo {
+  background: rgba(43, 143, 251, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(43, 143, 251, 0.3);
+}
+
+.status-atribuido {
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.status-planejado {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.status-pendente {
+  background: rgba(234, 179, 8, 0.15);
+  color: #facc15;
+  border: 1px solid rgba(234, 179, 8, 0.3);
+}
+
+.status-solucionado {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status-fechado {
+  background: rgba(156, 163, 175, 0.15);
+  color: #9ca3af;
+  border: 1px solid rgba(156, 163, 175, 0.3);
+}
