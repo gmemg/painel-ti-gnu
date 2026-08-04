@@ -1612,32 +1612,10 @@ export default function Dashboard() {
           ) : (
             <div className="db-abertos-mes-container">
               <div className="db-abertos-mes-card">
-                <div className="db-abertos-icon-wrap">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="36" height="36">
-                    <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M14 2V8H20" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M12 11V17" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M9 14H15" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </div>
-                <div className="db-abertos-content">
-                  <div className="db-abertos-number-wrap">
-                    <span className="db-abertos-number">{totalAbertosMes ?? 0}</span>
-                    <span className="db-abertos-unit">chamados abertos</span>
-                  </div>
-                  <p className="db-abertos-periodo">
-                    Registrados no sistema GLPI em <strong>{["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"][mesAbertos - 1]} de {anoAbertos}</strong>
-                  </p>
-                  <div className="db-abertos-badges">
-                    <span className="db-abertos-badge">
-                      <span className="db-pulse-dot" style={{ width: 6, height: 6 }} />
-                      Sistema GLPI
-                    </span>
-                    <span className="db-abertos-badge-sub">
-                      Mês selecionado
-                    </span>
-                  </div>
-                </div>
+                <span className="db-abertos-number">{totalAbertosMes ?? 0}</span>
+                <span className="db-abertos-text">
+                  chamados abertos em <strong>{["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"][mesAbertos - 1]}</strong> de <strong>{anoAbertos}</strong>
+                </span>
               </div>
 
               {/* Lista com os chamados do mês selecionado */}
