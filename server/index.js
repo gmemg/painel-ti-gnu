@@ -1428,6 +1428,7 @@ app.put("/api/tv-config", async (req, res, next) => {
 const GLPI_API_URL = process.env.GLPI_API_URL || "";
 const GLPI_APP_TOKEN = process.env.GLPI_APP_TOKEN || "";
 const GLPI_USER_TOKEN = process.env.GLPI_USER_TOKEN || "";
+const glpiBaseWebUrl = (process.env.GLPI_WEB_URL || process.env.GLPI_URL || GLPI_API_URL.replace(/\/apirest\.php\/?$/i, "")).replace(/\/$/, "");
 
 let syncTimeoutId = null;
 let syncIntervalId = null;
@@ -2801,7 +2802,8 @@ app.get("/api/glpi/tecnico-detalhes", async (req, res, next) => {
             dataFechamento: formatData(dataFechamentoRaw),
             status: "Fechado",
             mesAnoAbertura: mesAnoAbertura,
-            criadoOutroMes: criadoOutroMes
+            criadoOutroMes: criadoOutroMes,
+            url: glpiBaseWebUrl ? `${glpiBaseWebUrl}/front/ticket.form.php?id=${ticketId}` : ""
           });
           meses[mesIndex].total += 1;
           totalAno += 1;
@@ -3077,7 +3079,8 @@ app.get("/api/glpi/relatorio", async (req, res, next) => {
             dataAbertura: formatData(dataAberturaRaw),
             dataFechamento: formatData(dataFechamentoRaw),
             mesAnoAbertura,
-            criadoOutroMes
+            criadoOutroMes,
+            url: glpiBaseWebUrl ? `${glpiBaseWebUrl}/front/ticket.form.php?id=${id}` : ""
           });
         });
       } else {
@@ -3137,7 +3140,8 @@ app.get("/api/glpi/relatorio", async (req, res, next) => {
               dataAbertura: formatData(dataAberturaRaw),
               dataFechamento: formatData(dataFechamentoRaw),
               mesAnoAbertura,
-              criadoOutroMes
+              criadoOutroMes,
+              url: glpiBaseWebUrl ? `${glpiBaseWebUrl}/front/ticket.form.php?id=${id}` : ""
             });
           }
         });

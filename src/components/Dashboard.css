@@ -2682,6 +2682,26 @@ html[data-theme="light"] .db-tab-group {
   color: #facc15; /* Amarelo se for de outro mês */
 }
 
+/* Ícone de link externo para redirecionar ao GLPI */
+.db-ticket-external-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #38bdf8;
+  opacity: 0.8;
+  transition: all 0.2s ease;
+  padding: 1px;
+  border-radius: 4px;
+  text-decoration: none;
+}
+
+.db-ticket-external-link:hover {
+  opacity: 1;
+  color: #60a5fa;
+  background: rgba(56, 189, 248, 0.18);
+  transform: scale(1.15);
+}
+
 /* Seletores de filtro nos cabeçalhos da tabela */
 .th-filter-header {
   display: flex;

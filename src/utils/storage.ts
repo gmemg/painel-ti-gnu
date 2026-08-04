@@ -434,6 +434,7 @@ export interface ChamadoDetalhe {
   status?: string;
   mesAnoAbertura?: string;
   criadoOutroMes?: boolean;
+  url?: string;
 }
 
 export interface MesDetalhes {

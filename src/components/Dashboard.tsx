@@ -62,6 +62,7 @@ interface ChamadoAbertoMes {
   dataFechamento?: string;
   mesAnoAbertura?: string;
   criadoOutroMes?: boolean;
+  url?: string;
 }
 
 const DEFAULT_COLORS: Record<string, string> = {
@@ -1919,7 +1920,36 @@ export default function Dashboard() {
                               </td>
                               <td className="td-id">
                                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2px" }}>
-                                  <span style={{ fontWeight: 700 }}>#{item.id}</span>
+                                  <div style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
+                                    {item.url ? (
+                                      <a
+                                        href={item.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{ fontWeight: 700, color: "#38bdf8", textDecoration: "none" }}
+                                        title={`Abrir chamado #${item.id} no GLPI`}
+                                      >
+                                        #{item.id}
+                                      </a>
+                                    ) : (
+                                      <span style={{ fontWeight: 700 }}>#{item.id}</span>
+                                    )}
+                                    {item.url && (
+                                      <a
+                                        href={item.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="db-ticket-external-link"
+                                        title={`Abrir chamado #${item.id} no GLPI`}
+                                      >
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13">
+                                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" strokeLinecap="round" strokeLinejoin="round" />
+                                          <polyline points="15 3 21 3 21 9" strokeLinecap="round" strokeLinejoin="round" />
+                                          <line x1="10" y1="14" x2="21" y2="3" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                      </a>
+                                    )}
+                                  </div>
                                   {getMesAnoAberturaTag(item) && (
                                     <span
                                       className={`db-ticket-mes-abertura ${isSame ? "mesmo-mes" : "outro-mes"}`}
@@ -2536,7 +2566,37 @@ export default function Dashboard() {
                                           <tr key={c.id}>
                                             <td>
                                               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2px" }}>
-                                                <span className="db-ticket-id">#{c.id}</span>
+                                                <div style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
+                                                  {c.url ? (
+                                                    <a
+                                                      href={c.url}
+                                                      target="_blank"
+                                                      rel="noopener noreferrer"
+                                                      className="db-ticket-id"
+                                                      style={{ textDecoration: "none" }}
+                                                      title={`Abrir chamado #${c.id} no GLPI`}
+                                                    >
+                                                      #{c.id}
+                                                    </a>
+                                                  ) : (
+                                                    <span className="db-ticket-id">#{c.id}</span>
+                                                  )}
+                                                  {c.url && (
+                                                    <a
+                                                      href={c.url}
+                                                      target="_blank"
+                                                      rel="noopener noreferrer"
+                                                      className="db-ticket-external-link"
+                                                      title={`Abrir chamado #${c.id} no GLPI`}
+                                                    >
+                                                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13">
+                                                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" strokeLinecap="round" strokeLinejoin="round" />
+                                                        <polyline points="15 3 21 3 21 9" strokeLinecap="round" strokeLinejoin="round" />
+                                                        <line x1="10" y1="14" x2="21" y2="3" strokeLinecap="round" strokeLinejoin="round" />
+                                                      </svg>
+                                                    </a>
+                                                  )}
+                                                </div>
                                                 {getMesAnoAberturaTag(c) && (
                                                   <span
                                                     className={`db-ticket-mes-abertura ${isSame ? "mesmo-mes" : "outro-mes"}`}
