@@ -998,6 +998,11 @@ export default function Dashboard() {
       return true;
     })
     .sort((a, b) => {
+      const isSameA = isMesIgual(a, mesAbertos, anoAbertos);
+      const isSameB = isMesIgual(b, mesAbertos, anoAbertos);
+      if (isSameA !== isSameB) {
+        return isSameA ? -1 : 1;
+      }
       const weightA = STATUS_ORDER[a.status?.trim()] ?? 99;
       const weightB = STATUS_ORDER[b.status?.trim()] ?? 99;
       if (weightA !== weightB) {
@@ -2455,16 +2460,27 @@ export default function Dashboard() {
                       const maxTotalMes = Math.max(1, ...(dadosDetalhes?.meses.map((x) => x.total) || [0]));
                       const pctBar = Math.min(100, Math.round((m.total / maxTotalMes) * 100));
 
-                      const chamadosFiltrados = m.chamados.filter((c) => {
-                        if (!buscaChamadosDetalhes) return true;
-                        const q = buscaChamadosDetalhes.toLowerCase().trim();
-                        return (
-                          c.id.toLowerCase().includes(q) ||
-                          c.titulo.toLowerCase().includes(q) ||
-                          c.requerente.toLowerCase().includes(q) ||
-                          (c.mesAnoAbertura && c.mesAnoAbertura.toLowerCase().includes(q))
-                        );
-                      });
+                      const chamadosFiltrados = m.chamados
+                        .filter((c) => {
+                          if (!buscaChamadosDetalhes) return true;
+                          const q = buscaChamadosDetalhes.toLowerCase().trim();
+                          return (
+                            c.id.toLowerCase().includes(q) ||
+                            c.titulo.toLowerCase().includes(q) ||
+                            c.requerente.toLowerCase().includes(q) ||
+                            (c.mesAnoAbertura && c.mesAnoAbertura.toLowerCase().includes(q))
+                          );
+                        })
+                        .sort((a, b) => {
+                          const isSameA = isMesIgual(a, m.mes, anoDetalhes);
+                          const isSameB = isMesIgual(b, m.mes, anoDetalhes);
+                          if (isSameA !== isSameB) {
+                            return isSameA ? -1 : 1;
+                          }
+                          const numA = parseInt(a.id.replace(/\D/g, ""), 10) || 0;
+                          const numB = parseInt(b.id.replace(/\D/g, ""), 10) || 0;
+                          return numB - numA;
+                        });
 
                       const isExpanded = buscaChamadosDetalhes.trim() !== "" ? chamadosFiltrados.length > 0 : mesExpandido === m.mes;
 
