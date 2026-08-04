@@ -73,6 +73,10 @@ export interface Impressora {
   tonerCiano: number | null;
   tonerMagenta: number | null;
   tonerAmarelo: number | null;
+  prevTonerPreto?: number | null;
+  prevTonerCiano?: number | null;
+  prevTonerMagenta?: number | null;
+  prevTonerAmarelo?: number | null;
   updatedAt: string;
 }
 

@@ -22,6 +22,7 @@ import NumeroManutencao from "./components/NumeroManutencao";
 import Login from "./components/Login";
 import GlobalSearch from "./components/GlobalSearch";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { getImpressoras, temTonerCritico } from "./utils/storage";
 import "./App.css";
 
 /**
@@ -38,6 +39,21 @@ function AppLayout() {
     () => typeof window === "undefined" || window.innerWidth > 1024,
   );
   const [menuUsuarioAberto, setMenuUsuarioAberto] = useState(false);
+  const [temAlertaImpressoras, setTemAlertaImpressoras] = useState(false);
+
+  useEffect(() => {
+    const checarImpressoras = () => {
+      getImpressoras()
+        .then((list) => {
+          setTemAlertaImpressoras(list.some(temTonerCritico));
+        })
+        .catch(() => {});
+    };
+
+    checarImpressoras();
+    const interval = setInterval(checarImpressoras, 15000);
+    return () => clearInterval(interval);
+  }, [location.pathname]);
 
   // No mobile, selecionar um item fecha o drawer.
   const fecharMenuSeMobile = () => {
@@ -286,7 +302,17 @@ function AppLayout() {
                   `side-nav-link${isActive ? " active" : ""}`
                 }
               >
-                Impressoras
+                <span>Impressoras</span>
+                {temAlertaImpressoras && (
+                  <span
+                    className="sidebar-alert-icon"
+                    title="Atenção: Existe impressora com toner em 20% ou menos!"
+                  >
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15">
+                      <path d="M12 2L1 21h22L12 2zm1 14h-2v-2h2v2zm0-4h-2V10h2v2z" />
+                    </svg>
+                  </span>
+                )}
               </NavLink>
               <NavLink
                 to="/escala-plantao"

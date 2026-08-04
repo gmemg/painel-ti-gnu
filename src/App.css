@@ -325,6 +325,33 @@ html[data-theme="light"] .theme-toggle:hover {
     border-color 0.2s ease;
   font-size: 0.875rem;
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@keyframes sidebarAlertBlink {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1.1);
+    color: #ef4444;
+    filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.9));
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.88);
+    color: #f97316;
+    filter: drop-shadow(0 0 2px rgba(249, 115, 22, 0.3));
+  }
+}
+
+.sidebar-alert-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.4rem;
+  color: #ef4444;
+  animation: sidebarAlertBlink 1s infinite ease-in-out;
 }
 
 .side-nav-link:hover {

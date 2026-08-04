@@ -9,6 +9,7 @@ import {
   importGlpiPrinter,
   getGlpiSyncStatus,
   syncGlpiPrintersNow,
+  temTonerCritico,
   GlpiPrinterAvailable,
   GlpiSyncStatus,
 } from "../utils/storage";
@@ -170,13 +171,18 @@ function gerarId(): string {
 function TonerBar({
   label,
   valor,
+  prevValor,
   cor,
 }: {
   label: string;
   valor: number;
+  prevValor?: number | null;
   cor: string;
 }) {
   const pct = Math.max(0, Math.min(100, valor));
+  const temDiff = prevValor !== undefined && prevValor !== null;
+  const diff = temDiff ? valor - prevValor! : 0;
+
   return (
     <div className="imp-toner-row">
       <span className="imp-toner-label">{label}</span>
@@ -186,7 +192,20 @@ function TonerBar({
           style={{ width: `${pct}%`, backgroundColor: cor }}
         />
       </div>
-      <span className="imp-toner-pct">{pct}%</span>
+      <div className="imp-toner-pct-wrap">
+        <span className="imp-toner-pct">{pct}%</span>
+        {diff !== 0 ? (
+          <span
+            className={`imp-toner-diff ${diff < 0 ? "imp-toner-diff-down" : "imp-toner-diff-up"}`}
+          >
+            {diff > 0 ? `(+${diff}%)` : `(${diff}%)`}
+          </span>
+        ) : (
+          <span className="imp-toner-diff imp-toner-diff-zero">
+            (0%)
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -202,12 +221,19 @@ function ImpressoraCard({
   onDelete: (id: string) => void;
   podeEditar: boolean;
 }) {
+  const eCritica = temTonerCritico(impressora);
+
   return (
-    <div className="imp-card">
+    <div className={`imp-card${eCritica ? " imp-card-critica" : ""}`}>
       <div className="imp-card-header">
         <div className="imp-card-title">
           <span className="imp-card-local">
             {impressora.local || "Sem localização"}
+            {eCritica && (
+              <span className="imp-badge imp-badge-critica" title="Toner em 20% ou menos">
+                ⚠️ Toner ≤20%
+              </span>
+            )}
             {impressora.glpiId ? (
               <span className="imp-badge imp-badge-glpi" title="Sincronizada com o GLPI a cada 6h">GLPI</span>
             ) : (
@@ -319,6 +345,8 @@ function ImpressoraCard({
           <div className="imp-toners-title">Toner</div>
           {TONERS.map(({ key, label, cor }) => {
             const hasToner = impressora[key] !== null && typeof impressora[key] !== "undefined";
+            const prevKey = ("prev" + key.charAt(0).toUpperCase() + key.slice(1)) as keyof Impressora;
+            const prevValor = impressora[prevKey] as number | null | undefined;
             return (
               <div 
                 key={key} 
@@ -330,6 +358,7 @@ function ImpressoraCard({
                 <TonerBar
                   label={label}
                   valor={hasToner ? (impressora[key] as number) : 0}
+                  prevValor={hasToner ? prevValor : null}
                   cor={cor}
                 />
               </div>
@@ -704,9 +733,22 @@ export default function Impressoras() {
     return <div className="imp-erro">{erro}</div>;
   }
 
-  const impressorasFiltradas = sedeSelecionada === "todas"
+  const impressorasBase = sedeSelecionada === "todas"
     ? impressoras
     : impressoras.filter((imp) => imp.sede === sedeSelecionada);
+
+  const impressorasFiltradas = [...impressorasBase].sort((a, b) => {
+    const aCritico = temTonerCritico(a);
+    const bCritico = temTonerCritico(b);
+    if (aCritico && !bCritico) return -1;
+    if (!aCritico && bCritico) return 1;
+    if (aCritico && bCritico) {
+      const minA = Math.min(...[a.tonerPreto, a.tonerCiano, a.tonerMagenta, a.tonerAmarelo].filter((v): v is number => v !== null && v !== undefined));
+      const minB = Math.min(...[b.tonerPreto, b.tonerCiano, b.tonerMagenta, b.tonerAmarelo].filter((v): v is number => v !== null && v !== undefined));
+      return minA - minB;
+    }
+    return 0;
+  });
 
   return (
     <div className="imp-page">

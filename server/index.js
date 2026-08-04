@@ -224,6 +224,10 @@ const initDatabase = async () => {
     ALTER TABLE impressoras ADD COLUMN IF NOT EXISTS sede TEXT;
     ALTER TABLE impressoras ADD COLUMN IF NOT EXISTS link TEXT;
     ALTER TABLE impressoras ADD COLUMN IF NOT EXISTS glpi_id TEXT;
+    ALTER TABLE impressoras ADD COLUMN IF NOT EXISTS prev_toner_preto INTEGER;
+    ALTER TABLE impressoras ADD COLUMN IF NOT EXISTS prev_toner_ciano INTEGER;
+    ALTER TABLE impressoras ADD COLUMN IF NOT EXISTS prev_toner_magenta INTEGER;
+    ALTER TABLE impressoras ADD COLUMN IF NOT EXISTS prev_toner_amarelo INTEGER;
 
     CREATE TABLE IF NOT EXISTS tarefas (
       id TEXT PRIMARY KEY,
@@ -427,6 +431,10 @@ const rowToImpressora = (row) => ({
   tonerCiano: row.toner_ciano !== null && row.toner_ciano !== undefined ? Number(row.toner_ciano) : null,
   tonerMagenta: row.toner_magenta !== null && row.toner_magenta !== undefined ? Number(row.toner_magenta) : null,
   tonerAmarelo: row.toner_amarelo !== null && row.toner_amarelo !== undefined ? Number(row.toner_amarelo) : null,
+  prevTonerPreto: row.prev_toner_preto !== null && row.prev_toner_preto !== undefined ? Number(row.prev_toner_preto) : null,
+  prevTonerCiano: row.prev_toner_ciano !== null && row.prev_toner_ciano !== undefined ? Number(row.prev_toner_ciano) : null,
+  prevTonerMagenta: row.prev_toner_magenta !== null && row.prev_toner_magenta !== undefined ? Number(row.prev_toner_magenta) : null,
+  prevTonerAmarelo: row.prev_toner_amarelo !== null && row.prev_toner_amarelo !== undefined ? Number(row.prev_toner_amarelo) : null,
   updatedAt: new Date(row.updated_at).toISOString(),
 });
 
@@ -888,6 +896,10 @@ app.put("/api/impressoras", async (req, res, next) => {
           ip = EXCLUDED.ip,
           mac = EXCLUDED.mac,
           link = EXCLUDED.link,
+          prev_toner_preto = CASE WHEN impressoras.toner_preto IS DISTINCT FROM EXCLUDED.toner_preto THEN impressoras.toner_preto ELSE impressoras.prev_toner_preto END,
+          prev_toner_ciano = CASE WHEN impressoras.toner_ciano IS DISTINCT FROM EXCLUDED.toner_ciano THEN impressoras.toner_ciano ELSE impressoras.prev_toner_ciano END,
+          prev_toner_magenta = CASE WHEN impressoras.toner_magenta IS DISTINCT FROM EXCLUDED.toner_magenta THEN impressoras.toner_magenta ELSE impressoras.prev_toner_magenta END,
+          prev_toner_amarelo = CASE WHEN impressoras.toner_amarelo IS DISTINCT FROM EXCLUDED.toner_amarelo THEN impressoras.toner_amarelo ELSE impressoras.prev_toner_amarelo END,
           toner_preto = EXCLUDED.toner_preto,
           toner_ciano = EXCLUDED.toner_ciano,
           toner_magenta = EXCLUDED.toner_magenta,
@@ -1675,7 +1687,11 @@ async function executePrintersSync() {
       
       await pool.query(
         `UPDATE impressoras 
-         SET toner_preto = $1, toner_ciano = $2, toner_magenta = $3, toner_amarelo = $4,
+         SET prev_toner_preto = CASE WHEN toner_preto IS DISTINCT FROM $1 THEN toner_preto ELSE prev_toner_preto END,
+             prev_toner_ciano = CASE WHEN toner_ciano IS DISTINCT FROM $2 THEN toner_ciano ELSE prev_toner_ciano END,
+             prev_toner_magenta = CASE WHEN toner_magenta IS DISTINCT FROM $3 THEN toner_magenta ELSE prev_toner_magenta END,
+             prev_toner_amarelo = CASE WHEN toner_amarelo IS DISTINCT FROM $4 THEN toner_amarelo ELSE prev_toner_amarelo END,
+             toner_preto = $1, toner_ciano = $2, toner_magenta = $3, toner_amarelo = $4,
              ip = COALESCE($5, ip), mac = COALESCE($6, mac), 
              marca = COALESCE($7, marca), modelo = COALESCE($8, modelo),
              numero_serie = COALESCE($9, numero_serie), local_texto = COALESCE($10, local_texto),
@@ -1939,18 +1955,11 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
               }
             });
           }
-          if (pessoaNome && statusVal === 6) {
-            const lowerNome = pessoaNome.toLowerCase().trim();
-            if (
-              lowerNome !== "infraestrutura" &&
-              lowerNome !== "sistemas" &&
-              lowerNome !== "infra/sistemas"
-            ) {
-              if (!contagemPessoas[pessoaId]) {
-                contagemPessoas[pessoaId] = { nome: pessoaNome, count: 0 };
-              }
-              contagemPessoas[pessoaId].count++;
+          if (pessoaNome) {
+            if (!contagemPessoas[pessoaId]) {
+              contagemPessoas[pessoaId] = { nome: pessoaNome, count: 0 };
             }
+            contagemPessoas[pessoaId].count++;
           }
         });
 
@@ -2015,7 +2024,7 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
             fetch(
               `${GLPI_API_URL}/search/Ticket?criteria[0][field]=15&criteria[0][searchtype]=morethan&criteria[0][value]=${encodeURIComponent(firstDayOfMonth)}` +
               `&criteria[1][link]=AND&criteria[1][field]=15&criteria[1][searchtype]=lessthan&criteria[1][value]=${encodeURIComponent(lastDayOfMonth)}` +
-              `&range=0-1`,
+              `&forcedisplay[0]=4&range=0-1000`,
               { headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken } }
             ),
             fetch(
@@ -2033,6 +2042,17 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
           if (abertosMesRes && abertosMesRes.ok) {
             const data = await abertosMesRes.json();
             abertosMes = data.totalcount || 0;
+            (data.data || []).forEach(t => {
+              const rawReq = t["4"];
+              const reqId = Array.isArray(rawReq) ? String(rawReq[0] || "") : String(rawReq || "");
+              if (reqId && usersMap[reqId]) {
+                const name = usersMap[reqId];
+                if (!contagemPessoas[reqId]) {
+                  contagemPessoas[reqId] = { nome: name, count: 0 };
+                }
+                contagemPessoas[reqId].count++;
+              }
+            });
           }
           if (abertosAnoRes && abertosAnoRes.ok) {
             const data = await abertosAnoRes.json();
@@ -2291,17 +2311,17 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
         statusCounts.historicoMensal = historicoMensal;
         tecnicosList.sort((a, b) => b.resolvidosMes - a.resolvidosMes || b.resolvidosAno - a.resolvidosAno || b.resolvidos - a.resolvidos);
           
-        const top15PessoasRaw = Object.entries(contagemPessoas)
+        const topPessoasRaw = Object.entries(contagemPessoas)
           .map(([id, item]) => ({ id, nome: item.nome, count: item.count }))
           .sort((a, b) => b.count - a.count)
-          .slice(0, 15);
+          .slice(0, 50);
 
         const coresSetores = [
           "#2b8ffb", "#10b981", "#eab308", "#f97316", "#a855f7", 
           "#ef4444", "#6366f1", "#14b8a6", "#ec4899", "#f43f5e"
         ];
         pessoasList = await Promise.all(
-          top15PessoasRaw.map(async (p, index) => {
+          topPessoasRaw.map(async (p, index) => {
             let totalFechados = p.count;
             let totalGeral = p.count;
             let abertos = 0;
@@ -2929,10 +2949,7 @@ app.get("/api/glpi/relatorio", async (req, res, next) => {
           const rawReq = t["4"];
           const reqId = Array.isArray(rawReq) ? String(rawReq[0] || "") : String(rawReq || "");
           if (reqId && usersMap[reqId]) {
-            const lower = usersMap[reqId].toLowerCase().trim();
-            if (lower !== "infraestrutura" && lower !== "sistemas" && lower !== "infra/sistemas") {
-              reqAbertosMesCounts[reqId] = (reqAbertosMesCounts[reqId] || 0) + 1;
-            }
+            reqAbertosMesCounts[reqId] = (reqAbertosMesCounts[reqId] || 0) + 1;
           }
         });
       } else {

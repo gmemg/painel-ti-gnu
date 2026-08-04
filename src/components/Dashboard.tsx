@@ -808,6 +808,7 @@ export default function Dashboard() {
   const totalChamadosMesTI = chamadosFechadosMesTI + chamadosSolucionadosMesTI;
   const nomeMesAtual = new Date().toLocaleDateString("pt-BR", { month: "long" });
   const nomeMesCapitalizado = nomeMesAtual.charAt(0).toUpperCase() + nomeMesAtual.slice(1);
+  const totalAbertosMesRequerentes = pessoasExibidas.reduce((sum, p) => sum + (p.abertosMes ?? p.fechadosMes ?? 0), 0);
 
   // Usa as estatísticas globais do ano (ou geral se o usuário não quiser filtrar por ano, mas as variáveis do backend são fechados/solucionados)
   const totalFechadosAnoTI = Math.max(0, kpis.fechados ?? kpis.fechadosAno ?? 0);
@@ -1252,51 +1253,61 @@ export default function Dashboard() {
         {/* Informações da TI Redesenhadas em Grid Responsivo */}
         <div className="premium-kpi-grid">
           <div className="premium-kpi-card glass-blue">
-            <div className="kpi-content" style={{ width: '100%' }}>
+            <div className="kpi-content">
               <span className="kpi-label">Total Chamados TI</span>
-              <span className="kpi-value">{carregandoGlpi ? "..." : totalChamadosAnoTI} <small>atendimentos</small></span>
-              <div style={{ display: 'flex', gap: '8px', fontSize: '0.82rem', marginTop: '4px', fontWeight: 600 }}>
-                <span style={{ color: '#10b981' }}>Fechados: {totalFechadosAnoTI}</span>
-                <span style={{ color: '#38bdf8' }}>Solucionados: {totalSolucionadosAnoTI}</span>
+              <span className="kpi-value" style={{ margin: '6px 0' }}>
+                {carregandoGlpi ? "..." : totalChamadosAnoTI} <small>atendimentos</small>
+              </span>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
+                <span className="kpi-pill kpi-pill-green">Fechados: {totalFechadosAnoTI}</span>
+                <span className="kpi-pill kpi-pill-cyan">Solucionados: {totalSolucionadosAnoTI}</span>
               </div>
             </div>
           </div>
 
           <div className="premium-kpi-card glass-orange">
-            <div className="kpi-content" style={{ width: '100%' }}>
+            <div className="kpi-content">
               <span className="kpi-label">Chamados no Mês Atual</span>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
                 {top3Tecnicos.length > 0 ? top3Tecnicos.map((t, idx) => (
-                  <span key={idx} style={{ color: '#f8fafc', fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    {renderTrofeuIcon(idx)} {formatNomeComInicial(t.nome)} <small style={{ color: '#94a3b8', fontSize: '0.85rem', fontWeight: 500 }}>({t.val || 0})</small>
-                  </span>
+                  <div key={idx} className="top3-row">
+                    <div className="top3-left">
+                      {renderTrofeuIcon(idx)}
+                      <span>{formatNomeComInicial(t.nome)}</span>
+                    </div>
+                    <span className="top3-val-badge">{t.val || 0}</span>
+                  </div>
                 )) : <span className="kpi-value">Nenhum</span>}
               </div>
             </div>
           </div>
 
           <div className="premium-kpi-card glass-amber">
-            <div className="kpi-content" style={{ width: '100%' }}>
+            <div className="kpi-content">
               <span className="kpi-label">Chamados no Ano</span>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
                 {top3TecnicosAno.length > 0 ? top3TecnicosAno.map((t, idx) => (
-                  <span key={idx} style={{ color: '#f8fafc', fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    {renderTrofeuIcon(idx)} {formatNomeComInicial(t.nome)} <small style={{ color: '#94a3b8', fontSize: '0.85rem', fontWeight: 500 }}>({t.valAno || 0})</small>
-                  </span>
+                  <div key={idx} className="top3-row">
+                    <div className="top3-left">
+                      {renderTrofeuIcon(idx)}
+                      <span>{formatNomeComInicial(t.nome)}</span>
+                    </div>
+                    <span className="top3-val-badge">{t.valAno || 0}</span>
+                  </div>
                 )) : <span className="kpi-value">Nenhum</span>}
               </div>
             </div>
           </div>
 
           <div className="premium-kpi-card glass-purple">
-            <div className="kpi-content" style={{ width: '100%' }}>
-              <span className="kpi-label">Chamados Concluídos ({nomeMesCapitalizado})</span>
-              <span className="kpi-value" style={{ margin: '6px 0', fontSize: '1.75rem', display: 'flex', justifyContent: 'center' }}>
+            <div className="kpi-content">
+              <span className="kpi-label" style={{ textAlign: 'center' }}>Chamados Concluídos ({nomeMesCapitalizado})</span>
+              <span className="kpi-value" style={{ margin: '6px 0', fontSize: '2rem', display: 'flex', justifyContent: 'center', color: '#c084fc' }}>
                 {carregandoGlpi ? "..." : totalChamadosMesTI}
               </span>
-              <div style={{ display: 'flex', gap: '8px', fontSize: '0.82rem', marginTop: '4px', fontWeight: 600 }}>
-                <span style={{ color: '#10b981' }}>Fechados: {chamadosFechadosMesTI}</span>
-                <span style={{ color: '#38bdf8' }}>Solucionados: {chamadosSolucionadosMesTI}</span>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <span className="kpi-pill kpi-pill-green">Fechados: {chamadosFechadosMesTI}</span>
+                <span className="kpi-pill kpi-pill-cyan">Solucionados: {chamadosSolucionadosMesTI}</span>
               </div>
             </div>
           </div>
@@ -1307,22 +1318,22 @@ export default function Dashboard() {
             title="Clique para ver os chamados sem interação há 1 mês ou mais (30+ dias)"
             style={{ cursor: "pointer" }}
           >
-            <div className="kpi-content" style={{ width: '100%' }}>
+            <div className="kpi-content">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span className="kpi-label">Sem Interação (+30 dias)</span>
-                <span style={{ fontSize: '0.72rem', background: 'rgba(255,255,255,0.15)', padding: '2px 6px', borderRadius: '4px', color: '#34d399', fontWeight: 600 }}>
+                <span className="kpi-label" style={{ marginBottom: 0 }}>Sem Interação (+30d)</span>
+                <span style={{ fontSize: '0.72rem', background: 'rgba(52, 211, 153, 0.15)', border: '1px solid rgba(52, 211, 153, 0.3)', padding: '2px 8px', borderRadius: '12px', color: '#34d399', fontWeight: 700 }}>
                   Ver lista ↗
                 </span>
               </div>
-              <span className="kpi-value">
+              <span className="kpi-value" style={{ margin: '6px 0' }}>
                 {carregandoGlpi ? "..." : chamadosSemInteracao30Dias.length} <small>chamados</small>
               </span>
               {chamadoPiorInteracao ? (
-                <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  <span style={{ color: '#38bdf8', fontWeight: 600 }}>#{chamadoPiorInteracao.id}</span> • {chamadoPiorInteracao.diasSemInteracao}d s/ atualização
+                <div style={{ fontSize: '0.78rem', color: '#fca5a5', background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.25)', padding: '3px 8px', borderRadius: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontWeight: 700, color: '#ef4444' }}>#{chamadoPiorInteracao.id}</span> • {chamadoPiorInteracao.diasSemInteracao}d s/ atualização
                 </div>
               ) : (
-                <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '4px' }}>
+                <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
                   Nenhum chamado há +30d s/ resposta
                 </div>
               )}
@@ -1330,9 +1341,19 @@ export default function Dashboard() {
           </div>
 
           <div className="premium-kpi-card glass-yellow">
-            <div className="kpi-content" style={{ width: '100%' }}>
-              <span className="kpi-label">Fila Ativa da TI</span>
-              <span className="kpi-value">{totalSemSolucaoTI} <small>em andamento</small></span>
+            <div className="kpi-content">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="kpi-label" style={{ marginBottom: 0 }}>Fila Ativa da TI</span>
+                <span className="kpi-pill" style={{ background: 'rgba(234, 179, 8, 0.15)', color: '#facc15', border: '1px solid rgba(234, 179, 8, 0.3)', fontSize: '0.72rem' }}>
+                  ● Em Atendimento
+                </span>
+              </div>
+              <span className="kpi-value" style={{ margin: '6px 0' }}>
+                {totalSemSolucaoTI} <small>em andamento</small>
+              </span>
+              <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                Atendimentos em processamento no GLPI
+              </div>
             </div>
           </div>
         </div>
@@ -1514,7 +1535,12 @@ export default function Dashboard() {
         <div className="db-tech-widget">
           <div className="db-widget-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
             <div className="db-widget-title-group">
-              <h3>Chamados por requerente</h3>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                <h3>Chamados por requerente</h3>
+                <span className="kpi-pill kpi-pill-cyan" style={{ fontSize: '0.78rem' }}>
+                  {totalAbertosMesRequerentes} {filtroRequerenteMode === "geral" ? "no histórico geral" : "abertos no mês"}
+                </span>
+              </div>
               <p>
                 {filtroRequerenteMode === "geral"
                   ? ""
@@ -1607,7 +1633,7 @@ export default function Dashboard() {
                   } else if (dadosRequerenteCustom) {
                     val = dadosRequerenteCustom[pessoa.nome.toLowerCase().trim()] ?? 0;
                   } else {
-                    val = pessoa.fechadosMes ?? 0;
+                    val = pessoa.abertosMes ?? pessoa.fechadosMes ?? 0;
                   }
                   return { ...pessoa, val };
                 })
@@ -1618,7 +1644,7 @@ export default function Dashboard() {
                   const labelExibido =
                     filtroRequerenteMode === "geral"
                       ? "fechados"
-                      : `em ${siglaMeses[mesRequerente - 1]}/${anoRequerente}`;
+                      : `abertos em ${siglaMeses[mesRequerente - 1]}/${anoRequerente}`;
                   return (
                     <div key={pessoa.id} className="db-sector-item">
                       <div className="db-sector-info-row">

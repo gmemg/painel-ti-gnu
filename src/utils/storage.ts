@@ -200,6 +200,12 @@ export const saveInventario = (
     body: JSON.stringify(itens),
   });
 
+export function temTonerCritico(imp: Impressora): boolean {
+  if (!imp) return false;
+  const toners = [imp.tonerPreto, imp.tonerCiano, imp.tonerMagenta, imp.tonerAmarelo];
+  return toners.some((val) => val !== null && val !== undefined && val <= 20);
+}
+
 export const getImpressoras = (): Promise<Impressora[]> =>
   requestJson<Impressora[]>("/impressoras");
 
