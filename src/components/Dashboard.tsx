@@ -223,7 +223,7 @@ export default function Dashboard() {
   const [filtroRankingMode, setFiltroRankingMode] = useState<"especifico" | "geral">("especifico");
   const [mesRanking, setMesRanking] = useState<number>(new Date().getMonth() + 1);
   const [anoRanking, setAnoRanking] = useState<number>(new Date().getFullYear());
-  const [dadosRankingCustom, setDadosRankingCustom] = useState<Record<string, number> | null>(null);
+  const [dadosRankingCustom, setDadosRankingCustom] = useState<Record<string, { count: number; fechados: number; solucionados: number }> | null>(null);
 
   const [mesAbertos, setMesAbertos] = useState<number>(new Date().getMonth() + 1);
   const [anoAbertos, setAnoAbertos] = useState<number>(new Date().getFullYear());
@@ -599,9 +599,15 @@ export default function Dashboard() {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data && data.tecnicos) {
-          const map: Record<string, number> = {};
+          const map: Record<string, { count: number; fechados: number; solucionados: number }> = {};
           data.tecnicos.forEach((t: any) => {
-            if (t.nome) map[t.nome.toLowerCase().trim()] = t.count;
+            if (t.nome) {
+              map[t.nome.toLowerCase().trim()] = {
+                count: t.count || 0,
+                fechados: t.fechados ?? t.count ?? 0,
+                solucionados: t.solucionados ?? 0
+              };
+            }
           });
           setDadosRankingCustom(map);
         }
@@ -1023,14 +1029,24 @@ export default function Dashboard() {
   const rankingTITecnicos = [...tecnicosExibidos]
     .map((tech) => {
       let val = 0;
+      let fechadosVal = 0;
+      let solucionadosVal = 0;
+
       if (filtroRankingMode === "geral") {
         val = tech.resolvidos;
+        fechadosVal = tech.fechadosGeral ?? tech.resolvidos;
+        solucionadosVal = tech.solucionadosGeral ?? 0;
       } else if (dadosRankingCustom) {
-        val = dadosRankingCustom[tech.nome.toLowerCase().trim()] ?? 0;
+        const customData = dadosRankingCustom[tech.nome.toLowerCase().trim()];
+        val = customData ? customData.count : 0;
+        fechadosVal = customData ? customData.fechados : 0;
+        solucionadosVal = customData ? customData.solucionados : 0;
       } else {
         val = tech.resolvidosMes ?? 0;
+        fechadosVal = tech.fechadosMes ?? tech.resolvidosMes ?? 0;
+        solucionadosVal = tech.solucionadosMes ?? 0;
       }
-      return { ...tech, val };
+      return { ...tech, val, fechadosVal, solucionadosVal };
     })
     .sort((a, b) => b.val - a.val);
 
@@ -1674,8 +1690,8 @@ export default function Dashboard() {
                     <div className="db-ranking-info">
                       <span className="db-ranking-name">{tech.nome}</span>
                       <div className="db-ranking-sub-breakdown" style={{ display: 'flex', gap: '6px', fontSize: '0.78rem', marginTop: '2px', fontWeight: 500 }}>
-                        <span style={{ color: '#10b981' }}>Fechados: {filtroRankingMode === "geral" ? (tech.fechadosGeral ?? tech.val) : (tech.fechadosMes ?? tech.fechadosAno ?? tech.val)}</span>
-                        <span style={{ color: '#38bdf8' }}>• Solucionados: {filtroRankingMode === "geral" ? (tech.solucionadosGeral ?? 0) : (tech.solucionadosMes ?? tech.solucionadosAno ?? 0)}</span>
+                        <span style={{ color: '#10b981' }}>Fechados: {tech.fechadosVal}</span>
+                        <span style={{ color: '#38bdf8' }}>• Solucionados: {tech.solucionadosVal}</span>
                       </div>
                     </div>
                     <div className="db-ranking-value-wrap">

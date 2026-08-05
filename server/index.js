@@ -2518,7 +2518,11 @@ app.get("/api/glpi/usuarios-busca", async (req, res, next) => {
         let fechadosAno = 0;
 
         try {
-          const [resTotalReq, resFechadosMesReq, resFechadosAnoReq, resTotalTech, resFechadosMesTech, resFechadosAnoTech] = await Promise.all([
+          const [
+            resTotalReq, resFechadosMesReq, resFechadosAnoReq,
+            resTotalTech, resFechadosMesTech, resFechadosAnoTech,
+            resSolTotalTech, resSolMesTech, resSolAnoTech
+          ] = await Promise.all([
             fetch(
               `${GLPI_API_URL}/search/Ticket?criteria[0][field]=4&criteria[0][searchtype]=equals&criteria[0][value]=${u.glpiId}` +
               `&criteria[1][link]=AND&criteria[1][field]=12&criteria[1][searchtype]=equals&criteria[1][value]=6&range=0-1`,
@@ -2558,21 +2562,48 @@ app.get("/api/glpi/usuarios-busca", async (req, res, next) => {
               `&criteria[1][link]=AND&criteria[1][field]=12&criteria[1][searchtype]=equals&criteria[1][value]=6` +
               `&criteria[2][link]=AND&criteria[2][field]=17&criteria[2][searchtype]=morethan&criteria[2][value]=${encodeURIComponent(firstDayOfYear)}` +
               `&criteria[3][link]=AND&criteria[3][field]=17&criteria[3][searchtype]=lessthan&criteria[3][value]=${encodeURIComponent(lastDayOfYear)}` +
+              `&range=0-1`,
+              { headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken } }
+            ),
+            fetch(
+              `${GLPI_API_URL}/search/Ticket?criteria[0][field]=5&criteria[0][searchtype]=equals&criteria[0][value]=${u.glpiId}` +
+              `&criteria[1][link]=AND&criteria[1][field]=12&criteria[1][searchtype]=equals&criteria[1][value]=5&range=0-1`,
+              { headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken } }
+            ),
+            fetch(
+              `${GLPI_API_URL}/search/Ticket?criteria[0][field]=5&criteria[0][searchtype]=equals&criteria[0][value]=${u.glpiId}` +
+              `&criteria[1][link]=AND&criteria[1][field]=12&criteria[1][searchtype]=equals&criteria[1][value]=5` +
+              `&criteria[2][link]=AND&criteria[2][field]=15&criteria[2][searchtype]=morethan&criteria[2][value]=${encodeURIComponent(firstDayOfMonth)}` +
+              `&criteria[3][link]=AND&criteria[3][field]=15&criteria[3][searchtype]=lessthan&criteria[3][value]=${encodeURIComponent(lastDayOfMonth)}` +
+              `&range=0-1`,
+              { headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken } }
+            ),
+            fetch(
+              `${GLPI_API_URL}/search/Ticket?criteria[0][field]=5&criteria[0][searchtype]=equals&criteria[0][value]=${u.glpiId}` +
+              `&criteria[1][link]=AND&criteria[1][field]=12&criteria[1][searchtype]=equals&criteria[1][value]=5` +
+              `&criteria[2][link]=AND&criteria[2][field]=15&criteria[2][searchtype]=morethan&criteria[2][value]=${encodeURIComponent(firstDayOfYear)}` +
+              `&criteria[3][link]=AND&criteria[3][field]=15&criteria[3][searchtype]=lessthan&criteria[3][value]=${encodeURIComponent(lastDayOfYear)}` +
               `&range=0-1`,
               { headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken } }
             )
           ]);
 
           let reqTotal = resTotalReq.ok ? ((await resTotalReq.json()).totalcount || 0) : 0;
-          let techTotal = resTotalTech.ok ? ((await resTotalTech.json()).totalcount || 0) : 0;
+          let techFechadosTotal = resTotalTech.ok ? ((await resTotalTech.json()).totalcount || 0) : 0;
+          let techSolucionadosTotal = resSolTotalTech.ok ? ((await resSolTotalTech.json()).totalcount || 0) : 0;
+          let techTotal = techFechadosTotal + techSolucionadosTotal;
           totalFechados = Math.max(reqTotal, techTotal);
 
           let reqMes = resFechadosMesReq.ok ? ((await resFechadosMesReq.json()).totalcount || 0) : 0;
-          let techMes = resFechadosMesTech.ok ? ((await resFechadosMesTech.json()).totalcount || 0) : 0;
+          let techFechadosMes = resFechadosMesTech.ok ? ((await resFechadosMesTech.json()).totalcount || 0) : 0;
+          let techSolucionadosMes = resSolMesTech.ok ? ((await resSolMesTech.json()).totalcount || 0) : 0;
+          let techMes = techFechadosMes + techSolucionadosMes;
           fechadosMes = Math.max(reqMes, techMes);
 
           let reqAno = resFechadosAnoReq.ok ? ((await resFechadosAnoReq.json()).totalcount || 0) : 0;
-          let techAno = resFechadosAnoTech.ok ? ((await resFechadosAnoTech.json()).totalcount || 0) : 0;
+          let techFechadosAno = resFechadosAnoTech.ok ? ((await resFechadosAnoTech.json()).totalcount || 0) : 0;
+          let techSolucionadosAno = resSolAnoTech.ok ? ((await resSolAnoTech.json()).totalcount || 0) : 0;
+          let techAno = techFechadosAno + techSolucionadosAno;
           fechadosAno = Math.max(reqAno, techAno);
         } catch (e) {
           console.error(`[GLPI] Erro ao buscar métricas para usuário ${u.nome}:`, e.message);
@@ -2706,7 +2737,7 @@ app.get("/api/glpi/tecnico-detalhes", async (req, res, next) => {
       techCriteria = `&criteria[0][link]=AND&criteria[0][field]=5&criteria[0][searchtype]=equals&criteria[0][value]=${glpiId}`;
     }
 
-    const searchUrl = `${GLPI_API_URL}/search/Ticket?sort=17&order=DESC` +
+    const searchUrlFechados = `${GLPI_API_URL}/search/Ticket?sort=17&order=DESC` +
       `&forcedisplay[0]=1&forcedisplay[1]=2&forcedisplay[2]=4&forcedisplay[3]=5&forcedisplay[4]=12&forcedisplay[5]=15&forcedisplay[6]=17` +
       `&criteria[1][link]=AND&criteria[1][field]=12&criteria[1][searchtype]=equals&criteria[1][value]=6` +
       `&criteria[2][link]=AND&criteria[2][field]=17&criteria[2][searchtype]=morethan&criteria[2][value]=${encodeURIComponent(start)}` +
@@ -2714,102 +2745,120 @@ app.get("/api/glpi/tecnico-detalhes", async (req, res, next) => {
       techCriteria +
       `&range=0-1000`;
 
-    const searchRes = await fetch(searchUrl, {
-      headers: {
-        "App-Token": GLPI_APP_TOKEN,
-        "Session-Token": sessionToken
-      }
-    });
+    const searchUrlSolucionados = `${GLPI_API_URL}/search/Ticket?sort=15&order=DESC` +
+      `&forcedisplay[0]=1&forcedisplay[1]=2&forcedisplay[2]=4&forcedisplay[3]=5&forcedisplay[4]=12&forcedisplay[5]=15&forcedisplay[6]=17` +
+      `&criteria[1][link]=AND&criteria[1][field]=12&criteria[1][searchtype]=equals&criteria[1][value]=5` +
+      `&criteria[2][link]=AND&criteria[2][field]=15&criteria[2][searchtype]=morethan&criteria[2][value]=${encodeURIComponent(start)}` +
+      `&criteria[3][link]=AND&criteria[3][field]=15&criteria[3][searchtype]=lessthan&criteria[3][value]=${encodeURIComponent(end)}` +
+      techCriteria +
+      `&range=0-1000`;
+
+    const [searchResFechados, searchResSolucionados] = await Promise.all([
+      fetch(searchUrlFechados, { headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken } }),
+      fetch(searchUrlSolucionados, { headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken } })
+    ]);
 
     let totalAno = 0;
 
-    if (searchRes.ok) {
-      const searchData = await searchRes.json();
-      const tickets = searchData.data || [];
+    const ticketsFechados = searchResFechados.ok ? ((await searchResFechados.json()).data || []) : [];
+    const ticketsSolucionados = searchResSolucionados.ok ? ((await searchResSolucionados.json()).data || []) : [];
 
-      tickets.forEach(ticket => {
-        const rawTech = ticket["5"];
-        const techIds = Array.isArray(rawTech) ? rawTech.map(String) : [String(rawTech || "")];
+    const ticketIdsSeen = new Set();
+    const tickets = [];
+    [...ticketsFechados, ...ticketsSolucionados].forEach(t => {
+      const rawId = t["2"] || t.id || "";
+      const idStr = String(rawId);
+      if (idStr && !ticketIdsSeen.has(idStr)) {
+        ticketIdsSeen.add(idStr);
+        tickets.push(t);
+      }
+    });
 
-        let matchesTech = false;
-        if (glpiId) {
-          matchesTech = techIds.includes(String(glpiId));
-        } else if (nome) {
-          matchesTech = techIds.some(tid => usersMap[tid] && usersMap[tid].toLowerCase().trim() === nome.toLowerCase().trim());
-        } else {
-          matchesTech = true;
+    tickets.forEach(ticket => {
+      const rawTech = ticket["5"];
+      const techIds = Array.isArray(rawTech) ? rawTech.map(String) : [String(rawTech || "")];
+
+      let matchesTech = false;
+      if (glpiId) {
+        matchesTech = techIds.includes(String(glpiId));
+      } else if (nome) {
+        matchesTech = techIds.some(tid => usersMap[tid] && usersMap[tid].toLowerCase().trim() === nome.toLowerCase().trim());
+      } else {
+        matchesTech = true;
+      }
+
+      if (!matchesTech) return;
+
+      let rawId = ticket["2"] || ticket.id || "";
+      let rawName = ticket["1"] || "";
+
+      if (isNaN(parseInt(rawId, 10)) && !isNaN(parseInt(rawName, 10))) {
+        const temp = rawId;
+        rawId = rawName;
+        rawName = temp;
+      }
+
+      const ticketId = String(rawId || ticket.id || "");
+      const titulo = String(rawName || `Chamado #${ticketId}`);
+      const rawReq = ticket["4"];
+      const reqId = Array.isArray(rawReq) ? String(rawReq[0] || "") : String(rawReq || "");
+      const requerenteNome = (reqId && usersMap[reqId]) ? usersMap[reqId] : (reqId ? `Usuário ${reqId}` : "Não informado");
+
+      const dataFechamentoRaw = ticket["17"] || ticket["15"] || "";
+      const dataAberturaRaw = ticket["15"] || "";
+
+      let mesIndex = -1;
+      if (dataFechamentoRaw) {
+        const parts = dataFechamentoRaw.split(" ")[0].split("-");
+        if (parts.length === 3) {
+          const ticketYear = parseInt(parts[0], 10);
+          if (ticketYear === ano) {
+            mesIndex = parseInt(parts[1], 10) - 1;
+          }
         }
+      }
 
-        if (!matchesTech) return;
+      if (mesIndex >= 0 && mesIndex < 12) {
+        const formatData = (raw) => {
+          if (!raw) return "";
+          const [datePart, timePart] = raw.split(" ");
+          if (!datePart) return raw;
+          const [y, m, d] = datePart.split("-");
+          const t = timePart ? timePart.substring(0, 5) : "";
+          return `${d}/${m}/${y}${t ? ` às ${t}` : ""}`;
+        };
 
-        let rawId = ticket["2"] || ticket.id || "";
-        let rawName = ticket["1"] || "";
+        const statusRaw = parseInt(ticket["12"], 10);
+        const statusText = statusRaw === 5 ? "Solucionado" : "Fechado";
 
-        if (isNaN(parseInt(rawId, 10)) && !isNaN(parseInt(rawName, 10))) {
-          const temp = rawId;
-          rawId = rawName;
-          rawName = temp;
-        }
-
-        const ticketId = String(rawId || ticket.id || "");
-        const titulo = String(rawName || `Chamado #${ticketId}`);
-        const rawReq = ticket["4"];
-        const reqId = Array.isArray(rawReq) ? String(rawReq[0] || "") : String(rawReq || "");
-        const requerenteNome = (reqId && usersMap[reqId]) ? usersMap[reqId] : (reqId ? `Usuário ${reqId}` : "Não informado");
-
-        const dataFechamentoRaw = ticket["17"] || ticket["15"] || "";
-        const dataAberturaRaw = ticket["15"] || "";
-
-        let mesIndex = -1;
-        if (dataFechamentoRaw) {
-          const parts = dataFechamentoRaw.split(" ")[0].split("-");
+        const mesAnoAbertura = getMesAnoLabel(dataAberturaRaw);
+        let criadoOutroMes = false;
+        if (dataAberturaRaw) {
+          const parts = dataAberturaRaw.split(" ")[0].split("-");
           if (parts.length === 3) {
-            const ticketYear = parseInt(parts[0], 10);
-            if (ticketYear === ano) {
-              mesIndex = parseInt(parts[1], 10) - 1;
+            const y = parseInt(parts[0], 10);
+            const m = parseInt(parts[1], 10);
+            if (y !== ano || m !== (mesIndex + 1)) {
+              criadoOutroMes = true;
             }
           }
         }
 
-        if (mesIndex >= 0 && mesIndex < 12) {
-          const formatData = (raw) => {
-            if (!raw) return "";
-            const [datePart, timePart] = raw.split(" ");
-            if (!datePart) return raw;
-            const [y, m, d] = datePart.split("-");
-            const t = timePart ? timePart.substring(0, 5) : "";
-            return `${d}/${m}/${y}${t ? ` às ${t}` : ""}`;
-          };
-
-          const mesAnoAbertura = getMesAnoLabel(dataAberturaRaw);
-          let criadoOutroMes = false;
-          if (dataAberturaRaw) {
-            const parts = dataAberturaRaw.split(" ")[0].split("-");
-            if (parts.length === 3) {
-              const y = parseInt(parts[0], 10);
-              const m = parseInt(parts[1], 10);
-              if (y !== ano || m !== (mesIndex + 1)) {
-                criadoOutroMes = true;
-              }
-            }
-          }
-
-          meses[mesIndex].chamados.push({
-            id: ticketId,
-            titulo: titulo,
-            requerente: requerenteNome,
-            dataAbertura: formatData(dataAberturaRaw),
-            dataFechamento: formatData(dataFechamentoRaw),
-            status: "Fechado",
-            mesAnoAbertura: mesAnoAbertura,
-            criadoOutroMes: criadoOutroMes,
-            url: glpiBaseWebUrl ? `${glpiBaseWebUrl}/front/ticket.form.php?id=${ticketId}` : ""
-          });
-          meses[mesIndex].total += 1;
-          totalAno += 1;
-        }
-      });
-    }
+        meses[mesIndex].chamados.push({
+          id: ticketId,
+          titulo: titulo,
+          requerente: requerenteNome,
+          dataAbertura: formatData(dataAberturaRaw),
+          dataFechamento: formatData(dataFechamentoRaw),
+          status: statusText,
+          mesAnoAbertura: mesAnoAbertura,
+          criadoOutroMes: criadoOutroMes,
+          url: glpiBaseWebUrl ? `${glpiBaseWebUrl}/front/ticket.form.php?id=${ticketId}` : ""
+        });
+        meses[mesIndex].total += 1;
+        totalAno += 1;
+      }
+    });
 
     res.json({
       nome: nome || (glpiId && usersMap[glpiId]) || "Técnico",
@@ -2889,55 +2938,87 @@ app.get("/api/glpi/relatorio", async (req, res, next) => {
       "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
     ];
 
-    let dateCriteria = "";
+    let dateCriteriaFechados = "";
+    let dateCriteriaSolucionados = "";
     let periodoLabel = "";
 
     if (tipo === "mensal") {
       const start = `${ano}-${pad(mes)}-01 00:00:00`;
       const lastDay = new Date(ano, mes, 0).getDate();
       const end = `${ano}-${pad(mes)}-${pad(lastDay)} 23:59:59`;
-      dateCriteria = `&criteria[1][link]=AND&criteria[1][field]=17&criteria[1][searchtype]=morethan&criteria[1][value]=${encodeURIComponent(start)}` +
-                     `&criteria[2][link]=AND&criteria[2][field]=17&criteria[2][searchtype]=lessthan&criteria[2][value]=${encodeURIComponent(end)}`;
+      dateCriteriaFechados = `&criteria[1][link]=AND&criteria[1][field]=17&criteria[1][searchtype]=morethan&criteria[1][value]=${encodeURIComponent(start)}` +
+                             `&criteria[2][link]=AND&criteria[2][field]=17&criteria[2][searchtype]=lessthan&criteria[2][value]=${encodeURIComponent(end)}`;
+      dateCriteriaSolucionados = `&criteria[1][link]=AND&criteria[1][field]=15&criteria[1][searchtype]=morethan&criteria[1][value]=${encodeURIComponent(start)}` +
+                                `&criteria[2][link]=AND&criteria[2][field]=15&criteria[2][searchtype]=lessthan&criteria[2][value]=${encodeURIComponent(end)}`;
       periodoLabel = `${nomesMeses[mes - 1]} / ${ano}`;
     } else if (tipo === "anual") {
       const start = `${ano}-01-01 00:00:00`;
       const end = `${ano}-12-31 23:59:59`;
-      dateCriteria = `&criteria[1][link]=AND&criteria[1][field]=17&criteria[1][searchtype]=morethan&criteria[1][value]=${encodeURIComponent(start)}` +
-                     `&criteria[2][link]=AND&criteria[2][field]=17&criteria[2][searchtype]=lessthan&criteria[2][value]=${encodeURIComponent(end)}`;
+      dateCriteriaFechados = `&criteria[1][link]=AND&criteria[1][field]=17&criteria[1][searchtype]=morethan&criteria[1][value]=${encodeURIComponent(start)}` +
+                             `&criteria[2][link]=AND&criteria[2][field]=17&criteria[2][searchtype]=lessthan&criteria[2][value]=${encodeURIComponent(end)}`;
+      dateCriteriaSolucionados = `&criteria[1][link]=AND&criteria[1][field]=15&criteria[1][searchtype]=morethan&criteria[1][value]=${encodeURIComponent(start)}` +
+                                `&criteria[2][link]=AND&criteria[2][field]=15&criteria[2][searchtype]=lessthan&criteria[2][value]=${encodeURIComponent(end)}`;
       periodoLabel = `Ano ${ano}`;
     } else {
       periodoLabel = "Histórico Total";
     }
 
-    // Busca chamados fechados no período
-    const searchUrl = `${GLPI_API_URL}/search/Ticket?sort=17&order=DESC` +
+    // Busca chamados fechados (status 6) e solucionados (status 5) no período
+    const searchUrlFechados = `${GLPI_API_URL}/search/Ticket?sort=17&order=DESC` +
       `&forcedisplay[0]=1&forcedisplay[1]=2&forcedisplay[2]=4&forcedisplay[3]=5&forcedisplay[4]=12&forcedisplay[5]=15&forcedisplay[6]=17` +
       `&criteria[0][field]=12&criteria[0][searchtype]=equals&criteria[0][value]=6` +
-      dateCriteria + `&range=0-1000`;
+      dateCriteriaFechados + `&range=0-1000`;
 
-    const searchRes = await fetch(searchUrl, {
-      headers: {
-        "App-Token": GLPI_APP_TOKEN,
-        "Session-Token": sessionToken
+    const searchUrlSolucionados = `${GLPI_API_URL}/search/Ticket?sort=15&order=DESC` +
+      `&forcedisplay[0]=1&forcedisplay[1]=2&forcedisplay[2]=4&forcedisplay[3]=5&forcedisplay[4]=12&forcedisplay[5]=15&forcedisplay[6]=17` +
+      `&criteria[0][field]=12&criteria[0][searchtype]=equals&criteria[0][value]=5` +
+      dateCriteriaSolucionados + `&range=0-1000`;
+
+    const [searchResFechados, searchResSolucionados] = await Promise.all([
+      fetch(searchUrlFechados, { headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken } }),
+      fetch(searchUrlSolucionados, { headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken } })
+    ]);
+
+    const searchDataFechados = searchResFechados.ok ? await searchResFechados.json() : {};
+    const searchDataSolucionados = searchResSolucionados.ok ? await searchResSolucionados.json() : {};
+
+    const ticketsFechados = searchDataFechados.data || [];
+    const ticketsSolucionados = searchDataSolucionados.data || [];
+
+    // Mescla garantindo que chamados não se dupliquem caso apareçam em ambas buscas
+    const ticketIdsSeen = new Set();
+    const tickets = [];
+    [...ticketsFechados, ...ticketsSolucionados].forEach(t => {
+      const rawId = t["2"] || t.id || "";
+      const idStr = String(rawId);
+      if (idStr && !ticketIdsSeen.has(idStr)) {
+        ticketIdsSeen.add(idStr);
+        tickets.push(t);
       }
     });
 
-    const searchData = searchRes.ok ? await searchRes.json() : {};
-    const tickets = searchData.data || [];
-    const totalFechados = searchData.totalcount || tickets.length;
+    const totalFechados = (searchDataFechados.totalcount || ticketsFechados.length) + (searchDataSolucionados.totalcount || ticketsSolucionados.length);
 
     const techCounts = {};
+    const techFechadosCounts = {};
+    const techSolucionadosCounts = {};
     const reqCounts = {};
 
     tickets.forEach(t => {
       const rawTech = t["5"];
       const techIds = Array.isArray(rawTech) ? rawTech.map(String) : [String(rawTech || "")];
+      const statusVal = parseInt(t["12"], 10);
 
       techIds.forEach(tid => {
         if (tid && usersMap[tid]) {
           const lower = usersMap[tid].toLowerCase().trim();
           if (lower !== "infraestrutura" && lower !== "sistemas" && lower !== "infra/sistemas") {
             techCounts[tid] = (techCounts[tid] || 0) + 1;
+            if (statusVal === 6) {
+              techFechadosCounts[tid] = (techFechadosCounts[tid] || 0) + 1;
+            } else if (statusVal === 5) {
+              techSolucionadosCounts[tid] = (techSolucionadosCounts[tid] || 0) + 1;
+            }
           }
         }
       });
@@ -2952,7 +3033,13 @@ app.get("/api/glpi/relatorio", async (req, res, next) => {
     });
 
     const tecnicos = Object.entries(techCounts)
-      .map(([id, count]) => ({ id, nome: usersMap[id], count }))
+      .map(([id, count]) => ({
+        id,
+        nome: usersMap[id],
+        count,
+        fechados: techFechadosCounts[id] || 0,
+        solucionados: techSolucionadosCounts[id] || 0
+      }))
       .sort((a, b) => b.count - a.count);
 
     const requerentes = Object.entries(reqCounts)
