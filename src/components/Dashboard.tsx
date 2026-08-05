@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   reconcileEventosAutomaticos,
   getHistorico,
@@ -10,16 +10,7 @@ import {
   GlpiUsuarioBusca,
   ChamadoAntigo
 } from "../utils/storage";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  ResponsiveContainer,
-  Legend
-} from "recharts";
+
 import "./Dashboard.css";
 
 interface Tecnico {
@@ -52,18 +43,7 @@ interface Pessoa {
   cor: string;
 }
 
-interface ChamadoAbertoMes {
-  id: string;
-  titulo?: string;
-  requerente: string;
-  tecnico: string;
-  status: string;
-  dataAbertura?: string;
-  dataFechamento?: string;
-  mesAnoAbertura?: string;
-  criadoOutroMes?: boolean;
-  url?: string;
-}
+
 
 const DEFAULT_COLORS: Record<string, string> = {
   novos: "#2b8ffb",
@@ -124,6 +104,8 @@ const renderTrofeuIcon = (idx: number) => {
     </svg>
   );
 };
+
+
 
 const getMesAnoAberturaTag = (item: { mesAnoAbertura?: string; dataAbertura?: string }) => {
   if (item.mesAnoAbertura) return item.mesAnoAbertura;
@@ -225,26 +207,11 @@ export default function Dashboard() {
   const [anoRanking, setAnoRanking] = useState<number>(new Date().getFullYear());
   const [dadosRankingCustom, setDadosRankingCustom] = useState<Record<string, { count: number; fechados: number; solucionados: number }> | null>(null);
 
-  const [mesAbertos, setMesAbertos] = useState<number>(new Date().getMonth() + 1);
-  const [anoAbertos, setAnoAbertos] = useState<number>(new Date().getFullYear());
-  const [totalAbertosMes, setTotalAbertosMes] = useState<number | null>(null);
-  const [chamadosAbertosLista, setChamadosAbertosLista] = useState<ChamadoAbertoMes[]>([]);
-  const [listaRequerentesApi, setListaRequerentesApi] = useState<{ id: string; nome: string; count: number }[]>([]);
-  const [listaTecnicosApi, setListaTecnicosApi] = useState<{ id: string; nome: string; count: number }[]>([]);
-
-  const [filtroChamadosAbertos, setFiltroChamadosAbertos] = useState<string>("");
-  const [filtroRequerente, setFiltroRequerente] = useState<string>("");
-  const [filtroTecnico, setFiltroTecnico] = useState<string>("");
-  const [filtroStatus, setFiltroStatus] = useState<string>("");
-
   const [carregandoGlpi, setCarregandoGlpi] = useState<boolean>(true);
   const [progressoGlpi, setProgressoGlpi] = useState<number>(0);
 
   const [carregandoRanking, setCarregandoRanking] = useState<boolean>(false);
   const [progressoRanking, setProgressoRanking] = useState<number>(0);
-
-  const [carregandoAbertos, setCarregandoAbertos] = useState<boolean>(false);
-  const [progressoAbertos, setProgressoAbertos] = useState<number>(0);
 
   // Estados para Modal de Relatório PDF
   const [modalReportAberto, setModalReportAberto] = useState(false);
@@ -252,9 +219,7 @@ export default function Dashboard() {
   const [anoRelatorio, setAnoRelatorio] = useState<number>(new Date().getFullYear());
   const [gerandoPdf, setGerandoPdf] = useState(false);
 
-  // Estados para Gráfico de Barras (Chamados Mensal, Anual, Total)
-  const [visaoGrafico, setVisaoGrafico] = useState<"mensal" | "anual" | "total">("mensal");
-  const [anoGrafico, setAnoGrafico] = useState<number>(new Date().getFullYear());
+
 
   // Estados para Modal de Detalhes do Técnico (Ranking TI)
   const [modalDetalhesAberto, setModalDetalhesAberto] = useState(false);
@@ -622,40 +587,7 @@ export default function Dashboard() {
       .finally(() => clearInterval(progressTimer));
   }, [mesRanking, anoRanking, filtroRankingMode]);
 
-  useEffect(() => {
-    setCarregandoAbertos(true);
-    setProgressoAbertos(20);
-    const progressTimer = setInterval(() => {
-      setProgressoAbertos((p) => (p < 90 ? Math.min(90, p + Math.floor(Math.random() * 12 + 6)) : p));
-    }, 200);
 
-    const token = getToken();
-    fetch(`/api/glpi/relatorio?tipo=mensal&mes=${mesAbertos}&ano=${anoAbertos}`, {
-      headers: { Authorization: token ? `Bearer ${token}` : "" }
-    })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data && typeof data.totalAbertosMes === "number") {
-          setTotalAbertosMes(data.totalAbertosMes);
-          setChamadosAbertosLista(data.chamadosAbertosMes || []);
-          setListaRequerentesApi(data.requerentesAbertosMes || []);
-          setListaTecnicosApi(data.tecnicos || []);
-        } else {
-          setTotalAbertosMes(0);
-          setChamadosAbertosLista([]);
-          setListaRequerentesApi([]);
-          setListaTecnicosApi([]);
-        }
-        setProgressoAbertos(100);
-        setTimeout(() => setCarregandoAbertos(false), 250);
-      })
-      .catch((err) => {
-        console.error("Erro ao buscar total de chamados abertos por mes/ano:", err);
-        setProgressoAbertos(100);
-        setTimeout(() => setCarregandoAbertos(false), 250);
-      })
-      .finally(() => clearInterval(progressTimer));
-  }, [mesAbertos, anoAbertos]);
 
   const renderProgressBar = (label: string, pct: number) => {
     const clampedPct = Math.min(100, Math.max(0, Math.round(pct)));
@@ -766,139 +698,7 @@ export default function Dashboard() {
     .filter((t) => !excluidosRanking.includes(t.id) && !excluidosRanking.includes(t.nome) && !excluidosRanking.includes(String(t.glpiId || "")));
 
 
-  // Lógica de Agregação de Dados EXCLUSIVA para Chamados da Equipe de TI
-  const getDadosGrafico = () => {
-    const totalNovos = Math.max(0, kpis.novos || 0);
-    const totalAtribuidos = Math.max(0, kpis.atribuidos || 0);
-    const totalPendentes = Math.max(0, kpis.pendentes || 0);
-    const totalPlanejados = Math.max(0, kpis.planejados || 0);
 
-    // Total de chamados resolvidos especificamente pela equipe de TI
-    const totalResolvidosTI = tecnicosExibidos.reduce(
-      (sum, t) => sum + Math.max(0, t.resolvidosAno || 0),
-      0
-    );
-
-    const totalAbertosTIBase = totalNovos + totalAtribuidos + totalPendentes + totalPlanejados + totalResolvidosTI;
-    const totalConcluidosTIBase = totalResolvidosTI || (Math.max(0, kpis.solucionados || 0) + Math.max(0, kpis.fechados || 0));
-
-    const anoAtual = new Date().getFullYear();
-    let fatorAno = 1;
-    if (anoGrafico < anoAtual) {
-      fatorAno = Math.max(0.3, 1 - ((anoAtual - anoGrafico) * 0.15));
-    } else if (anoGrafico > anoAtual) {
-      fatorAno = 1 + ((anoGrafico - anoAtual) * 0.15);
-    }
-
-    const totalAbertosTI = Math.floor(totalAbertosTIBase * fatorAno);
-    const totalConcluidosTI = Math.floor(totalConcluidosTIBase * fatorAno);
-
-    if (visaoGrafico === "mensal") {
-      const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-      const mesAtualIdx = new Date().getMonth();
-      const isAnoAtual = anoGrafico === anoAtual;
-      const mesesAtivosCount = isAnoAtual ? Math.max(1, mesAtualIdx + 1) : 12;
-
-      let abertosRestantes = totalAbertosTI;
-      let concluidosRestantes = totalConcluidosTI;
-
-      let realTotalAbertos = 0;
-      let realTotalConcluidos = 0;
-
-      const baseAbertos = Math.floor(totalAbertosTI / mesesAtivosCount);
-      const baseConcluidos = Math.floor(totalConcluidosTI / mesesAtivosCount);
-
-      const varAbertos = [0.85, 1.15, 0.90, 1.20, 0.80, 1.10, 0.95, 1.05, 0.85, 1.10, 0.90, 1.15];
-      const varConclui = [0.80, 1.20, 0.85, 1.15, 0.90, 1.10, 0.85, 1.20, 0.95, 1.05, 0.80, 1.10];
-
-      const items = mesesNomes.map((mes, idx) => {
-        if (isAnoAtual && kpis.historicoMensal) {
-          const ab = kpis.historicoMensal.abertos[idx] || 0;
-          const co = kpis.historicoMensal.concluidos[idx] || 0;
-          realTotalAbertos += ab;
-          realTotalConcluidos += co;
-
-          return {
-            label: mes,
-            sublabel: `${mes}/${anoGrafico}` + (idx === mesAtualIdx ? ' (Mês Atual)' : ''),
-            abertos: ab,
-            concluidos: co,
-          };
-        }
-
-        if (isAnoAtual && idx > mesAtualIdx) {
-          return { label: mes, sublabel: `${mes}/${anoGrafico}`, abertos: 0, concluidos: 0 };
-        }
-
-        if (isAnoAtual && idx === mesAtualIdx) {
-          return {
-            label: mes,
-            sublabel: `${mes}/${anoGrafico} (Mês Atual)`,
-            abertos: Math.max(0, abertosRestantes),
-            concluidos: Math.max(0, concluidosRestantes),
-          };
-        }
-
-        if (!isAnoAtual && idx === 11) {
-          return {
-            label: mes,
-            sublabel: `${mes}/${anoGrafico}`,
-            abertos: Math.max(0, abertosRestantes),
-            concluidos: Math.max(0, concluidosRestantes),
-          };
-        }
-
-        const variacaoAbertos = Math.floor(baseAbertos * varAbertos[idx % 12]);
-        const variacaoConcluidos = Math.floor(baseConcluidos * varConclui[idx % 12]);
-
-        abertosRestantes -= variacaoAbertos;
-        concluidosRestantes -= variacaoConcluidos;
-
-        return {
-          label: mes,
-          sublabel: `${mes}/${anoGrafico}`,
-          abertos: Math.max(0, variacaoAbertos),
-          concluidos: Math.max(0, variacaoConcluidos),
-        };
-      });
-
-      return {
-        type: "mensal" as const,
-        items,
-        totalAbertos: (isAnoAtual && kpis.historicoMensal) ? realTotalAbertos : totalAbertosTI,
-        totalConcluidos: (isAnoAtual && kpis.historicoMensal) ? realTotalConcluidos : totalConcluidosTI,
-      };
-    }
-
-    // if (visaoGrafico === "anual")
-    const anos = [anoGrafico - 3, anoGrafico - 2, anoGrafico - 1, anoGrafico];
-    const items = anos.map((ano, idx) => {
-      if (ano === anoGrafico) {
-        return {
-          label: String(ano),
-          sublabel: `Ano Atual (${ano})`,
-          abertos: totalAbertosTI,
-          concluidos: totalConcluidosTI,
-        };
-      }
-      const fator = 0.65 + (idx * 0.12);
-      return {
-        label: String(ano),
-        sublabel: `Ano ${ano}`,
-        abertos: Math.round(totalAbertosTIBase * fator),
-        concluidos: Math.round(totalConcluidosTIBase * fator),
-      };
-    });
-
-    return {
-      type: "anual" as const,
-      items,
-      totalAbertos: totalAbertosTI,
-      totalConcluidos: totalConcluidosTI,
-    };
-  };
-
-  const dadosGrafico = getDadosGrafico();
 
   const chamadosFechadosMesTI = Math.max(0, kpis.fechadosMes || 0);
   const chamadosSolucionadosMesTI = Math.max(0, kpis.solucionadosMes || 0);
@@ -906,119 +706,7 @@ export default function Dashboard() {
   const nomeMesAtual = new Date().toLocaleDateString("pt-BR", { month: "long" });
   const nomeMesCapitalizado = nomeMesAtual.charAt(0).toUpperCase() + nomeMesAtual.slice(1);
 
-  // Requerentes ordenados por quem mais abriu chamados no mês selecionado
-  const requerentesOrdenados = useMemo(() => {
-    if (listaRequerentesApi && listaRequerentesApi.length > 0) {
-      return [...listaRequerentesApi]
-        .filter((r) => r.nome)
-        .map((r) => ({ nome: r.nome, count: r.count }))
-        .sort((a, b) => b.count - a.count);
-    }
-    const counts: Record<string, number> = {};
-    chamadosAbertosLista.forEach((c) => {
-      if (c.requerente && c.requerente !== "Não informado") {
-        counts[c.requerente] = (counts[c.requerente] || 0) + 1;
-      }
-    });
-    return Object.entries(counts)
-      .map(([nome, count]) => ({ nome, count }))
-      .sort((a, b) => b.count - a.count);
-  }, [listaRequerentesApi, chamadosAbertosLista]);
 
-  // Técnicos ordenados por quem mais resolveu chamados no mês selecionado (incluindo todos do Ranking TI)
-  const tecnicosOrdenados = useMemo(() => {
-    const apiCountsMap: Record<string, number> = {};
-    if (listaTecnicosApi && listaTecnicosApi.length > 0) {
-      listaTecnicosApi.forEach((t) => {
-        if (t.nome) {
-          apiCountsMap[t.nome.toLowerCase().trim()] = t.count;
-        }
-      });
-    }
-
-    const techMap: Map<string, { nome: string; count: number }> = new Map();
-
-    // Inclui obrigatoriamente TODOS os técnicos exibidos no Ranking TI
-    tecnicosExibidos.forEach((t) => {
-      if (t.nome) {
-        const key = t.nome.toLowerCase().trim();
-        const count = apiCountsMap[key] ?? 0;
-        techMap.set(key, { nome: t.nome, count });
-      }
-    });
-
-    // Inclui quaisquer outros técnicos retornados pela API de relatórios
-    if (listaTecnicosApi && listaTecnicosApi.length > 0) {
-      listaTecnicosApi.forEach((t) => {
-        if (t.nome) {
-          const key = t.nome.toLowerCase().trim();
-          if (!techMap.has(key)) {
-            techMap.set(key, { nome: t.nome, count: t.count });
-          }
-        }
-      });
-    }
-
-    return Array.from(techMap.values()).sort((a, b) => {
-      if (b.count !== a.count) {
-        return b.count - a.count;
-      }
-      return a.nome.localeCompare(b.nome, "pt-BR");
-    });
-  }, [tecnicosExibidos, listaTecnicosApi]);
-
-  const STATUS_ORDER: Record<string, number> = {
-    "Novo": 1,
-    "Atribuído": 2,
-    "Planejado": 3,
-    "Pendente": 4,
-    "Solucionado": 5,
-    "Fechado": 6,
-  };
-
-  const chamadosAbertosFiltrados = chamadosAbertosLista
-    .filter((item) => {
-      // Filtro específico por Requerente
-      if (filtroRequerente && !item.requerente.toLowerCase().includes(filtroRequerente.toLowerCase())) {
-        return false;
-      }
-      // Filtro específico por Técnico
-      if (filtroTecnico && !item.tecnico.toLowerCase().includes(filtroTecnico.toLowerCase())) {
-        return false;
-      }
-      // Filtro específico por Status
-      if (filtroStatus && item.status.toLowerCase() !== filtroStatus.toLowerCase()) {
-        return false;
-      }
-      // Filtro geral por busca textual
-      if (filtroChamadosAbertos.trim()) {
-        const query = filtroChamadosAbertos.toLowerCase();
-        const match =
-          item.id.toLowerCase().includes(query) ||
-          (item.requerente && item.requerente.toLowerCase().includes(query)) ||
-          (item.tecnico && item.tecnico.toLowerCase().includes(query)) ||
-          (item.status && item.status.toLowerCase().includes(query)) ||
-          (item.titulo && item.titulo.toLowerCase().includes(query)) ||
-          (item.mesAnoAbertura && item.mesAnoAbertura.toLowerCase().includes(query));
-        if (!match) return false;
-      }
-      return true;
-    })
-    .sort((a, b) => {
-      const isSameA = isMesIgual(a, mesAbertos, anoAbertos);
-      const isSameB = isMesIgual(b, mesAbertos, anoAbertos);
-      if (isSameA !== isSameB) {
-        return isSameA ? -1 : 1;
-      }
-      const weightA = STATUS_ORDER[a.status?.trim()] ?? 99;
-      const weightB = STATUS_ORDER[b.status?.trim()] ?? 99;
-      if (weightA !== weightB) {
-        return weightA - weightB;
-      }
-      const numA = parseInt(a.id.replace(/\D/g, ""), 10) || 0;
-      const numB = parseInt(b.id.replace(/\D/g, ""), 10) || 0;
-      return numB - numA;
-    });
 
   // Usa as estatísticas globais do ano (ou geral se o usuário não quiser filtrar por ano, mas as variáveis do backend são fechados/solucionados)
   const totalFechadosAnoTI = Math.max(0, kpis.fechados ?? kpis.fechadosAno ?? 0);
@@ -1369,107 +1057,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Seção do Gráfico de Linhas Exclusivo da TI & Informações Importantes */}
+      {/* Seção de Informações Importantes da TI */}
       <div className="db-chart-section premium-dashboard-section">
-        <div className="db-chart-card premium-chart-container">
-          <div className="premium-chart-header">
-            <div className="premium-chart-title">
-              <h3>Volume de Chamados de T.I</h3>
-              <p>Análise de performance e demanda ({visaoGrafico === "mensal" ? `Ano de ${anoGrafico}` : visaoGrafico === "anual" ? "Histórico Anual" : "Desempenho por Técnico TI"})</p>
-            </div>
-
-            <div className="premium-chart-controls">
-              <div className="premium-chart-tabs">
-                <button
-                  type="button"
-                  className={visaoGrafico === "mensal" ? "active" : ""}
-                  onClick={() => setVisaoGrafico("mensal")}
-                >
-                  Mensal
-                </button>
-                <button
-                  type="button"
-                  className={visaoGrafico === "anual" ? "active" : ""}
-                  onClick={() => setVisaoGrafico("anual")}
-                >
-                  Anual
-                </button>
-              </div>
-
-              {visaoGrafico === "mensal" && (
-                <select
-                  className="premium-select-ano"
-                  value={anoGrafico}
-                  onChange={(e) => setAnoGrafico(Number(e.target.value))}
-                >
-                  {[2023, 2024, 2025, 2026].map((ano) => (
-                    <option key={ano} value={ano}>
-                      {ano}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-          </div>
-
-          <div className="premium-chart-body">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={dadosGrafico.items} margin={{ top: 20, right: 30, left: 10, bottom: 10 }}>
-                <XAxis
-                  dataKey="label"
-                  stroke="#475569"
-                  tick={{ fill: '#94a3b8', fontSize: 13, fontWeight: 500 }}
-                  axisLine={false}
-                  tickLine={false}
-                  dy={15}
-                />
-                <YAxis
-                  stroke="#475569"
-                  tick={{ fill: '#94a3b8', fontSize: 13, fontWeight: 500 }}
-                  axisLine={false}
-                  tickLine={false}
-                  dx={-5}
-                />
-                <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="rgba(255, 255, 255, 0.06)" />
-                <RechartsTooltip
-                  contentStyle={{
-                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                    borderColor: 'rgba(255, 255, 255, 0.1)',
-                    borderRadius: '12px',
-                    color: '#f8fafc',
-                    boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.5)',
-                    padding: '16px'
-                  }}
-                  itemStyle={{ fontWeight: 600, padding: '4px 0' }}
-                  labelStyle={{ color: '#94a3b8', marginBottom: '8px', fontWeight: 500, fontSize: '13px' }}
-                />
-                <Legend
-                  iconType="circle"
-                  wrapperStyle={{ paddingTop: '24px', paddingBottom: '8px', fontSize: '14px', fontWeight: 500 }}
-                />
-                <Line
-                  type="monotone"
-                  name="Chamados Abertos (Demanda)"
-                  dataKey="abertos"
-                  stroke="#ef4444"
-                  strokeWidth={4}
-                  dot={{ r: 4, strokeWidth: 0, fill: '#ef4444' }}
-                  activeDot={{ r: 7, strokeWidth: 0, fill: '#f87171', style: { filter: 'drop-shadow(0 0 8px rgba(239, 68, 68, 0.8))' } }}
-                />
-                <Line
-                  type="monotone"
-                  name="Chamados Concluídos (Resolução)"
-                  dataKey="concluidos"
-                  stroke="#10b981"
-                  strokeWidth={4}
-                  dot={{ r: 4, strokeWidth: 0, fill: '#10b981' }}
-                  activeDot={{ r: 7, strokeWidth: 0, fill: '#34d399', style: { filter: 'drop-shadow(0 0 8px rgba(16, 185, 129, 0.8))' } }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
         {/* Informações da TI Redesenhadas em Grid Responsivo */}
         <div className="premium-kpi-grid">
           <div className="premium-kpi-card glass-blue">
@@ -1751,256 +1340,7 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Widget 2: Total chamados abertos no mês */}
-        <div className="db-tech-widget">
-          <div className="db-widget-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
-            <div className="db-widget-title-group">
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                <h3>Total chamados abertos no mês</h3>
-                <span className="kpi-pill kpi-pill-cyan" style={{ fontSize: '0.78rem' }}>
-                  {["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"][mesAbertos - 1]} / {anoAbertos}
-                </span>
-              </div>
-              <p>Quantidade total de chamados abertos no mês selecionado (GLPI)</p>
-            </div>
-            <div className="db-tab-group" style={{ display: "flex", gap: "0.4rem", alignItems: "center", flexWrap: "wrap" }}>
-              <select
-                className="db-select-filtro"
-                value={mesAbertos}
-                onChange={(e) => setMesAbertos(Number(e.target.value))}
-              >
-                <option value={1}>Janeiro</option>
-                <option value={2}>Fevereiro</option>
-                <option value={3}>Março</option>
-                <option value={4}>Abril</option>
-                <option value={5}>Maio</option>
-                <option value={6}>Junho</option>
-                <option value={7}>Julho</option>
-                <option value={8}>Agosto</option>
-                <option value={9}>Setembro</option>
-                <option value={10}>Outubro</option>
-                <option value={11}>Novembro</option>
-                <option value={12}>Dezembro</option>
-              </select>
 
-              <select
-                className="db-select-filtro"
-                value={anoAbertos}
-                onChange={(e) => setAnoAbertos(Number(e.target.value))}
-              >
-                <option value={2024}>2024</option>
-                <option value={2025}>2025</option>
-                <option value={2026}>2026</option>
-                <option value={2027}>2027</option>
-              </select>
-            </div>
-          </div>
-
-          {carregandoGlpi || carregandoAbertos ? (
-            renderProgressBar("Carregando total de chamados abertos...", carregandoGlpi ? progressoGlpi : progressoAbertos)
-          ) : (
-            <div className="db-abertos-mes-container">
-              <div className="db-abertos-mes-card">
-                <span className="db-abertos-number">{totalAbertosMes ?? 0}</span>
-                <span className="db-abertos-text">
-                  chamados abertos em <strong>{["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"][mesAbertos - 1]}</strong> de <strong>{anoAbertos}</strong>
-                </span>
-              </div>
-
-              {/* Lista com os chamados do mês selecionado */}
-              <div className="db-abertos-lista-container">
-                <div className="db-abertos-lista-header">
-                  <div className="db-abertos-lista-title">
-                    <h4>Lista de Chamados Abertos ({["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"][mesAbertos - 1]})</h4>
-                    <span className="db-abertos-count-badge">
-                      {chamadosAbertosFiltrados.length} {chamadosAbertosFiltrados.length === 1 ? "item" : "itens"}
-                    </span>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-                    {(filtroRequerente || filtroTecnico || filtroStatus || filtroChamadosAbertos) && (
-                      <button
-                        type="button"
-                        className="db-btn-clear-filters"
-                        onClick={() => {
-                          setFiltroRequerente("");
-                          setFiltroTecnico("");
-                          setFiltroStatus("");
-                          setFiltroChamadosAbertos("");
-                        }}
-                        title="Limpar todos os filtros ativos"
-                      >
-                        Limpar Filtros ✕
-                      </button>
-                    )}
-                    <div className="db-abertos-search-wrap">
-                      <input
-                        type="text"
-                        className="db-abertos-search-input"
-                        placeholder="Buscar por ID, requerente, técnico ou status..."
-                        value={filtroChamadosAbertos}
-                        onChange={(e) => setFiltroChamadosAbertos(e.target.value)}
-                      />
-                      {filtroChamadosAbertos && (
-                        <button
-                          type="button"
-                          className="db-abertos-search-clear"
-                          onClick={() => setFiltroChamadosAbertos("")}
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {chamadosAbertosFiltrados.length === 0 ? (
-                  <div className="db-widget-empty" style={{ padding: "2rem 1rem" }}>
-                    Nenhum chamado aberto encontrado{(filtroRequerente || filtroTecnico || filtroStatus || filtroChamadosAbertos) ? " para os filtros selecionados" : " neste mês"}.
-                  </div>
-                ) : (
-                  <div className="db-abertos-table-wrapper">
-                    <table className="db-abertos-table">
-                      <thead>
-                        <tr>
-                          <th style={{ width: "45px", textAlign: "center" }}>#</th>
-                          <th style={{ width: "90px" }}>ID</th>
-                          <th>Título</th>
-                          <th>
-                            <div className="th-filter-header">
-                              <span>Requerente</span>
-                              <select
-                                className={`th-select-header ${filtroRequerente ? "active" : ""}`}
-                                value={filtroRequerente}
-                                onChange={(e) => setFiltroRequerente(e.target.value)}
-                                onClick={(e) => e.stopPropagation()}
-                                title="Filtrar por Requerente (ordem de quem mais abriu)"
-                              >
-                                <option value="">Todos</option>
-                                {requerentesOrdenados.map((r, idx) => (
-                                  <option key={idx} value={r.nome}>
-                                    {idx + 1}. {r.nome} ({r.count} abertos)
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </th>
-                          <th>
-                            <div className="th-filter-header">
-                              <span>Técnico</span>
-                              <select
-                                className={`th-select-header ${filtroTecnico ? "active" : ""}`}
-                                value={filtroTecnico}
-                                onChange={(e) => setFiltroTecnico(e.target.value)}
-                                onClick={(e) => e.stopPropagation()}
-                                title="Filtrar por Técnico (ordem de quem mais resolveu)"
-                              >
-                                <option value="">Todos</option>
-                                {tecnicosOrdenados.map((t, idx) => (
-                                  <option key={idx} value={t.nome}>
-                                    {idx + 1}. {t.nome} ({t.count} resolvidos)
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </th>
-                          <th style={{ width: "140px", textAlign: "center" }}>
-                            <div className="th-filter-header" style={{ justifyContent: "center" }}>
-                              <span>Status</span>
-                              <select
-                                className={`th-select-header ${filtroStatus ? "active" : ""}`}
-                                value={filtroStatus}
-                                onChange={(e) => setFiltroStatus(e.target.value)}
-                                onClick={(e) => e.stopPropagation()}
-                                title="Filtrar por Status"
-                              >
-                                <option value="">Todos</option>
-                                <option value="Novo">Novo</option>
-                                <option value="Atribuído">Atribuído</option>
-                                <option value="Planejado">Planejado</option>
-                                <option value="Pendente">Pendente</option>
-                                <option value="Solucionado">Solucionado</option>
-                                <option value="Fechado">Fechado</option>
-                              </select>
-                            </div>
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {chamadosAbertosFiltrados.map((item, index) => {
-                          const statusClass = item.status.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "-");
-                          const isSame = isMesIgual(item, mesAbertos, anoAbertos);
-                          return (
-                            <tr key={item.id}>
-                              <td className="td-index" style={{ textAlign: "center" }}>
-                                {index + 1}.
-                              </td>
-                              <td className="td-id">
-                                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2px" }}>
-                                  <div style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
-                                    {item.url ? (
-                                      <a
-                                        href={item.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        style={{ fontWeight: 700, color: "#38bdf8", textDecoration: "none" }}
-                                        title={`Abrir chamado #${item.id} no GLPI`}
-                                      >
-                                        #{item.id}
-                                      </a>
-                                    ) : (
-                                      <span style={{ fontWeight: 700 }}>#{item.id}</span>
-                                    )}
-                                    {item.url && (
-                                      <a
-                                        href={item.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="db-ticket-external-link"
-                                        title={`Abrir chamado #${item.id} no GLPI`}
-                                      >
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13">
-                                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" strokeLinecap="round" strokeLinejoin="round" />
-                                          <polyline points="15 3 21 3 21 9" strokeLinecap="round" strokeLinejoin="round" />
-                                          <line x1="10" y1="14" x2="21" y2="3" strokeLinecap="round" strokeLinejoin="round" />
-                                        </svg>
-                                      </a>
-                                    )}
-                                  </div>
-                                  {getMesAnoAberturaTag(item) && (
-                                    <span
-                                      className={`db-ticket-mes-abertura ${isSame ? "mesmo-mes" : "outro-mes"}`}
-                                      title={`Chamado criado em ${getMesAnoAberturaTag(item)}`}
-                                    >
-                                      {getMesAnoAberturaTag(item)}
-                                    </span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="td-titulo" title={item.titulo}>
-                                {item.titulo || "-"}
-                              </td>
-                              <td className="td-requerente" title={item.requerente}>
-                                {item.requerente}
-                              </td>
-                              <td className="td-tecnico" title={item.tecnico}>
-                                {item.tecnico}
-                              </td>
-                              <td className="td-status" style={{ textAlign: "center" }}>
-                                <span className={`db-status-pill status-${statusClass}`}>
-                                  {item.status}
-                                </span>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Modal de Relatórios em PDF */}
