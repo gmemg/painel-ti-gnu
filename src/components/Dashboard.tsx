@@ -1411,7 +1411,7 @@ export default function Dashboard() {
                               value={filtroDetalhesTecnico}
                               onChange={(e) => setFiltroDetalhesTecnico(e.target.value)}
                             >
-                              <option value="todos">Todos os tecnicos</option>
+                              <option value="todos">Resolvidos em equipe</option>
                               {tecnicosDisponiveis.map((tecnico) => (
                                 <option key={tecnico} value={tecnico}>
                                   {tecnico}
