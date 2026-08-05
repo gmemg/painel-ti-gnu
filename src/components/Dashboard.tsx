@@ -775,8 +775,8 @@ export default function Dashboard() {
   const chamadoPiorInteracao = chamadosSemInteracao30Dias.length > 0
     ? [...chamadosSemInteracao30Dias].sort((a, b) => b.diasSemInteracao - a.diasSemInteracao)[0]
     : chamadosAntigos.length > 0
-    ? [...chamadosAntigos].sort((a, b) => b.diasSemInteracao - a.diasSemInteracao)[0]
-    : null;
+      ? [...chamadosAntigos].sort((a, b) => b.diasSemInteracao - a.diasSemInteracao)[0]
+      : null;
 
   const listaAntigosBase = abaModalAntigos === "interacao_30" ? chamadosSemInteracao30Dias : chamadosAntigos;
 
@@ -1185,7 +1185,7 @@ export default function Dashboard() {
         <div className="db-tech-widget">
           <div className="db-widget-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
             <div className="db-widget-title-group">
-              <h3>Ranking TI</h3>
+              <h3>Chamados TI</h3>
               <p>
                 {filtroRankingMode === "geral"
                   ? ""
@@ -1283,8 +1283,8 @@ export default function Dashboard() {
                 const detalhesDoTech = isRankingOpen ? dadosDetalhes : null;
                 const chamadosDoTech = detalhesDoTech
                   ? detalhesDoTech.meses.flatMap((mes) =>
-                      mes.chamados.map((chamado) => ({ ...chamado, mes: mes.mes, nomeMes: mes.nomeMes }))
-                    )
+                    mes.chamados.map((chamado) => ({ ...chamado, mes: mes.mes, nomeMes: mes.nomeMes }))
+                  )
                   : [];
                 const statusDisponiveis = Array.from(
                   new Set(chamadosDoTech.map((c) => c.status || "Sem status"))
@@ -1331,56 +1331,56 @@ export default function Dashboard() {
                       title={`Ver chamados fechados e solucionados de ${tech.nome}`}
                     >
                       <div className="db-ranking-position-wrap">
-                      <span className={`db-ranking-position ${isTop3 ? `medal-${medalColor}` : ""}`}>
-                        {index + 1}
-                      </span>
-                    </div>
-                    <div className="db-ranking-avatar">{tech.avatar}</div>
-                    <div className="db-ranking-info">
-                      <span className="db-ranking-name">{tech.nome}</span>
-                      <div className="db-ranking-sub-breakdown" style={{ display: 'flex', gap: '6px', fontSize: '0.78rem', marginTop: '2px', fontWeight: 500 }}>
-                        <span style={{ color: '#10b981' }}>Fechados: {tech.fechadosVal}</span>
-                        <span style={{ color: '#38bdf8' }}>• Solucionados: {tech.solucionadosVal}</span>
+                        <span className={`db-ranking-position ${isTop3 ? `medal-${medalColor}` : ""}`}>
+                          {index + 1}
+                        </span>
                       </div>
-                    </div>
-                    <div className="db-ranking-value-wrap">
-                      <span className="db-ranking-value">{valorExibido}</span>
-                      <span className="db-ranking-label">{labelExibido}</span>
-                    </div>
-                    <div style={{ position: "relative" }}>
-                      <button
-                        type="button"
-                        className={`db-btn-ranking-menu ${activeRankingMenuId === tech.id ? "active" : ""}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveRankingMenuId(activeRankingMenuId === tech.id ? null : tech.id);
-                        }}
-                        title="Opções"
-                      >
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                          <circle cx="12" cy="5" r="2" />
-                          <circle cx="12" cy="12" r="2" />
-                          <circle cx="12" cy="19" r="2" />
-                        </svg>
-                      </button>
-                      {activeRankingMenuId === tech.id && (
-                        <div className="db-ranking-popover" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            type="button"
-                            className="db-ranking-popover-item db-popover-danger"
-                            onClick={() => {
-                              ocultarDoRanking(tech.id);
-                              setActiveRankingMenuId(null);
-                            }}
-                          >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-                              <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                            Remover
-                          </button>
+                      <div className="db-ranking-avatar">{tech.avatar}</div>
+                      <div className="db-ranking-info">
+                        <span className="db-ranking-name">{tech.nome}</span>
+                        <div className="db-ranking-sub-breakdown" style={{ display: 'flex', gap: '6px', fontSize: '0.78rem', marginTop: '2px', fontWeight: 500 }}>
+                          <span style={{ color: '#10b981' }}>Fechados: {tech.fechadosVal}</span>
+                          <span style={{ color: '#38bdf8' }}>• Solucionados: {tech.solucionadosVal}</span>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                      <div className="db-ranking-value-wrap">
+                        <span className="db-ranking-value">{valorExibido}</span>
+                        <span className="db-ranking-label">{labelExibido}</span>
+                      </div>
+                      <div style={{ position: "relative" }}>
+                        <button
+                          type="button"
+                          className={`db-btn-ranking-menu ${activeRankingMenuId === tech.id ? "active" : ""}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveRankingMenuId(activeRankingMenuId === tech.id ? null : tech.id);
+                          }}
+                          title="Opções"
+                        >
+                          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                            <circle cx="12" cy="5" r="2" />
+                            <circle cx="12" cy="12" r="2" />
+                            <circle cx="12" cy="19" r="2" />
+                          </svg>
+                        </button>
+                        {activeRankingMenuId === tech.id && (
+                          <div className="db-ranking-popover" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              className="db-ranking-popover-item db-popover-danger"
+                              onClick={() => {
+                                ocultarDoRanking(tech.id);
+                                setActiveRankingMenuId(null);
+                              }}
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                                <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                              Remover
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     {isRankingOpen && (
                       <div className="db-ranking-details-panel" onClick={(e) => e.stopPropagation()}>
@@ -1479,20 +1479,37 @@ export default function Dashboard() {
                                       <span className="db-ticket-row-number">{chamadoIndex + 1}</span>
                                     </td>
                                     <td>
-                                      {c.url ? (
-                                        <a
-                                          href={c.url}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="db-ticket-id"
-                                          style={{ textDecoration: "none" }}
-                                          title={`Abrir chamado #${c.id} no GLPI`}
-                                        >
-                                          #{c.id}
-                                        </a>
-                                      ) : (
-                                        <span className="db-ticket-id">#{c.id}</span>
-                                      )}
+                                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2px" }}>
+                                        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
+                                          {c.url ? (
+                                            <a
+                                              href={c.url}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="db-ticket-id"
+                                              style={{ textDecoration: "none" }}
+                                              title={`Abrir chamado #${c.id} no GLPI`}
+                                            >
+                                              #{c.id}
+                                            </a>
+                                          ) : (
+                                            <span className="db-ticket-id">#{c.id}</span>
+                                          )}
+                                        </div>
+                                        {filtroDetalhesMes !== "todos" && (() => {
+                                          const mesSelecionado = parseInt(filtroDetalhesMes, 10);
+                                          const isSame = isMesIgual(c, mesSelecionado, anoDetalhes);
+                                          const tag = getMesAnoAberturaTag(c);
+                                          return !isSame && tag ? (
+                                            <span
+                                              className="db-ticket-mes-abertura outro-mes"
+                                              title={`Chamado criado em ${c.dataAbertura || tag}`}
+                                            >
+                                              Aberto em {tag}
+                                            </span>
+                                          ) : null;
+                                        })()}
+                                      </div>
                                     </td>
                                     <td>
                                       <span className="db-ticket-title">{c.titulo}</span>
@@ -2147,37 +2164,37 @@ export default function Dashboard() {
                                                     </a>
                                                   )}
                                                 </div>
-                                                {getMesAnoAberturaTag(c) && (
+                                                {!isSame && getMesAnoAberturaTag(c) && (
                                                   <span
-                                                    className={`db-ticket-mes-abertura ${isSame ? "mesmo-mes" : "outro-mes"}`}
+                                                    className="db-ticket-mes-abertura outro-mes"
                                                     title={`Chamado criado em ${c.dataAbertura || getMesAnoAberturaTag(c)}`}
                                                   >
-                                                    {getMesAnoAberturaTag(c)}
+                                                    Aberto em {getMesAnoAberturaTag(c)}
                                                   </span>
                                                 )}
                                               </div>
                                             </td>
-                                          <td>
-                                            <span className="db-ticket-title">{c.titulo}</span>
-                                          </td>
-                                          <td>
-                                            <span className="db-ticket-req">{c.requerente}</span>
-                                          </td>
-                                          <td>
-                                            <span className="db-ticket-req">{c.tecnico || tecnicoDetalhes.nome}</span>
-                                          </td>
-                                          <td>
-                                            <span className={`db-ticket-status ${(c.status || "").toLowerCase()}`}>
-                                              {c.status || "-"}
-                                            </span>
-                                          </td>
-                                          <td style={{ textAlign: "right" }}>
-                                            <span className="db-ticket-date">{c.dataFechamento || "-"}</span>
-                                          </td>
-                                         </tr>
-                                       );
-                                     })}
-                                   </tbody>
+                                            <td>
+                                              <span className="db-ticket-title">{c.titulo}</span>
+                                            </td>
+                                            <td>
+                                              <span className="db-ticket-req">{c.requerente}</span>
+                                            </td>
+                                            <td>
+                                              <span className="db-ticket-req">{c.tecnico || tecnicoDetalhes.nome}</span>
+                                            </td>
+                                            <td>
+                                              <span className={`db-ticket-status ${(c.status || "").toLowerCase()}`}>
+                                                {c.status || "-"}
+                                              </span>
+                                            </td>
+                                            <td style={{ textAlign: "right" }}>
+                                              <span className="db-ticket-date">{c.dataFechamento || "-"}</span>
+                                            </td>
+                                          </tr>
+                                        );
+                                      })}
+                                    </tbody>
                                   </table>
                                 </div>
                               )}

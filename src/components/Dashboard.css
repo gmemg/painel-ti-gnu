@@ -2805,7 +2805,12 @@ html[data-theme="light"] .db-tab-group {
 }
 
 .db-ticket-mes-abertura.outro-mes {
-  color: #facc15; /* Amarelo se for de outro mês */
+  color: #facc15;
+  background: rgba(250, 204, 21, 0.12);
+  border: 1px solid rgba(250, 204, 21, 0.3);
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-top: 2px;
 }
 
 /* Ícone de link externo para redirecionar ao GLPI */
