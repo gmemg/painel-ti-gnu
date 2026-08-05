@@ -381,6 +381,7 @@
   box-shadow: 0 4px 16px var(--shadow);
   display: flex;
   flex-direction: column;
+  grid-column: 1 / -1;
 }
 
 .db-widget-header {
@@ -625,6 +626,12 @@ html[data-theme="light"] .db-preset-circle.active {
   flex: 1;
 }
 
+.db-ranking-item-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
 .db-ranking-item {
   display: flex;
   align-items: center;
@@ -640,6 +647,83 @@ html[data-theme="light"] .db-preset-circle.active {
   transform: translateX(4px);
   border-color: var(--border-strong);
   box-shadow: 0 4px 12px var(--shadow);
+}
+
+.db-ranking-item-clickable {
+  cursor: pointer;
+}
+
+.db-ranking-item-clickable:focus-visible {
+  outline: 2px solid var(--blue, #2b8ffb);
+  outline-offset: 2px;
+}
+
+.db-ranking-item-block.open .db-ranking-item {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.db-ranking-details-panel {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-top: 0;
+  border-radius: 0 0 10px 10px;
+  padding: 1rem;
+  box-shadow: 0 8px 18px var(--shadow);
+}
+
+.db-ranking-details-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.db-ranking-details-summary {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.db-ranking-details-summary strong {
+  color: var(--text-strong);
+  font-size: 1.2rem;
+}
+
+.db-ranking-details-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.db-ranking-details-search {
+  min-width: 220px;
+  background: var(--surface-3);
+  color: var(--text-strong);
+  border: 1px solid var(--border-strong);
+  padding: 0.45rem 0.7rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  outline: none;
+}
+
+.db-ranking-details-search:focus {
+  border-color: var(--blue, #2b8ffb);
+}
+
+.db-ranking-details-loading,
+.db-ranking-details-empty {
+  padding: 1rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
 }
 
 .db-ranking-position-wrap {
@@ -1259,7 +1343,7 @@ html[data-theme="light"] .db-tab-group {
 }
 
 .db-modal-detalhes {
-  max-width: 920px;
+  max-width: 1180px;
   width: 95%;
   max-height: 90vh;
   display: flex;
@@ -1537,6 +1621,21 @@ html[data-theme="light"] .db-tab-group {
   font-family: monospace;
 }
 
+.db-ticket-row-number {
+  display: inline-flex;
+  min-width: 28px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .db-ticket-title {
   font-weight: 500;
   color: var(--text-strong);
@@ -1550,6 +1649,33 @@ html[data-theme="light"] .db-tab-group {
   color: var(--text-muted);
   font-size: 0.78rem;
   white-space: nowrap;
+}
+
+.db-ticket-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 88px;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-3);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.db-ticket-status.fechado {
+  background: rgba(156, 163, 175, 0.16);
+  border-color: rgba(156, 163, 175, 0.28);
+  color: #cbd5e1;
+}
+
+.db-ticket-status.solucionado {
+  background: rgba(16, 185, 129, 0.16);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #34d399;
 }
 
 /* Botões de Adicionar / Deletar no Ranking */

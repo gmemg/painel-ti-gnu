@@ -229,6 +229,10 @@ export default function Dashboard() {
   const [carregandoDetalhes, setCarregandoDetalhes] = useState<boolean>(false);
   const [buscaChamadosDetalhes, setBuscaChamadosDetalhes] = useState<string>("");
   const [mesExpandido, setMesExpandido] = useState<number | null>(new Date().getMonth() + 1);
+  const [rankingDetalhesAbertoId, setRankingDetalhesAbertoId] = useState<string | null>(null);
+  const [filtroDetalhesStatus, setFiltroDetalhesStatus] = useState<string>("todos");
+  const [filtroDetalhesTecnico, setFiltroDetalhesTecnico] = useState<string>("todos");
+  const [filtroDetalhesMes, setFiltroDetalhesMes] = useState<string>("todos");
 
   const carregarDetalhesTecnico = async (tech: Tecnico, ano: number) => {
     setCarregandoDetalhes(true);
@@ -258,12 +262,19 @@ export default function Dashboard() {
   };
 
   const abrirModalDetalhes = (tech: Tecnico) => {
+    if (rankingDetalhesAbertoId === tech.id) {
+      setRankingDetalhesAbertoId(null);
+      return;
+    }
     setTecnicoDetalhes(tech);
-    setAnoDetalhes(new Date().getFullYear());
     setBuscaChamadosDetalhes("");
-    setMesExpandido(new Date().getMonth() + 1);
-    setModalDetalhesAberto(true);
-    carregarDetalhesTecnico(tech, new Date().getFullYear());
+    setFiltroDetalhesStatus("todos");
+    setFiltroDetalhesTecnico("todos");
+    setFiltroDetalhesMes("todos");
+    setDadosDetalhes(null);
+    setRankingDetalhesAbertoId(tech.id);
+    setModalDetalhesAberto(false);
+    carregarDetalhesTecnico(tech, anoDetalhes);
   };
 
   const alterarAnoDetalhes = (novoAno: number) => {
@@ -1268,9 +1279,58 @@ export default function Dashboard() {
                   filtroRankingMode === "geral"
                     ? "total"
                     : `${siglaMeses[mesRanking - 1]}/${anoRanking}`;
+                const isRankingOpen = rankingDetalhesAbertoId === tech.id;
+                const detalhesDoTech = isRankingOpen ? dadosDetalhes : null;
+                const chamadosDoTech = detalhesDoTech
+                  ? detalhesDoTech.meses.flatMap((mes) =>
+                      mes.chamados.map((chamado) => ({ ...chamado, mes: mes.mes, nomeMes: mes.nomeMes }))
+                    )
+                  : [];
+                const statusDisponiveis = Array.from(
+                  new Set(chamadosDoTech.map((c) => c.status || "Sem status"))
+                ).sort();
+                const tecnicosDisponiveis = Array.from(
+                  new Set(chamadosDoTech.map((c) => c.tecnico || tech.nome))
+                ).sort();
+                const mesesDisponiveis = detalhesDoTech
+                  ? detalhesDoTech.meses.filter((m) => m.total > 0)
+                  : [];
+                const chamadosInlineFiltrados = chamadosDoTech
+                  .filter((c) => filtroDetalhesStatus === "todos" || (c.status || "Sem status") === filtroDetalhesStatus)
+                  .filter((c) => filtroDetalhesTecnico === "todos" || (c.tecnico || tech.nome) === filtroDetalhesTecnico)
+                  .filter((c) => filtroDetalhesMes === "todos" || String(c.mes) === filtroDetalhesMes)
+                  .filter((c) => {
+                    if (!buscaChamadosDetalhes.trim()) return true;
+                    const q = buscaChamadosDetalhes.toLowerCase().trim();
+                    return (
+                      c.id.toLowerCase().includes(q) ||
+                      c.titulo.toLowerCase().includes(q) ||
+                      c.requerente.toLowerCase().includes(q) ||
+                      (c.tecnico || "").toLowerCase().includes(q) ||
+                      (c.status || "").toLowerCase().includes(q)
+                    );
+                  })
+                  .sort((a, b) => {
+                    const numA = parseInt(a.id.replace(/\D/g, ""), 10) || 0;
+                    const numB = parseInt(b.id.replace(/\D/g, ""), 10) || 0;
+                    return numB - numA;
+                  });
                 return (
-                  <div key={tech.id} className="db-ranking-item">
-                    <div className="db-ranking-position-wrap">
+                  <div key={tech.id} className={`db-ranking-item-block ${isRankingOpen ? "open" : ""}`}>
+                    <div
+                      className="db-ranking-item db-ranking-item-clickable"
+                      onClick={() => abrirModalDetalhes(tech)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          abrirModalDetalhes(tech);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      title={`Ver chamados fechados e solucionados de ${tech.nome}`}
+                    >
+                      <div className="db-ranking-position-wrap">
                       <span className={`db-ranking-position ${isTop3 ? `medal-${medalColor}` : ""}`}>
                         {index + 1}
                       </span>
@@ -1287,18 +1347,6 @@ export default function Dashboard() {
                       <span className="db-ranking-value">{valorExibido}</span>
                       <span className="db-ranking-label">{labelExibido}</span>
                     </div>
-                    <button
-                      type="button"
-                      className="db-btn-detalhes-ranking"
-                      onClick={() => abrirModalDetalhes(tech)}
-                      title={`Ver chamados concluídos de ${tech.nome}`}
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="13" height="13">
-                        <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      Detalhes
-                    </button>
                     <div style={{ position: "relative" }}>
                       <button
                         type="button"
@@ -1333,6 +1381,144 @@ export default function Dashboard() {
                         </div>
                       )}
                     </div>
+                    </div>
+                    {isRankingOpen && (
+                      <div className="db-ranking-details-panel" onClick={(e) => e.stopPropagation()}>
+                        <div className="db-ranking-details-toolbar">
+                          <div className="db-ranking-details-summary">
+                            <strong>{chamadosInlineFiltrados.length}</strong>
+                            <span>
+                              {chamadosInlineFiltrados.length === 1 ? "chamado exibido" : "chamados exibidos"}
+                            </span>
+                          </div>
+
+                          <div className="db-ranking-details-filters">
+                            <select
+                              className="db-select-filtro"
+                              value={filtroDetalhesStatus}
+                              onChange={(e) => setFiltroDetalhesStatus(e.target.value)}
+                            >
+                              <option value="todos">Todos os status</option>
+                              {statusDisponiveis.map((status) => (
+                                <option key={status} value={status}>
+                                  {status}
+                                </option>
+                              ))}
+                            </select>
+
+                            <select
+                              className="db-select-filtro"
+                              value={filtroDetalhesTecnico}
+                              onChange={(e) => setFiltroDetalhesTecnico(e.target.value)}
+                            >
+                              <option value="todos">Todos os tecnicos</option>
+                              {tecnicosDisponiveis.map((tecnico) => (
+                                <option key={tecnico} value={tecnico}>
+                                  {tecnico}
+                                </option>
+                              ))}
+                            </select>
+
+                            <select
+                              className="db-select-filtro"
+                              value={filtroDetalhesMes}
+                              onChange={(e) => setFiltroDetalhesMes(e.target.value)}
+                            >
+                              <option value="todos">Todos os meses</option>
+                              {mesesDisponiveis.map((mes) => (
+                                <option key={mes.mes} value={String(mes.mes)}>
+                                  {mes.nomeMes}
+                                </option>
+                              ))}
+                            </select>
+
+                            <select
+                              className="db-select-filtro"
+                              value={anoDetalhes}
+                              onChange={(e) => alterarAnoDetalhes(Number(e.target.value))}
+                            >
+                              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
+                                <option key={y} value={y}>
+                                  {y}
+                                </option>
+                              ))}
+                            </select>
+
+                            <input
+                              type="text"
+                              className="db-ranking-details-search"
+                              placeholder="Buscar ID, titulo, requerente..."
+                              value={buscaChamadosDetalhes}
+                              onChange={(e) => setBuscaChamadosDetalhes(e.target.value)}
+                            />
+                          </div>
+                        </div>
+
+                        {carregandoDetalhes ? (
+                          <div className="db-ranking-details-loading">Buscando chamados...</div>
+                        ) : chamadosInlineFiltrados.length === 0 ? (
+                          <div className="db-ranking-details-empty">Nenhum chamado encontrado para os filtros selecionados.</div>
+                        ) : (
+                          <div className="db-tickets-table-wrap">
+                            <table className="db-tickets-table">
+                              <thead>
+                                <tr>
+                                  <th style={{ width: "56px" }}>Nº</th>
+                                  <th style={{ width: "96px" }}>ID</th>
+                                  <th>Titulo</th>
+                                  <th>Requerente</th>
+                                  <th>Tecnico</th>
+                                  <th style={{ width: "120px" }}>Status</th>
+                                  <th style={{ width: "140px", textAlign: "right" }}>Concluido em</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {chamadosInlineFiltrados.map((c, chamadoIndex) => (
+                                  <tr key={`${c.id}-${chamadoIndex}`}>
+                                    <td>
+                                      <span className="db-ticket-row-number">{chamadoIndex + 1}</span>
+                                    </td>
+                                    <td>
+                                      {c.url ? (
+                                        <a
+                                          href={c.url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="db-ticket-id"
+                                          style={{ textDecoration: "none" }}
+                                          title={`Abrir chamado #${c.id} no GLPI`}
+                                        >
+                                          #{c.id}
+                                        </a>
+                                      ) : (
+                                        <span className="db-ticket-id">#{c.id}</span>
+                                      )}
+                                    </td>
+                                    <td>
+                                      <span className="db-ticket-title">{c.titulo}</span>
+                                    </td>
+                                    <td>
+                                      <span className="db-ticket-req">{c.requerente}</span>
+                                    </td>
+                                    <td>
+                                      <span className="db-ticket-req">{c.tecnico || tech.nome}</span>
+                                    </td>
+                                    <td>
+                                      <span className={`db-ticket-status ${(c.status || "").toLowerCase()}`}>
+                                        {c.status || "-"}
+                                      </span>
+                                    </td>
+                                    <td style={{ textAlign: "right" }}>
+                                      <span className="db-ticket-date">{c.dataFechamento || "-"}</span>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -1854,6 +2040,8 @@ export default function Dashboard() {
                             c.id.toLowerCase().includes(q) ||
                             c.titulo.toLowerCase().includes(q) ||
                             c.requerente.toLowerCase().includes(q) ||
+                            (c.tecnico || "").toLowerCase().includes(q) ||
+                            (c.status || "").toLowerCase().includes(q) ||
                             (c.mesAnoAbertura && c.mesAnoAbertura.toLowerCase().includes(q))
                           );
                         })
@@ -1909,17 +2097,23 @@ export default function Dashboard() {
                                   <table className="db-tickets-table">
                                     <thead>
                                       <tr>
-                                        <th style={{ width: "90px" }}>Chamado</th>
+                                        <th style={{ width: "56px" }}>Nº</th>
+                                        <th style={{ width: "96px" }}>ID</th>
                                         <th>Descrição</th>
                                         <th>Requerente</th>
+                                        <th>Tecnico</th>
+                                        <th style={{ width: "120px" }}>Status</th>
                                         <th style={{ width: "140px", textAlign: "right" }}>Concluído em</th>
                                       </tr>
                                     </thead>
                                     <tbody>
-                                      {chamadosFiltrados.map((c) => {
+                                      {chamadosFiltrados.map((c, chamadoIndex) => {
                                         const isSame = isMesIgual(c, m.mes, anoDetalhes);
                                         return (
                                           <tr key={c.id}>
+                                            <td>
+                                              <span className="db-ticket-row-number">{chamadoIndex + 1}</span>
+                                            </td>
                                             <td>
                                               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2px" }}>
                                                 <div style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
@@ -1968,6 +2162,14 @@ export default function Dashboard() {
                                           </td>
                                           <td>
                                             <span className="db-ticket-req">{c.requerente}</span>
+                                          </td>
+                                          <td>
+                                            <span className="db-ticket-req">{c.tecnico || tecnicoDetalhes.nome}</span>
+                                          </td>
+                                          <td>
+                                            <span className={`db-ticket-status ${(c.status || "").toLowerCase()}`}>
+                                              {c.status || "-"}
+                                            </span>
                                           </td>
                                           <td style={{ textAlign: "right" }}>
                                             <span className="db-ticket-date">{c.dataFechamento || "-"}</span>

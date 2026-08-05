@@ -429,6 +429,7 @@ export interface ChamadoDetalhe {
   id: string;
   titulo: string;
   requerente: string;
+  tecnico?: string;
   dataAbertura?: string;
   dataFechamento?: string;
   status?: string;

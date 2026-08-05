@@ -2800,6 +2800,10 @@ app.get("/api/glpi/tecnico-detalhes", async (req, res, next) => {
 
       const ticketId = String(rawId || ticket.id || "");
       const titulo = String(rawName || `Chamado #${ticketId}`);
+      const tecnicoNome = techIds
+        .map(tid => usersMap[tid] || (tid ? `Usuario ${tid}` : ""))
+        .filter(Boolean)
+        .join(", ") || nome || "Nao informado";
       const rawReq = ticket["4"];
       const reqId = Array.isArray(rawReq) ? String(rawReq[0] || "") : String(rawReq || "");
       const requerenteNome = (reqId && usersMap[reqId]) ? usersMap[reqId] : (reqId ? `Usuário ${reqId}` : "Não informado");
@@ -2848,6 +2852,7 @@ app.get("/api/glpi/tecnico-detalhes", async (req, res, next) => {
           id: ticketId,
           titulo: titulo,
           requerente: requerenteNome,
+          tecnico: tecnicoNome,
           dataAbertura: formatData(dataAberturaRaw),
           dataFechamento: formatData(dataFechamentoRaw),
           status: statusText,
