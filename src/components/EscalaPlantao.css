@@ -566,6 +566,18 @@
   box-shadow: inset 3px 0 0 var(--blue);
 }
 
+.esc-row-passado {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+.esc-row-passado .esc-nome,
+.esc-row-passado .esc-matricula,
+.esc-row-passado .esc-dia,
+.esc-row-passado .esc-diasemana {
+  text-decoration: line-through;
+}
+
 .esc-dia {
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;

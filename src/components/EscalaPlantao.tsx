@@ -414,19 +414,26 @@ export function EscalaCard({ escala }: { escala: Escala }) {
         ) : (
           grupos.map((grupo, gi) => (
             <div key={gi} className="esc-grupo">
-              {grupo.map((p) => (
-                <div
-                  key={p.id}
-                  className={
-                    p.data === hoje ? "esc-row esc-row-hoje" : "esc-row"
-                  }
-                >
-                  <span className="esc-dia">{formatDiaCurto(p.data)}</span>
-                  <span className="esc-diasemana">{diaDaSemana(p.data)}</span>
-                  <span className="esc-nome">{p.nome}</span>
-                  <span className="esc-matricula">{p.matricula}</span>
-                </div>
-              ))}
+              {grupo.map((p) => {
+                const passado = p.data < hoje && p.data !== hoje;
+                return (
+                  <div
+                    key={p.id}
+                    className={[
+                      "esc-row",
+                      p.data === hoje ? "esc-row-hoje" : "",
+                      passado ? "esc-row-passado" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                  >
+                    <span className="esc-dia">{formatDiaCurto(p.data)}</span>
+                    <span className="esc-diasemana">{diaDaSemana(p.data)}</span>
+                    <span className="esc-nome">{p.nome}</span>
+                    <span className="esc-matricula">{p.matricula}</span>
+                  </div>
+                );
+              })}
             </div>
           ))
         )}

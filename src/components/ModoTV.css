@@ -296,6 +296,18 @@
   box-shadow: inset 4px 0 0 #3b82f6;
 }
 
+.tv-escala-wrap .esc-row-passado {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+
+.tv-escala-wrap .esc-row-passado .esc-nome,
+.tv-escala-wrap .esc-row-passado .esc-matricula,
+.tv-escala-wrap .esc-row-passado .esc-dia,
+.tv-escala-wrap .esc-row-passado .esc-diasemana {
+  text-decoration: line-through;
+}
+
 .tv-escala-vazio {
   text-align: center;
   padding: 5rem 2rem;

@@ -78,6 +78,52 @@ const NumeroManutencao = () => {
   const [novaCategoria, setNovaCategoria] = useState("");
   const [erroCategoria, setErroCategoria] = useState("");
 
+  // ── Drag-and-drop ─────────────────────────────────────────────────
+  const dragSrcIdx = useRef<number | null>(null);
+  const canDrag = useRef(false);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, idx: number) => {
+    // Cancela o drag se não foi iniciado pelo handle
+    if (!canDrag.current) {
+      e.preventDefault();
+      return;
+    }
+    dragSrcIdx.current = idx;
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverIdx(idx);
+  };
+
+  const handleDrop = (e: React.DragEvent, destIdx: number) => {
+    e.preventDefault();
+    const srcIdx = dragSrcIdx.current;
+    if (srcIdx === null || srcIdx === destIdx) {
+      setDragOverIdx(null);
+      return;
+    }
+    setRegistros((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(srcIdx, 1);
+      next.splice(destIdx, 0, moved);
+      return next;
+    });
+    dragSrcIdx.current = null;
+    canDrag.current = false;
+    setDragOverIdx(null);
+  };
+
+  const handleDragEnd = () => {
+    dragSrcIdx.current = null;
+    canDrag.current = false;
+    setDragOverIdx(null);
+  };
+  // ──────────────────────────────────────────────────────────────────
+
   useEffect(() => {
     getManutencao()
       .then((saved) => {
@@ -219,6 +265,8 @@ const NumeroManutencao = () => {
     );
   };
 
+  const isDraggable = sortBy === "manual" && !search.trim();
+
   return (
     <div className="inventario">
       <div className="inventario-header">
@@ -282,7 +330,8 @@ const NumeroManutencao = () => {
           <div className="empty-state">Nenhum registro de NM.</div>
         ) : (
           <div className="ut-wrap">
-            <div className="ut-head nm-ut-head">
+            <div className={`ut-head nm-ut-head${isDraggable ? " nm-ut-head--drag" : ""}`}>
+              {isDraggable && <span title="Arraste para reordenar"></span>}
               <span>#</span>
               <span>Equipamento</span>
               <span>Sede</span>
@@ -296,94 +345,121 @@ const NumeroManutencao = () => {
             {registrosFiltrados.length === 0 ? (
               <div className="empty-state">Nenhum resultado para a busca.</div>
             ) : (
-              registrosFiltrados.map((r, idx) => (
-                <div key={r.id} className="ut-row nm-ut-row">
-                  <span className="ut-num">{idx + 1}</span>
-                  <select
-                    className="unit-editor ut-input"
-                    value={r.equipamento}
-                    disabled={!isAdmin}
-                    onChange={(e) => {
-                      markFieldStart(r.id, "equipamento", r.equipamento);
-                      handleFieldChange(r.id, "equipamento", e.target.value);
-                      handleFieldBlur(r.id, "equipamento", e.target.value);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        focusNextEditor(e.currentTarget);
-                      }
-                    }}
+              registrosFiltrados.map((r, idx) => {
+                const realIdx = registros.indexOf(r);
+                return (
+                  <div
+                    key={r.id}
+                    className={[
+                      "ut-row nm-ut-row",
+                      isDraggable ? "nm-ut-row--drag" : "",
+                      isDraggable && dragOverIdx === idx ? "nm-ut-row--over" : "",
+                      isDraggable && dragSrcIdx.current === realIdx ? "nm-ut-row--dragging" : "",
+                    ].filter(Boolean).join(" ")}
+                    draggable={isDraggable}
+                    onDragStart={isDraggable ? (e) => handleDragStart(e, realIdx) : undefined}
+                    onDragOver={isDraggable ? (e) => handleDragOver(e, idx) : undefined}
+                    onDrop={isDraggable ? (e) => handleDrop(e, realIdx) : undefined}
+                    onDragEnd={isDraggable ? handleDragEnd : undefined}
                   >
-                    {r.equipamento &&
-                      !equipamentoOptions.includes(r.equipamento) && (
-                        <option value={r.equipamento}>{r.equipamento}</option>
-                      )}
-                    {["", ...equipamentoOptions].map((o) => (
-                      <option key={o} value={o}>
-                        {o || "—"}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    className="unit-editor ut-input"
-                    value={r.sede}
-                    disabled={!isAdmin}
-                    onChange={(e) => {
-                      markFieldStart(r.id, "sede", r.sede);
-                      handleFieldChange(r.id, "sede", e.target.value);
-                      handleFieldBlur(r.id, "sede", e.target.value);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        focusNextEditor(e.currentTarget);
-                      }
-                    }}
-                  >
-                    {SEDE_OPTIONS.map((o) => (
-                      <option key={o} value={o}>
-                        {o || "—"}
-                      </option>
-                    ))}
-                  </select>
-                  {(["nm", "local", "patrimonio", "fornecedor"] as const).map(
-                    (campo) => (
-                      <input
-                        key={campo}
-                        className="unit-editor ut-input"
-                        type="text"
-                        readOnly={!isAdmin}
-                        placeholder={FIELD_LABELS[campo]}
-                        value={r[campo]}
-                        onFocus={() => markFieldStart(r.id, campo, r[campo])}
-                        onBlur={() => handleFieldBlur(r.id, campo, r[campo])}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            focusNextEditor(e.currentTarget);
-                          }
-                        }}
-                        onChange={(e) =>
-                          handleFieldChange(r.id, campo, e.target.value)
-                        }
-                      />
-                    ),
-                  )}
-                  <span className="ut-date">{formatDateTime(r.updatedAt)}</span>
-                  <div className="ut-actions">
-                    {isAdmin && (
-                      <button
-                        type="button"
-                        className="btn-remover-unidade"
-                        onClick={() => handleRemoverRegistro(r.id)}
+                    {isDraggable && (
+                      <span
+                        className="nm-drag-handle"
+                        title="Arraste para reordenar"
+                        aria-hidden="true"
+                        onMouseDown={() => { canDrag.current = true; }}
+                        onMouseUp={() => { canDrag.current = false; }}
                       >
-                        ✕
-                      </button>
+                        ⠿
+                      </span>
                     )}
+                    <span className="ut-num">{idx + 1}</span>
+                    <select
+                      className="unit-editor ut-input"
+                      value={r.equipamento}
+                      disabled={!isAdmin}
+                      onChange={(e) => {
+                        markFieldStart(r.id, "equipamento", r.equipamento);
+                        handleFieldChange(r.id, "equipamento", e.target.value);
+                        handleFieldBlur(r.id, "equipamento", e.target.value);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          focusNextEditor(e.currentTarget);
+                        }
+                      }}
+                    >
+                      {r.equipamento &&
+                        !equipamentoOptions.includes(r.equipamento) && (
+                          <option value={r.equipamento}>{r.equipamento}</option>
+                        )}
+                      {["", ...equipamentoOptions].map((o) => (
+                        <option key={o} value={o}>
+                          {o || "—"}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      className="unit-editor ut-input"
+                      value={r.sede}
+                      disabled={!isAdmin}
+                      onChange={(e) => {
+                        markFieldStart(r.id, "sede", r.sede);
+                        handleFieldChange(r.id, "sede", e.target.value);
+                        handleFieldBlur(r.id, "sede", e.target.value);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          focusNextEditor(e.currentTarget);
+                        }
+                      }}
+                    >
+                      {SEDE_OPTIONS.map((o) => (
+                        <option key={o} value={o}>
+                          {o || "—"}
+                        </option>
+                      ))}
+                    </select>
+                    {(["nm", "local", "patrimonio", "fornecedor"] as const).map(
+                      (campo) => (
+                        <input
+                          key={campo}
+                          className="unit-editor ut-input"
+                          type="text"
+                          readOnly={!isAdmin}
+                          placeholder={FIELD_LABELS[campo]}
+                          value={r[campo]}
+                          onFocus={() => markFieldStart(r.id, campo, r[campo])}
+                          onBlur={() => handleFieldBlur(r.id, campo, r[campo])}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              focusNextEditor(e.currentTarget);
+                            }
+                          }}
+                          onChange={(e) =>
+                            handleFieldChange(r.id, campo, e.target.value)
+                          }
+                        />
+                      ),
+                    )}
+                    <span className="ut-date">{formatDateTime(r.updatedAt)}</span>
+                    <div className="ut-actions">
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          className="btn-remover-unidade"
+                          onClick={() => handleRemoverRegistro(r.id)}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         )}

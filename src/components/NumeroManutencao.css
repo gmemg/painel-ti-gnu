@@ -4,6 +4,47 @@
   min-width: 820px;
 }
 
+/* Quando drag habilitado: coluna extra para o handle */
+.nm-ut-head--drag,
+.nm-ut-row--drag {
+  grid-template-columns: 1.6rem 1.5rem 9rem 5rem 1fr 1fr 1fr 1fr 8.5rem 3.5rem;
+}
+
+/* ── Handle de drag ──────────────────────────────────────────────── */
+.nm-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  cursor: grab;
+  font-size: 1rem;
+  opacity: 0.4;
+  transition: opacity 0.15s;
+  user-select: none;
+  touch-action: none;
+  padding: 0 0.1rem;
+}
+
+.nm-ut-row--drag:hover .nm-drag-handle {
+  opacity: 0.8;
+}
+
+.nm-drag-handle:active {
+  cursor: grabbing;
+  opacity: 1;
+}
+
+/* ── Estados de drag ─────────────────────────────────────────────── */
+.nm-ut-row--dragging {
+  opacity: 0.35;
+  background: rgba(43, 143, 251, 0.04);
+}
+
+.nm-ut-row--over {
+  border-top: 2px solid var(--blue, #2b8ffb);
+  background: rgba(43, 143, 251, 0.07);
+}
+
 .nm-actions-gap {
   display: flex;
   gap: 0.5rem;
