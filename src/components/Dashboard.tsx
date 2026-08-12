@@ -1141,15 +1141,15 @@ export default function Dashboard() {
             <div className="kpi-content">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span className="kpi-label" style={{ marginBottom: 0 }}>Sem Interação (+30d)</span>
-                <span style={{ fontSize: '0.72rem', background: 'rgba(52, 211, 153, 0.15)', border: '1px solid rgba(52, 211, 153, 0.3)', padding: '2px 8px', borderRadius: '12px', color: '#34d399', fontWeight: 700 }}>
+                <span style={{ fontSize: '0.72rem', background: 'rgba(52, 211, 153, 0.15)', border: '1px solid rgba(52, 211, 153, 0.3)', padding: '2px 8px', borderRadius: '2px', color: '#34d399', fontWeight: 700 }}>
                   Ver lista ↗
                 </span>
               </div>
-              <span className="kpi-value" style={{ margin: '6px 0' }}>
+              <span className="kpi-value" style={{ margin: '6px 0', justifyContent: 'center' }}>
                 {carregandoGlpi ? "..." : chamadosSemInteracao30Dias.length} <small>chamados</small>
               </span>
               {chamadoPiorInteracao ? (
-                <div style={{ fontSize: '0.78rem', color: '#fca5a5', background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.25)', padding: '3px 8px', borderRadius: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ fontSize: '0.78rem', color: '#fca5a5', background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.25)', padding: '3px 8px', borderRadius: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   <span style={{ fontWeight: 700, color: '#ef4444' }}>#{chamadoPiorInteracao.id}</span> • {chamadoPiorInteracao.diasSemInteracao}d s/ atualização
                 </div>
               ) : (
@@ -1164,14 +1164,11 @@ export default function Dashboard() {
             <div className="kpi-content">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span className="kpi-label" style={{ marginBottom: 0 }}>Fila Ativa da TI</span>
-                <span className="kpi-pill" style={{ background: 'rgba(234, 179, 8, 0.15)', color: '#facc15', border: '1px solid rgba(234, 179, 8, 0.3)', fontSize: '0.72rem' }}>
-                  ● Em Atendimento
-                </span>
               </div>
-              <span className="kpi-value" style={{ margin: '6px 0' }}>
-                {totalSemSolucaoTI} <small>em andamento</small>
+              <span className="kpi-value" style={{ margin: '6px 0', justifyContent: 'center' }}>
+                {totalSemSolucaoTI}
               </span>
-              <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+              <div style={{ fontSize: '0.78rem', color: '#94a3b8', textAlign: 'center' }}>
                 Atendimentos em processamento no GLPI
               </div>
             </div>
@@ -2357,7 +2354,7 @@ export default function Dashboard() {
                         alignItems: "center",
                         background: "var(--surface-2)",
                         padding: "0.6rem 0.85rem",
-                        borderRadius: "8px",
+                        borderRadius: "2px",
                         border: "1px solid var(--border)"
                       }}
                     >
@@ -2490,7 +2487,7 @@ export default function Dashboard() {
               </div>
 
               {/* Tabela de Resultados */}
-              <div style={{ overflowX: 'auto', maxHeight: '420px', overflowY: 'auto', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--surface-1)' }}>
+              <div style={{ overflowX: 'auto', maxHeight: '420px', overflowY: 'auto', borderRadius: '0', border: '1px solid var(--border)', background: 'var(--surface-1)' }}>
                 {listaAntigosFiltrada.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
                     Nenhum chamado pendente ou encontrado com o filtro aplicado.
@@ -2541,12 +2538,12 @@ export default function Dashboard() {
                             <td style={{ padding: '10px 14px', color: 'var(--text-main)' }}>{item.requerente}</td>
                             <td style={{ padding: '10px 14px', color: 'var(--text-main)' }}>{item.tecnico}</td>
                             <td style={{ padding: '10px 14px' }}>
-                              <span style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: '4px', background: 'var(--surface-2)', color: 'var(--text-strong)', border: '1px solid var(--border)' }}>
+                              <span style={{ fontSize: '0.78rem', padding: '3px 8px', borderRadius: '2px', background: 'var(--surface-2)', color: 'var(--text-strong)', border: '1px solid var(--border)' }}>
                                 {item.status}
                               </span>
                             </td>
                             <td style={{ padding: '10px 14px' }}>
-                              <span style={{ fontSize: '0.82rem', fontWeight: 700, padding: '3px 9px', borderRadius: '12px', color: corBadge, backgroundColor: bgBadge, display: 'inline-block' }}>
+                              <span style={{ fontSize: '0.82rem', fontWeight: 700, padding: '3px 9px', borderRadius: '2px', color: corBadge, backgroundColor: bgBadge, display: 'inline-block' }}>
                                 {valorDias} {valorDias === 1 ? 'dia' : 'dias'}
                               </span>
                             </td>
@@ -2566,7 +2563,7 @@ export default function Dashboard() {
                                     background: 'rgba(56, 189, 248, 0.15)',
                                     color: '#38bdf8',
                                     border: '1px solid rgba(56, 189, 248, 0.35)',
-                                    borderRadius: '6px',
+                                    borderRadius: '2px',
                                     fontWeight: 600,
                                     whiteSpace: 'nowrap',
                                     transition: 'all 0.2s ease'

@@ -18,7 +18,7 @@
   padding: 32px 28px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 0;
   box-shadow: 0 8px 30px var(--shadow);
 }
 
@@ -53,7 +53,7 @@
 
 .login-field input {
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: 2px;
   border: 1px solid var(--border-strong);
   background: var(--surface-2);
   color: var(--text-strong);
@@ -69,7 +69,7 @@
 
 .login-erro {
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: 2px;
   background: rgba(220, 38, 38, 0.12);
   border: 1px solid rgba(220, 38, 38, 0.4);
   color: #f87171;
@@ -80,7 +80,7 @@
 .login-btn {
   margin-top: 4px;
   padding: 11px 16px;
-  border-radius: 8px;
+  border-radius: 2px;
   border: none;
   background: #2b8ffb;
   color: #fff;

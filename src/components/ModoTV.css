@@ -107,7 +107,7 @@
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 0.2rem 0.6rem;
-  border-radius: 5px;
+  border-radius: 2px;
   white-space: nowrap;
 }
 
@@ -119,7 +119,7 @@
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   padding: 0.2rem 0.55rem;
-  border-radius: 5px;
+  border-radius: 2px;
 }
 
 /* ─── Botões do topbar ───────────────────────────────────────────── */
@@ -131,7 +131,7 @@
   height: 34px;
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 6px;
+  border-radius: 2px;
   color: rgba(255, 255, 255, 0.65);
   cursor: pointer;
   transition:
@@ -156,7 +156,7 @@
   height: 34px;
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 6px;
+  border-radius: 2px;
   color: rgba(255, 255, 255, 0.65);
   cursor: pointer;
   transition:
@@ -193,7 +193,7 @@
   text-decoration: none;
   border: 1px solid rgba(255, 255, 255, 0.15);
   padding: 0.25rem 0.75rem;
-  border-radius: 6px;
+  border-radius: 2px;
   font-weight: 600;
   transition:
     background 0.2s,
@@ -236,7 +236,7 @@
 .tv-tabela-wrap {
   flex: 1;
   min-height: 0;
-  border-radius: 10px;
+  border-radius: 0;
   overflow: hidden;
   border: 1px solid rgba(59, 130, 246, 0.18);
   background: rgba(15, 22, 41, 0.55);
@@ -539,7 +539,7 @@
   align-items: center;
   justify-content: center;
   padding: 0.18rem 0.65rem;
-  border-radius: 999px;
+  border-radius: 2px;
   border: 1px solid;
   font-size: 0.72rem;
   font-weight: 700;
@@ -638,7 +638,7 @@
   flex-direction: column;
   background: rgba(15, 22, 41, 0.97);
   border: 1px solid rgba(59, 130, 246, 0.3);
-  border-radius: 14px;
+  border-radius: 0;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
   overflow: hidden;
 }
@@ -667,7 +667,7 @@
   height: 30px;
   background: transparent;
   border: none;
-  border-radius: 6px;
+  border-radius: 2px;
   color: rgba(255, 255, 255, 0.55);
   cursor: pointer;
   transition:
@@ -704,7 +704,7 @@
   gap: 0.75rem;
   padding: 0.55rem 0.7rem;
   border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 8px;
+  border-radius: 2px;
   margin-bottom: 0.45rem;
   background: rgba(255, 255, 255, 0.02);
 }
@@ -746,7 +746,7 @@
   height: 28px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 6px;
+  border-radius: 2px;
   color: rgba(255, 255, 255, 0.6);
   font-size: 0.7rem;
   cursor: pointer;
@@ -778,7 +778,7 @@
 .tv-cfg-cancel,
 .tv-cfg-save {
   padding: 0.5rem 1.2rem;
-  border-radius: 7px;
+  border-radius: 2px;
   font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
@@ -832,7 +832,7 @@
 .tv-podio-card {
   background: rgba(15, 23, 42, 0.75);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
+  border-radius: 2px;
   padding: 0.6rem 0.85rem;
   display: flex;
   flex-direction: column;
@@ -1001,7 +1001,7 @@
   position: relative;
   height: 24px;
   background: rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
+  border-radius: 2px;
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -1010,7 +1010,7 @@
 .tv-bar-fill {
   height: 100%;
   background: linear-gradient(90deg, #2b8ffb 0%, #00ccee 100%);
-  border-radius: 6px;
+  border-radius: 2px;
   transition: width 0.5s ease;
 }
 
@@ -1026,7 +1026,7 @@
 .tv-pos-badge {
   display: inline-block;
   padding: 0.2rem 0.55rem;
-  border-radius: 6px;
+  border-radius: 2px;
   font-size: 0.95rem;
   background: rgba(255, 255, 255, 0.1);
   color: #94a3b8;

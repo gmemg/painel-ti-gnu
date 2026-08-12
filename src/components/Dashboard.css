@@ -29,9 +29,9 @@
 
 .db-header h2 {
   color: var(--text-strong);
-  font-size: 2.2rem;
-  font-weight: 700;
-  letter-spacing: 0.5px;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -42,17 +42,20 @@
 }
 
 .db-update-badge {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-size: 0.85rem;
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.20);
+  border-left: 3px solid var(--green);
+  padding: 0.35rem 0.75rem;
+  border-radius: 0;
+  font-size: 0.72rem;
   font-weight: 500;
+  font-family: "IBM Plex Mono", monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.5rem;
   color: var(--text-subtle);
-  box-shadow: 0 2px 8px var(--shadow);
 }
 
 .db-pulse-dot {
@@ -98,35 +101,21 @@
 
 .db-card {
   background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1.25rem;
-  box-shadow: 0 4px 12px var(--shadow);
-  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 0.22s ease,
-    box-shadow 0.22s ease;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 0;
+  padding: 1.1rem 1.25rem 1rem;
+  transition: border-color 0.15s;
   position: relative;
   overflow: visible;
-  /* Permitir exibir o popover flutuante */
 }
 
-/* Barra lateral esquerda usando variável inline customizável */
+/* Remover pseudo-element de barra lateral */
 .db-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 4px;
-  height: 100%;
-  background: var(--card-accent);
-  transition: background 0.22s ease;
+  display: none;
 }
 
-/* Efeito de hover dinâmico baseado na variável de cor do card */
 .db-card:hover {
-  transform: translateY(-4px);
-  border-color: var(--card-accent);
-  box-shadow: 0 8px 24px var(--card-accent-glow);
+  border-color: rgba(148, 163, 184, 0.28);
 }
 
 /* Animação extra pulsante suave para Chamados Novos */
@@ -144,27 +133,17 @@
   }
 }
 
+/* Ocultar cabeçalho dos cards KPI (ícone + badge de status) */
 .db-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.75rem;
+  display: none;
 }
 
 .db-card-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
+  display: none;
 }
 
 .db-card-icon-wrap {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.22s ease;
+  display: none;
 }
 
 .db-card-icon {
@@ -184,13 +163,15 @@
 
 /* Tendências nos Cards (Herdam a cor de acento do card de forma atenuada) */
 .db-card-trend {
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 0.2rem 0.5rem;
-  border-radius: 12px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  font-family: "IBM Plex Mono", monospace;
+  padding: 0.12rem 0.4rem;
+  border-radius: 2px;
   background-color: var(--card-accent-dim);
   color: var(--card-accent);
-  transition: background-color 0.22s ease, color 0.22s ease;
+  letter-spacing: 0.04em;
+  transition: background-color 0.15s, color 0.15s;
   white-space: nowrap;
 }
 
@@ -199,22 +180,35 @@
   color: var(--text-muted) !important;
 }
 
+/* Corpo do card: centralizado, número grande em cima, label embaixo */
 .db-card-body {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex: 1;
+  padding: 0.75rem 0;
 }
 
+/* Valor do card: IBM Plex Mono enorme — Bloomberg style */
 .db-card-value {
-  font-size: 2rem;
+  font-size: 2.6rem;
   font-weight: 700;
+  font-family: "IBM Plex Mono", monospace;
   color: var(--text-strong);
-  line-height: 1.2;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
 }
 
+/* Label do card: discreta, uppercase, bem pequena */
 .db-card-title {
-  font-size: 0.85rem;
+  font-size: 0.66rem;
   color: var(--text-muted);
-  font-weight: 500;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+  margin-top: 0.4rem;
 }
 
 /* Botão do seletor de cores no card */
@@ -259,7 +253,7 @@
   right: 0;
   background: var(--surface-3);
   border: 1px solid var(--border-strong);
-  border-radius: 10px;
+  border-radius: 0;
   padding: 0.75rem;
   width: 170px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
@@ -327,7 +321,7 @@
   color: var(--text-subtle);
   background: rgba(255, 255, 255, 0.03);
   padding: 0.35rem 0.5rem;
-  border-radius: 6px;
+  border-radius: 2px;
   border: 1px solid var(--border);
 }
 
@@ -342,7 +336,7 @@
   height: 22px;
   padding: 0;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 2px;
   overflow: hidden;
 }
 
@@ -353,7 +347,7 @@
   color: var(--text-subtle);
   font-size: 0.72rem;
   padding: 0.35rem;
-  border-radius: 6px;
+  border-radius: 2px;
   cursor: pointer;
   font-weight: 500;
   transition: background-color 0.2s, color 0.2s;
@@ -375,10 +369,9 @@
 
 .db-tech-widget {
   background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 0;
   padding: 1.5rem;
-  box-shadow: 0 4px 16px var(--shadow);
   display: flex;
   flex-direction: column;
   grid-column: 1 / -1;
@@ -394,9 +387,11 @@
 }
 
 .db-widget-header h3 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--text-strong);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
 }
 
 .db-widget-header p {
@@ -412,15 +407,16 @@
 .db-tech-select {
   background: var(--surface-3);
   color: var(--text-strong);
-  border: 1px solid var(--border-strong);
-  padding: 0.5rem 2rem 0.5rem 1rem;
-  border-radius: 8px;
-  font-size: 0.85rem;
+  border: 1px solid rgba(148, 163, 184, 0.20);
+  padding: 0.45rem 1.8rem 0.45rem 0.75rem;
+  border-radius: 2px;
+  font-size: 0.78rem;
+  font-family: "IBM Plex Mono", monospace;
   font-weight: 500;
   cursor: pointer;
   outline: none;
   appearance: none;
-  transition: border-color 0.2s, background-color 0.2s;
+  transition: border-color 0.15s;
 }
 
 .db-tech-select:focus {
@@ -457,30 +453,31 @@
 }
 
 .db-tech-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--blue), var(--blue-2));
+  width: 44px;
+  height: 44px;
+  border-radius: 2px;
+  background: var(--blue);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 600;
-  font-size: 1.1rem;
-  box-shadow: 0 2px 8px var(--shadow);
+  font-family: "IBM Plex Mono", monospace;
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
 }
 
 .bg-purple-grad {
-  background: linear-gradient(135deg, #a855f7, #6366f1) !important;
+  background: #4527A0 !important;
 }
 
 .db-tech-status-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 0;
   position: absolute;
-  bottom: 0;
-  right: 0;
+  bottom: -2px;
+  right: -2px;
   border: 2px solid var(--surface-2);
 }
 
@@ -489,10 +486,11 @@
 }
 
 .db-tech-meta h4 {
-  font-size: 1.05rem;
-  font-weight: 600;
+  font-size: 0.9rem;
+  font-weight: 700;
   color: var(--text-strong);
   margin: 0;
+  letter-spacing: 0.01em;
 }
 
 .db-tech-role {
@@ -503,38 +501,37 @@
 /* Big counter visual results box */
 .db-tech-result-box {
   background: var(--surface-3);
-  border: 1px solid var(--border);
-  padding: 1.5rem;
-  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  padding: 1.25rem 1rem;
+  border-radius: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
   flex: 1;
-  box-shadow: inset 0 2px 4px var(--shadow);
-  transition: border-color 0.2s;
+  transition: border-color 0.15s;
 }
 
 .db-tech-result-box:hover {
-  border-color: var(--border-strong);
+  border-top-color: var(--blue-bright);
 }
 
 .db-result-label {
-  font-size: 0.8rem;
+  font-size: 0.65rem;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.8px;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
+  letter-spacing: 0.12em;
+  margin-bottom: 0.4rem;
+  font-weight: 700;
 }
 
 .db-result-value {
-  font-size: 3.5rem;
-  font-weight: 800;
+  font-size: 3.75rem;
+  font-weight: 700;
+  font-family: "IBM Plex Mono", monospace;
   line-height: 1;
-  letter-spacing: -1px;
-  text-shadow: 0 4px 12px var(--shadow);
+  letter-spacing: -0.04em;
 }
 
 .db-result-subtext {
@@ -618,12 +615,12 @@ html[data-theme="light"] .db-preset-circle.active {
   }
 }
 
-/* Estilos para o Ranking de Técnicos */
 .db-ranking-list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0;
   flex: 1;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
 }
 
 .db-ranking-item-block {
@@ -636,17 +633,15 @@ html[data-theme="light"] .db-preset-circle.active {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  background: var(--surface-3);
-  border: 1px solid var(--border);
-  padding: 0.75rem 1rem;
-  border-radius: 10px;
-  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+  background: transparent;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+  padding: 0.6rem 0.5rem;
+  border-radius: 0;
+  transition: background 0.12s;
 }
 
 .db-ranking-item:hover {
-  transform: translateX(4px);
-  border-color: var(--border-strong);
-  box-shadow: 0 4px 12px var(--shadow);
+  background: rgba(21, 101, 192, 0.08);
 }
 
 .db-ranking-item-clickable {
@@ -664,12 +659,11 @@ html[data-theme="light"] .db-preset-circle.active {
 }
 
 .db-ranking-details-panel {
-  background: var(--surface-1);
-  border: 1px solid var(--border);
+  background: var(--surface-2);
+  border: 1px solid rgba(148, 163, 184, 0.14);
   border-top: 0;
-  border-radius: 0 0 10px 10px;
-  padding: 1rem;
-  box-shadow: 0 8px 18px var(--shadow);
+  border-radius: 0;
+  padding: 0.75rem;
 }
 
 .db-ranking-details-toolbar {
@@ -704,13 +698,14 @@ html[data-theme="light"] .db-preset-circle.active {
 }
 
 .db-ranking-details-search {
-  min-width: 220px;
+  min-width: 200px;
   background: var(--surface-3);
   color: var(--text-strong);
-  border: 1px solid var(--border-strong);
-  padding: 0.45rem 0.7rem;
-  border-radius: 8px;
-  font-size: 0.8rem;
+  border: 1px solid rgba(148, 163, 184, 0.20);
+  padding: 0.4rem 0.65rem;
+  border-radius: 2px;
+  font-size: 0.78rem;
+  font-family: "IBM Plex Mono", monospace;
   outline: none;
 }
 
@@ -734,47 +729,46 @@ html[data-theme="light"] .db-preset-circle.active {
 }
 
 .db-ranking-position {
-  font-size: 0.9rem;
+  font-size: 0.72rem;
   font-weight: 700;
+  font-family: "IBM Plex Mono", monospace;
   color: var(--text-muted);
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
+  border-radius: 2px;
 }
 
 .db-ranking-position.medal-gold {
-  background: linear-gradient(135deg, #ffd700, #ffa500);
-  color: #000000;
-  box-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+  background: #9E7700;
+  color: #FFFFFF;
 }
 
 .db-ranking-position.medal-silver {
-  background: linear-gradient(135deg, #c0c0c0, #a9a9a9);
-  color: #000000;
-  box-shadow: 0 0 8px rgba(192, 192, 192, 0.4);
+  background: #546678;
+  color: #FFFFFF;
 }
 
 .db-ranking-position.medal-bronze {
-  background: linear-gradient(135deg, #cd7f32, #8b4513);
+  background: #7B4E2A;
   color: #ffffff;
-  box-shadow: 0 0 8px rgba(205, 127, 50, 0.4);
 }
 
 .db-ranking-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--blue), var(--blue-2));
+  width: 32px;
+  height: 32px;
+  border-radius: 2px;
+  background: var(--blue);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 600;
-  font-size: 0.9rem;
-  box-shadow: 0 2px 4px var(--shadow);
+  font-family: "IBM Plex Mono", monospace;
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
 }
 
 .db-ranking-info {
@@ -809,10 +803,12 @@ html[data-theme="light"] .db-preset-circle.active {
 }
 
 .db-ranking-value {
-  font-size: 1.15rem;
+  font-size: 1rem;
   font-weight: 700;
+  font-family: "IBM Plex Mono", monospace;
   color: var(--green);
   line-height: 1.1;
+  letter-spacing: -0.02em;
 }
 
 .db-ranking-label {
@@ -899,7 +895,7 @@ html[data-theme="light"] .db-ranking-item {
   max-width: 260px;
   height: 8px;
   background: var(--surface-3);
-  border-radius: 999px;
+  border-radius: 2px;
   overflow: hidden;
   position: relative;
   border: 1px solid var(--border);
@@ -909,7 +905,7 @@ html[data-theme="light"] .db-ranking-item {
 .db-progress-bar-fill {
   height: 100%;
   background: linear-gradient(90deg, #2b8ffb 0%, #00ccee 100%);
-  border-radius: 999px;
+  border-radius: 2px;
   transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 0 10px rgba(0, 204, 238, 0.5);
 }
@@ -919,7 +915,7 @@ html[data-theme="light"] .db-ranking-item {
   max-width: 200px;
   height: 5px;
   background: var(--surface-3);
-  border-radius: 999px;
+  border-radius: 2px;
   overflow: hidden;
   position: relative;
 }
@@ -928,7 +924,7 @@ html[data-theme="light"] .db-ranking-item {
   width: 45%;
   height: 100%;
   background: var(--blue);
-  border-radius: 999px;
+  border-radius: 2px;
   position: absolute;
   animation: dbLoadingSlide 1.3s infinite ease-in-out;
 }
@@ -955,7 +951,7 @@ html[data-theme="light"] .db-ranking-item {
   display: flex;
   background: var(--surface-3);
   padding: 3px;
-  border-radius: 8px;
+  border-radius: 2px;
   border: 1px solid var(--border);
   gap: 2px;
 }
@@ -967,7 +963,7 @@ html[data-theme="light"] .db-ranking-item {
   font-size: 0.78rem;
   font-weight: 600;
   padding: 0.35rem 0.75rem;
-  border-radius: 6px;
+  border-radius: 2px;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
@@ -997,7 +993,7 @@ html[data-theme="light"] .db-tab-group {
   color: #ffffff;
   border: none;
   padding: 0.55rem 1.1rem;
-  border-radius: 20px;
+  border-radius: 0;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
@@ -1033,7 +1029,7 @@ html[data-theme="light"] .db-tab-group {
 .db-report-modal {
   background: var(--surface-1);
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 0;
   width: 90%;
   max-width: 520px;
   padding: 1.75rem;
@@ -1047,6 +1043,7 @@ html[data-theme="light"] .db-tab-group {
     opacity: 0;
     transform: scale(0.95) translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -1076,7 +1073,7 @@ html[data-theme="light"] .db-tab-group {
   font-size: 1.2rem;
   cursor: pointer;
   padding: 0.2rem 0.5rem;
-  border-radius: 6px;
+  border-radius: 2px;
   transition: all 0.2s ease;
 }
 
@@ -1106,7 +1103,7 @@ html[data-theme="light"] .db-tab-group {
   padding: 0.85rem 1rem;
   background: var(--surface-2);
   border: 1.5px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -1150,7 +1147,7 @@ html[data-theme="light"] .db-tab-group {
   margin-bottom: 1.5rem;
   background: var(--surface-2);
   padding: 1rem;
-  border-radius: 10px;
+  border-radius: 0;
   border: 1px solid var(--border);
 }
 
@@ -1172,7 +1169,7 @@ html[data-theme="light"] .db-tab-group {
   padding: 0.6rem 0.8rem;
   background: var(--surface-1);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 2px;
   color: var(--text-strong);
   font-size: 0.9rem;
   outline: none;
@@ -1200,7 +1197,7 @@ html[data-theme="light"] .db-tab-group {
   padding: 0.6rem 1.2rem;
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 2px;
   color: var(--text-muted);
   font-size: 0.88rem;
   font-weight: 600;
@@ -1217,7 +1214,7 @@ html[data-theme="light"] .db-tab-group {
   padding: 0.6rem 1.4rem;
   background: linear-gradient(135deg, #2b8ffb 0%, #1d4ed8 100%);
   border: none;
-  border-radius: 8px;
+  border-radius: 2px;
   color: #ffffff;
   font-size: 0.88rem;
   font-weight: 600;
@@ -1239,7 +1236,7 @@ html[data-theme="light"] .db-tab-group {
 .db-select-filtro {
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 2px;
   color: var(--text-strong);
   padding: 0.35rem 0.6rem;
   font-size: 0.8rem;
@@ -1267,7 +1264,7 @@ html[data-theme="light"] .db-tab-group {
   padding: 0.35rem 0.65rem;
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 2px;
   color: var(--text-main);
   font-size: 0.75rem;
   font-weight: 600;
@@ -1310,7 +1307,7 @@ html[data-theme="light"] .db-tab-group {
 .db-modal-content {
   background: var(--surface-1, #12161f);
   border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
-  border-radius: 16px;
+  border-radius: 0;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
   animation: dbModalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   color: var(--text-strong);
@@ -1333,7 +1330,7 @@ html[data-theme="light"] .db-tab-group {
   font-size: 1.2rem;
   cursor: pointer;
   padding: 0.2rem 0.5rem;
-  border-radius: 6px;
+  border-radius: 2px;
   transition: all 0.2s ease;
 }
 
@@ -1387,7 +1384,7 @@ html[data-theme="light"] .db-tab-group {
 .db-select-ano {
   background: var(--surface-3);
   border: 1px solid var(--border-strong);
-  border-radius: 6px;
+  border-radius: 2px;
   color: var(--text-strong);
   padding: 0.35rem 0.6rem;
   font-size: 0.85rem;
@@ -1418,7 +1415,7 @@ html[data-theme="light"] .db-tab-group {
 .db-metric-card {
   background: var(--surface-3);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 2px;
   padding: 0.85rem;
   display: flex;
   flex-direction: column;
@@ -1459,7 +1456,7 @@ html[data-theme="light"] .db-tab-group {
   padding: 0.6rem 2.2rem 0.6rem 2.4rem;
   background: var(--surface-3);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 2px;
   color: var(--text-strong);
   font-size: 0.85rem;
   outline: none;
@@ -1490,7 +1487,7 @@ html[data-theme="light"] .db-tab-group {
 .db-month-card {
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 2px;
   overflow: hidden;
   transition: border-color 0.2s;
 }
@@ -1529,7 +1526,7 @@ html[data-theme="light"] .db-tab-group {
   font-size: 0.72rem;
   font-weight: 600;
   padding: 0.2rem 0.55rem;
-  border-radius: 12px;
+  border-radius: 0;
   background: var(--surface-1);
   color: var(--text-muted);
 }
@@ -1549,14 +1546,14 @@ html[data-theme="light"] .db-tab-group {
   width: 100px;
   height: 6px;
   background: var(--border);
-  border-radius: 3px;
+  border-radius: 2px;
   overflow: hidden;
 }
 
 .db-month-progress-fill {
   height: 100%;
   background: linear-gradient(90deg, #2b8ffb, #10b981);
-  border-radius: 3px;
+  border-radius: 2px;
   transition: width 0.3s ease;
 }
 
@@ -1617,7 +1614,7 @@ html[data-theme="light"] .db-tab-group {
   color: #00ccee;
   background: rgba(0, 204, 238, 0.12);
   padding: 0.15rem 0.45rem;
-  border-radius: 4px;
+  border-radius: 2px;
   font-family: monospace;
 }
 
@@ -1627,7 +1624,7 @@ html[data-theme="light"] .db-tab-group {
   height: 24px;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
+  border-radius: 2px;
   background: var(--surface-3);
   border: 1px solid var(--border);
   color: var(--text-muted);
@@ -1657,7 +1654,7 @@ html[data-theme="light"] .db-tab-group {
   justify-content: center;
   min-width: 88px;
   padding: 0.18rem 0.55rem;
-  border-radius: 999px;
+  border-radius: 2px;
   border: 1px solid var(--border);
   background: var(--surface-3);
   color: var(--text-muted);
@@ -1688,7 +1685,7 @@ html[data-theme="light"] .db-tab-group {
   padding: 0;
   background: linear-gradient(135deg, #2b8ffb 0%, #1d4ed8 100%);
   border: none;
-  border-radius: 6px;
+  border-radius: 2px;
   color: #ffffff;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1709,7 +1706,7 @@ html[data-theme="light"] .db-tab-group {
   padding: 0.35rem 0.6rem;
   background: var(--surface-3);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 2px;
   color: #ef4444;
   font-size: 0.75rem;
   font-weight: 600;
@@ -1730,7 +1727,7 @@ html[data-theme="light"] .db-tab-group {
   background: rgba(239, 68, 68, 0.18);
   color: #ef4444;
   padding: 0.05rem 0.4rem;
-  border-radius: 10px;
+  border-radius: 0;
 }
 
 .db-btn-ranking-menu {
@@ -1741,7 +1738,7 @@ html[data-theme="light"] .db-tab-group {
   height: 28px;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: 2px;
   color: var(--text-muted);
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1761,7 +1758,7 @@ html[data-theme="light"] .db-tab-group {
   margin-top: 4px;
   background: var(--surface-1, #1e293b);
   border: 1px solid var(--border-strong, #334155);
-  border-radius: 8px;
+  border-radius: 2px;
   padding: 4px;
   min-width: 120px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
@@ -1770,8 +1767,15 @@ html[data-theme="light"] .db-tab-group {
 }
 
 @keyframes dbFadeIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .db-ranking-popover-item {
@@ -1782,7 +1786,7 @@ html[data-theme="light"] .db-tab-group {
   padding: 0.5rem 0.75rem;
   background: transparent;
   border: none;
-  border-radius: 6px;
+  border-radius: 2px;
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
@@ -1812,7 +1816,7 @@ html[data-theme="light"] .db-tab-group {
   margin-top: 4px;
   background: var(--surface);
   border: 1px solid var(--border-strong);
-  border-radius: 8px;
+  border-radius: 2px;
   max-height: 220px;
   overflow-y: auto;
   z-index: 10000;
@@ -1854,7 +1858,7 @@ html[data-theme="light"] .db-tab-group {
   color: #2b8ffb;
   background: rgba(43, 143, 251, 0.12);
   padding: 0.2rem 0.5rem;
-  border-radius: 4px;
+  border-radius: 2px;
 }
 
 .db-glpi-user-badge-selected {
@@ -1864,7 +1868,7 @@ html[data-theme="light"] .db-tab-group {
   background: rgba(16, 185, 129, 0.12);
   border: 1px solid rgba(16, 185, 129, 0.3);
   padding: 0.75rem 0.85rem;
-  border-radius: 8px;
+  border-radius: 2px;
   color: #10b981;
 }
 
@@ -1884,6 +1888,7 @@ html[data-theme="light"] .db-tab-group {
   .db-detalhes-metrics {
     grid-template-columns: 1fr;
   }
+
   .db-month-progress-bg {
     display: none;
   }
@@ -1901,7 +1906,7 @@ html[data-theme="light"] .db-tab-group {
 .db-chart-card {
   background: var(--surface-1, #1e293b);
   border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
-  border-radius: 16px;
+  border-radius: 0;
   padding: 1.5rem 1.75rem;
   box-shadow: 0 10px 30px var(--shadow, rgba(0, 0, 0, 0.25));
   backdrop-filter: blur(12px);
@@ -1928,7 +1933,7 @@ html[data-theme="light"] .db-tab-group {
 .db-chart-icon-box {
   width: 42px;
   height: 42px;
-  border-radius: 12px;
+  border-radius: 0;
   background: rgba(43, 143, 251, 0.14);
   border: 1px solid rgba(43, 143, 251, 0.25);
   color: #2b8ffb;
@@ -1961,7 +1966,7 @@ html[data-theme="light"] .db-tab-group {
   display: flex;
   background: var(--surface-2, rgba(255, 255, 255, 0.05));
   padding: 3px;
-  border-radius: 10px;
+  border-radius: 0;
   border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
 }
 
@@ -1972,7 +1977,7 @@ html[data-theme="light"] .db-tab-group {
   color: var(--text-muted, #94a3b8);
   background: transparent;
   border: none;
-  border-radius: 7px;
+  border-radius: 2px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -1989,7 +1994,7 @@ html[data-theme="light"] .db-tab-group {
 
 .db-chart-select-ano {
   padding: 0.45rem 0.75rem;
-  border-radius: 8px;
+  border-radius: 2px;
   font-size: 0.82rem;
   font-weight: 600;
   background: var(--surface-2, rgba(255, 255, 255, 0.05));
@@ -2035,7 +2040,7 @@ html[data-theme="light"] .db-tab-group {
 .db-legend-dot {
   width: 10px;
   height: 10px;
-  border-radius: 3px;
+  border-radius: 2px;
 }
 
 .legend-abertos {
@@ -2093,7 +2098,7 @@ html[data-theme="light"] .db-tab-group {
   background: #0f172a;
   border: 1px solid rgba(255, 255, 255, 0.18);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6);
-  border-radius: 10px;
+  border-radius: 0;
   padding: 0.75rem 0.95rem;
   z-index: 50;
   min-width: 170px;
@@ -2106,6 +2111,7 @@ html[data-theme="light"] .db-tab-group {
     opacity: 0;
     transform: translate(-50%, -5px);
   }
+
   to {
     opacity: 1;
     transform: translate(-50%, 0);
@@ -2180,7 +2186,7 @@ html[data-theme="light"] .db-tab-group {
 .db-important-info-col {
   background: rgba(15, 23, 42, 0.4);
   border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
-  border-radius: 12px;
+  border-radius: 0;
   padding: 1.15rem;
   display: flex;
   flex-direction: column;
@@ -2215,7 +2221,7 @@ html[data-theme="light"] .db-tab-group {
   border: 1px solid var(--border, rgba(255, 255, 255, 0.06));
   border-left-width: 4px;
   padding: 0.65rem 0.85rem;
-  border-radius: 8px;
+  border-radius: 2px;
   transition: transform 0.2s ease, background 0.2s ease;
 }
 
@@ -2224,11 +2230,25 @@ html[data-theme="light"] .db-tab-group {
   background: rgba(255, 255, 255, 0.06);
 }
 
-.border-blue { border-left-color: #3b82f6; }
-.border-orange { border-left-color: #f97316; }
-.border-green { border-left-color: #10b981; }
-.border-yellow { border-left-color: #eab308; }
-.border-purple { border-left-color: #a855f7; }
+.border-blue {
+  border-left-color: #3b82f6;
+}
+
+.border-orange {
+  border-left-color: #f97316;
+}
+
+.border-green {
+  border-left-color: #10b981;
+}
+
+.border-yellow {
+  border-left-color: #eab308;
+}
+
+.border-purple {
+  border-left-color: #a855f7;
+}
 
 .db-info-card-left {
   display: flex;
@@ -2264,7 +2284,7 @@ html[data-theme="light"] .db-tab-group {
   font-size: 0.68rem;
   font-weight: 700;
   padding: 0.2rem 0.5rem;
-  border-radius: 12px;
+  border-radius: 0;
   white-space: nowrap;
 }
 
@@ -2278,7 +2298,9 @@ html[data-theme="light"] .db-tab-group {
   background: rgba(249, 115, 22, 0.15);
   color: #f97316;
   border: 1px solid rgba(249, 115, 22, 0.3);
-}/* PREMIUM CHART SECTION */
+}
+
+/* PREMIUM CHART SECTION */
 .premium-dashboard-section {
   display: flex;
   flex-direction: column;
@@ -2289,7 +2311,7 @@ html[data-theme="light"] .db-tab-group {
 .premium-chart-container {
   background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 20px;
+  border-radius: 0;
   padding: 24px;
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
   position: relative;
@@ -2327,7 +2349,7 @@ html[data-theme="light"] .db-tab-group {
 .premium-chart-tabs {
   background-color: rgba(15, 23, 42, 0.6);
   padding: 4px;
-  border-radius: 8px;
+  border-radius: 2px;
   display: flex;
   gap: 4px;
 }
@@ -2337,7 +2359,7 @@ html[data-theme="light"] .db-tab-group {
   border: none;
   color: #94a3b8;
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: 2px;
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
@@ -2360,14 +2382,15 @@ html[data-theme="light"] .db-tab-group {
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #f8fafc;
   padding: 6px 12px;
-  border-radius: 8px;
+  border-radius: 2px;
   font-size: 0.875rem;
   outline: none;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.premium-select-ano:hover, .premium-select-ano:focus {
+.premium-select-ano:hover,
+.premium-select-ano:focus {
   border-color: #3b82f6;
 }
 
@@ -2376,136 +2399,134 @@ html[data-theme="light"] .db-tab-group {
   height: 380px;
 }
 
-/* PREMIUM KPI GRID */
+/* PREMIUM KPI GRID — alinhado ao padrão Bloomberg dos db-card */
 .premium-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1px;
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.12);
 }
 
 .premium-kpi-card {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  padding: 18px 20px;
-  border-radius: 16px;
-  background: linear-gradient(145deg, rgba(30, 41, 59, 0.65), rgba(15, 23, 42, 0.8));
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(14px);
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s ease;
-  min-height: 135px;
+  justify-content: flex-start;
+  padding: 1rem 1.1rem;
+  border-radius: 0;
+  background: var(--surface-2);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  transition: background 0.15s, border-color 0.15s;
+  min-height: 120px;
 }
 
 .premium-kpi-card:hover {
-  transform: translateY(-4px);
+  background: var(--surface-3);
+  border-color: rgba(148, 163, 184, 0.28);
 }
 
 .premium-kpi-card .kpi-content {
   display: flex;
   flex-direction: column;
   width: 100%;
+  height: 100%;
 }
 
 .premium-kpi-card .kpi-label {
-  color: #94a3b8;
-  font-size: 0.78rem;
+  font-size: 0.65rem;
   font-weight: 700;
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-bottom: 6px;
+  letter-spacing: 0.10em;
+  margin-bottom: 0.35rem;
 }
 
 .premium-kpi-card .kpi-value {
-  color: #f8fafc;
-  font-size: 1.8rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  color: var(--text-strong);
+  font-size: 1.6rem;
+  font-weight: 700;
+  font-family: "IBM Plex Mono", monospace;
+  letter-spacing: -0.03em;
   display: flex;
   align-items: baseline;
   gap: 6px;
 }
 
 .premium-kpi-card .kpi-value small {
-  font-size: 0.85rem;
-  color: #64748b;
-  font-weight: 500;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 400;
+  font-family: "Inter", sans-serif;
 }
 
-/* Glass Accent Glows for KPI Cards */
-.glass-blue { border-left: 4px solid #3b82f6; }
-.glass-blue:hover { box-shadow: 0 12px 24px -10px rgba(59, 130, 246, 0.35); border-color: rgba(59, 130, 246, 0.4); }
+/* Remover acentos coloridos dos cantos dos cards */
+.glass-blue,
+.glass-orange,
+.glass-amber,
+.glass-purple,
+.glass-green,
+.glass-yellow {
+  border-top: none;
+}
 
-.glass-orange { border-left: 4px solid #f97316; }
-.glass-orange:hover { box-shadow: 0 12px 24px -10px rgba(249, 115, 22, 0.35); border-color: rgba(249, 115, 22, 0.4); }
 
-.glass-amber { border-left: 4px solid #f59e0b; }
-.glass-amber:hover { box-shadow: 0 12px 24px -10px rgba(245, 158, 11, 0.35); border-color: rgba(245, 158, 11, 0.4); }
-
-.glass-purple { border-left: 4px solid #a855f7; }
-.glass-purple:hover { box-shadow: 0 12px 24px -10px rgba(168, 85, 247, 0.35); border-color: rgba(168, 85, 247, 0.4); }
-
-.glass-green { border-left: 4px solid #10b981; }
-.glass-green:hover { box-shadow: 0 12px 24px -10px rgba(16, 185, 129, 0.35); border-color: rgba(16, 185, 129, 0.4); }
-
-.glass-yellow { border-left: 4px solid #eab308; }
-.glass-yellow:hover { box-shadow: 0 12px 24px -10px rgba(234, 179, 8, 0.35); border-color: rgba(234, 179, 8, 0.4); }
-
-/* Top 3 Sleek Rows */
+/* Top 3 Rows — sem border-radius */
 .top3-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 8px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  transition: background 0.2s ease, border-color 0.2s ease;
+  padding: 4px 6px;
+  border-radius: 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+  transition: background 0.12s;
 }
 
 .top3-row:hover {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(21, 101, 192, 0.08);
 }
 
 .top3-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   font-weight: 600;
-  font-size: 0.88rem;
-  color: #f1f5f9;
+  font-size: 0.82rem;
+  color: var(--text-strong);
 }
 
 .top3-val-badge {
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  color: #94a3b8;
-  background: rgba(255, 255, 255, 0.08);
-  padding: 2px 8px;
-  border-radius: 12px;
+  font-family: "IBM Plex Mono", monospace;
+  color: var(--text-muted);
+  background: rgba(148, 163, 184, 0.10);
+  padding: 2px 6px;
+  border-radius: 2px;
 }
 
-/* Micro Pill Badges */
+/* Micro Pill Badges — sem border-radius */
 .kpi-pill {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.78rem;
+  font-size: 0.68rem;
   font-weight: 600;
-  padding: 3px 9px;
-  border-radius: 20px;
+  font-family: "IBM Plex Mono", monospace;
+  padding: 2px 7px;
+  border-radius: 2px;
+  letter-spacing: 0.04em;
 }
 
 .kpi-pill-green {
-  background: rgba(16, 185, 129, 0.12);
-  color: #34d399;
-  border: 1px solid rgba(16, 185, 129, 0.25);
+  background: rgba(0, 105, 92, 0.20);
+  color: #4DB6AC;
+  border: 1px solid rgba(0, 105, 92, 0.35);
 }
 
 .kpi-pill-cyan {
-  background: rgba(56, 189, 248, 0.12);
-  color: #38bdf8;
-  border: 1px solid rgba(56, 189, 248, 0.25);
+  background: rgba(21, 101, 192, 0.15);
+  color: #64B5F6;
+  border: 1px solid rgba(21, 101, 192, 0.30);
 }
 
 @media (max-width: 768px) {
@@ -2515,13 +2536,13 @@ html[data-theme="light"] .db-tab-group {
 }
 
 .clickable-kpi-card {
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: background 0.15s, border-top-color 0.15s;
+  cursor: pointer;
 }
 
 .clickable-kpi-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 24px -8px rgba(16, 185, 129, 0.4);
-  border-color: rgba(52, 211, 153, 0.6);
+  background: var(--surface-3);
+  border-top-color: #00897B;
 }
 
 /* Widget Total Chamados Abertos no Mês */
@@ -2536,7 +2557,7 @@ html[data-theme="light"] .db-tab-group {
   width: 100%;
   background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.85) 100%);
   border: 1px solid rgba(56, 189, 248, 0.25);
-  border-radius: 12px;
+  border-radius: 0;
   padding: 0.85rem 1.25rem;
   display: flex;
   align-items: center;
@@ -2583,7 +2604,7 @@ html[data-theme="light"] .db-tab-group {
 .db-abertos-lista-container {
   background: var(--surface-2, rgba(15, 23, 42, 0.6));
   border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
-  border-radius: 14px;
+  border-radius: 0;
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
@@ -2619,7 +2640,7 @@ html[data-theme="light"] .db-tab-group {
   font-size: 0.78rem;
   font-weight: 700;
   padding: 2px 8px;
-  border-radius: 12px;
+  border-radius: 0;
 }
 
 .db-abertos-search-wrap {
@@ -2633,7 +2654,7 @@ html[data-theme="light"] .db-tab-group {
   width: 100%;
   background: rgba(15, 23, 42, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
+  border-radius: 2px;
   padding: 0.45rem 2rem 0.45rem 0.75rem;
   font-size: 0.85rem;
   color: var(--text-strong, #f1f5f9);
@@ -2667,7 +2688,7 @@ html[data-theme="light"] .db-tab-group {
   min-height: 520px;
   max-height: 650px;
   overflow-y: auto;
-  border-radius: 10px;
+  border-radius: 0;
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
@@ -2677,7 +2698,7 @@ html[data-theme="light"] .db-tab-group {
 
 .db-abertos-table-wrapper::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
+  border-radius: 2px;
 }
 
 .db-abertos-table {
@@ -2749,7 +2770,7 @@ html[data-theme="light"] .db-tab-group {
 .db-status-pill {
   display: inline-block;
   padding: 3px 10px;
-  border-radius: 12px;
+  border-radius: 0;
   font-size: 0.78rem;
   font-weight: 700;
   text-align: center;
@@ -2801,7 +2822,8 @@ html[data-theme="light"] .db-tab-group {
 }
 
 .db-ticket-mes-abertura.mesmo-mes {
-  color: #34d399; /* Verde se for do mês selecionado */
+  color: #34d399;
+  /* Verde se for do mês selecionado */
 }
 
 .db-ticket-mes-abertura.outro-mes {
@@ -2809,7 +2831,7 @@ html[data-theme="light"] .db-tab-group {
   background: rgba(250, 204, 21, 0.12);
   border: 1px solid rgba(250, 204, 21, 0.3);
   padding: 1px 6px;
-  border-radius: 4px;
+  border-radius: 2px;
   margin-top: 2px;
 }
 
@@ -2822,7 +2844,7 @@ html[data-theme="light"] .db-tab-group {
   opacity: 0.8;
   transition: all 0.2s ease;
   padding: 1px;
-  border-radius: 4px;
+  border-radius: 2px;
   text-decoration: none;
 }
 
@@ -2844,7 +2866,7 @@ html[data-theme="light"] .db-tab-group {
   background: rgba(15, 23, 42, 0.8);
   color: #94a3b8;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 6px;
+  border-radius: 2px;
   padding: 2px 6px;
   font-size: 0.72rem;
   font-weight: 600;
@@ -2878,7 +2900,7 @@ html[data-theme="light"] .db-tab-group {
   font-size: 0.76rem;
   font-weight: 700;
   padding: 0.35rem 0.75rem;
-  border-radius: 8px;
+  border-radius: 2px;
   cursor: pointer;
   transition: all 0.2s ease;
 }

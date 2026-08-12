@@ -51,7 +51,7 @@
   background: var(--blue);
   color: #fff;
   border: none;
-  border-radius: 0.55rem;
+  border-radius: 2px;
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
@@ -63,7 +63,7 @@
 
 .imp-btn-add:hover {
   opacity: 0.88;
-  transform: translateY(-1px);
+  
 }
 
 .imp-btn-add:active {
@@ -94,7 +94,7 @@
 .imp-card {
   background: var(--surface);
   border: 1.5px solid rgba(255, 255, 255, 0.1);
-  border-radius: 1.25rem;
+  border-radius: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -109,9 +109,9 @@ html[data-theme="light"] .imp-card {
 }
 
 .imp-card:hover {
-  box-shadow: 0 6px 28px var(--shadow);
+  
   border-color: var(--border-strong);
-  transform: translateY(-2px);
+  
 }
 
 .imp-card-critica {
@@ -178,7 +178,7 @@ html[data-theme="light"] .imp-card {
   height: 1.75rem;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 0.4rem;
+  border-radius: 2px;
   color: var(--text-muted);
   cursor: pointer;
   transition:
@@ -292,13 +292,13 @@ html[data-theme="light"] .imp-card {
 .imp-toner-track {
   height: 7px;
   background: var(--surface-3);
-  border-radius: 999px;
+  border-radius: 2px;
   overflow: hidden;
 }
 
 .imp-toner-fill {
   height: 100%;
-  border-radius: 999px;
+  border-radius: 2px;
   transition: width 0.4s ease;
   min-width: 2px;
 }
@@ -326,7 +326,7 @@ html[data-theme="light"] .imp-card {
   font-family: "IBM Plex Mono", monospace;
   white-space: nowrap;
   padding: 0.05rem 0.25rem;
-  border-radius: 4px;
+  border-radius: 2px;
 }
 
 .imp-toner-diff-down {
@@ -422,7 +422,7 @@ html[data-theme="light"] .imp-card {
 .imp-modal {
   background: var(--modal-gradient);
   border: 1px solid var(--border-strong);
-  border-radius: 1.2rem;
+  border-radius: 0;
   width: 100%;
   max-width: 680px;
   max-height: 90vh;
@@ -468,7 +468,7 @@ html[data-theme="light"] .imp-card {
   height: 1.75rem;
   background: transparent;
   border: none;
-  border-radius: 0.35rem;
+  border-radius: 2px;
   color: var(--text-muted);
   cursor: pointer;
   transition:
@@ -522,7 +522,7 @@ html[data-theme="light"] .imp-card {
 .imp-form-field input[type="text"] {
   background: var(--surface-3);
   border: 1px solid var(--border);
-  border-radius: 0.5rem;
+  border-radius: 2px;
   padding: 0.55rem 0.8rem;
   color: var(--text);
   font-size: 0.85rem;
@@ -550,7 +550,7 @@ html[data-theme="light"] .imp-card {
   gap: 0.7rem;
   padding: 1rem;
   background: var(--surface-3);
-  border-radius: 0.65rem;
+  border-radius: 2px;
   border: 1px solid var(--border);
 }
 
@@ -589,7 +589,7 @@ html[data-theme="light"] .imp-card {
   appearance: none;
   -webkit-appearance: none;
   background: var(--border);
-  border-radius: 999px;
+  border-radius: 2px;
   outline: none;
 }
 
@@ -621,7 +621,7 @@ html[data-theme="light"] .imp-card {
   width: 3.5rem;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 0.35rem;
+  border-radius: 2px;
   padding: 0.25rem 0.4rem;
   color: var(--text);
   font-size: 0.8rem;
@@ -663,7 +663,7 @@ html[data-theme="light"] .imp-card {
   padding: 0.5rem 1.1rem;
   background: transparent;
   border: 1px solid var(--border-strong);
-  border-radius: 0.5rem;
+  border-radius: 2px;
   color: var(--text-muted);
   font-size: 0.85rem;
   font-weight: 500;
@@ -682,7 +682,7 @@ html[data-theme="light"] .imp-card {
   padding: 0.5rem 1.2rem;
   background: var(--blue);
   border: none;
-  border-radius: 0.5rem;
+  border-radius: 2px;
   color: #fff;
   font-size: 0.85rem;
   font-weight: 500;
@@ -703,7 +703,7 @@ html[data-theme="light"] .imp-card {
   padding: 0.5rem 1.2rem;
   background: #d32f2f;
   border: none;
-  border-radius: 0.5rem;
+  border-radius: 2px;
   color: #fff;
   font-size: 0.85rem;
   font-weight: 500;
@@ -726,7 +726,7 @@ html[data-theme="light"] .imp-card {
   padding: 0.5rem 0.8rem;
   background: var(--surface-3);
   border: 1px solid var(--border-strong);
-  border-radius: 0.55rem;
+  border-radius: 2px;
   color: var(--text);
   font-size: 0.875rem;
   font-weight: 500;
@@ -756,7 +756,7 @@ html[data-theme="light"] .imp-card {
   padding: 0.5rem 1.1rem;
   background: rgba(43, 143, 251, 0.08);
   border: 1px solid rgba(43, 143, 251, 0.35);
-  border-radius: 0.55rem;
+  border-radius: 2px;
   color: var(--text);
   font-size: 0.875rem;
   font-weight: 500;
@@ -794,7 +794,7 @@ html[data-theme="light"] .imp-card {
   padding: 0.42rem 0.9rem;
   background: rgba(43, 143, 251, 0.08);
   border: 1px solid rgba(43, 143, 251, 0.32);
-  border-radius: 0.55rem;
+  border-radius: 2px;
   color: var(--text-muted);
   font-size: 0.82rem;
   font-weight: 500;
@@ -830,7 +830,7 @@ html[data-theme="light"] .imp-card {
 .toner-panel {
   background: var(--surface);
   border: 1.5px solid rgba(255, 255, 255, 0.1);
-  border-radius: 1.25rem;
+  border-radius: 0;
   overflow: hidden;
 }
 
@@ -859,7 +859,7 @@ html[data-theme="light"] .toner-panel {
   background: var(--blue);
   color: #fff;
   border: none;
-  border-radius: 0.45rem;
+  border-radius: 2px;
   font-size: 0.73rem;
   font-weight: 500;
   cursor: pointer;
@@ -870,7 +870,7 @@ html[data-theme="light"] .toner-panel {
 
 .toner-btn-add:hover {
   opacity: 0.88;
-  transform: translateY(-1px);
+  
 }
 
 .toner-empty {
@@ -939,7 +939,7 @@ html[data-theme="light"] .toner-panel {
 /* ─── Toner Inputs ────────────────────────────────────────────── */
 .toner-input {
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: 2px;
   background: transparent;
   color: var(--text);
   font-size: 0.79rem;
@@ -1009,7 +1009,7 @@ html[data-theme="light"] .toner-panel {
   justify-content: center;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: 2px;
   color: var(--text-muted);
   font-size: 0.65rem;
   cursor: pointer;
@@ -1032,7 +1032,7 @@ html[data-theme="light"] .toner-panel {
   font-size: 0.65rem;
   font-weight: 700;
   padding: 0.15rem 0.4rem;
-  border-radius: 4px;
+  border-radius: 2px;
   text-transform: uppercase;
   margin-left: 0.5rem;
   letter-spacing: 0.5px;
@@ -1105,7 +1105,7 @@ html[data-theme="light"] .toner-panel {
   padding: 0.85rem 0.6rem;
   background: var(--surface-2);
   border: 1.5px solid var(--border);
-  border-radius: 8px;
+  border-radius: 2px;
   cursor: pointer;
   transition: border-color 0.2s, background-color 0.2s, transform 0.2s;
 }
@@ -1113,7 +1113,7 @@ html[data-theme="light"] .toner-panel {
 .imp-choice-btn:hover {
   border-color: var(--blue);
   background: rgba(43, 143, 251, 0.05);
-  transform: translateY(-2px);
+  
 }
 
 .imp-choice-btn svg {
@@ -1179,7 +1179,7 @@ html[data-theme="light"] .toner-panel {
   color: white;
   border: none;
   padding: 0.4rem 0.85rem;
-  border-radius: 6px;
+  border-radius: 2px;
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
@@ -1209,7 +1209,7 @@ html[data-theme="light"] .toner-panel {
   padding: 0.75rem 1rem;
   background: var(--surface-3);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 2px;
   gap: 1rem;
 }
 
@@ -1249,7 +1249,7 @@ html[data-theme="light"] .toner-panel {
   background: var(--blue);
   color: #fff;
   border: none;
-  border-radius: 6px;
+  border-radius: 2px;
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;

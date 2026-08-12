@@ -52,8 +52,8 @@
 
 .tabela-container {
   background: var(--surface-2);
-  border-radius: 6px;
-  box-shadow: 0 1px 8px var(--shadow);
+  border-radius: 2px;
+  
   border: 1px solid var(--border);
   overflow: hidden;
   overflow-x: auto;
@@ -154,7 +154,7 @@
 .status-badge {
   display: inline-block;
   padding: 0.4rem 0.8rem;
-  border-radius: 6px;
+  border-radius: 2px;
   font-size: 0.85rem;
   font-weight: 600;
 }
@@ -186,7 +186,7 @@
 .status-select-wrapper {
   position: relative;
   display: inline-block;
-  border-radius: 6px;
+  border-radius: 2px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
   transition: filter 0.15s, box-shadow 0.15s;
 }
@@ -235,7 +235,7 @@
   padding: 0.45rem 2.5rem 0.45rem 0.85rem;
   border: none;
   background: transparent;
-  border-radius: 6px;
+  border-radius: 2px;
   font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
@@ -263,7 +263,7 @@
 .btn-remover-historico {
   padding: 0.4rem 0.8rem;
   border: none;
-  border-radius: 6px;
+  border-radius: 2px;
   cursor: pointer;
   font-size: 0.85rem;
   font-weight: 600;
@@ -293,8 +293,8 @@
   width: min(520px, 95vw);
   background: var(--modal-gradient);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 8px 28px var(--shadow);
+  border-radius: 2px;
+  
   overflow: hidden;
   animation: popupFadeIn 0.18s ease-out;
 }
@@ -329,7 +329,7 @@
 
 .popup-btn {
   padding: 0.6rem 1.1rem;
-  border-radius: 6px;
+  border-radius: 2px;
   font-size: 0.9rem;
   font-weight: 600;
   border: none;

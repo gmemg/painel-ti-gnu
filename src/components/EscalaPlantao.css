@@ -37,7 +37,7 @@
   background: var(--blue);
   color: #fff;
   border: none;
-  border-radius: 0.5rem;
+  border-radius: 2px;
   padding: 0.5rem 0.9rem;
   font-size: 0.85rem;
   font-weight: 600;
@@ -60,7 +60,7 @@
   background: transparent;
   color: var(--blue);
   border: 1px solid var(--blue);
-  border-radius: 0.5rem;
+  border-radius: 2px;
   padding: 0.5rem 0.9rem;
   font-size: 0.85rem;
   font-weight: 600;
@@ -91,9 +91,9 @@
   top: 1rem;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 0.7rem;
+  border-radius: 0;
   padding: 0.7rem;
-  box-shadow: 0 1px 3px var(--shadow);
+  border: 1px solid var(--border-strong);
 }
 
 .esc-equipe-header {
@@ -124,7 +124,7 @@
   width: 1.5rem;
   height: 1.5rem;
   border: 1px solid var(--blue);
-  border-radius: 0.4rem;
+  border-radius: 2px;
   background: transparent;
   color: var(--blue);
   font-size: 1rem;
@@ -165,7 +165,7 @@
   text-align: left;
   padding: 0.45rem 0.6rem;
   border: 1px solid var(--border);
-  border-radius: 0.45rem;
+  border-radius: 2px;
   background: var(--bg);
   color: var(--text-strong);
   font-size: 0.83rem;
@@ -239,7 +239,7 @@
   letter-spacing: 0.02em;
   color: #f59e0b;
   border: 1px solid color-mix(in srgb, #f59e0b 50%, transparent);
-  border-radius: 0.35rem;
+  border-radius: 2px;
   padding: 0.05rem 0.3rem;
 }
 
@@ -259,8 +259,8 @@
   flex-direction: column;
   background: var(--surface);
   border: 1px solid var(--border-strong, var(--border));
-  border-radius: 0.5rem;
-  box-shadow: 0 6px 20px var(--shadow);
+  border-radius: 2px;
+  
   overflow: hidden;
 }
 
@@ -342,7 +342,7 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.55rem 0.75rem;
-  border-radius: 7px;
+  border-radius: 2px;
   border: 1px solid var(--border);
   background: var(--surface);
 }
@@ -354,7 +354,7 @@
   width: 1.4rem;
   height: 1.4rem;
   border: 1px solid color-mix(in srgb, #ef4444 45%, transparent);
-  border-radius: 0.35rem;
+  border-radius: 2px;
   background: transparent;
   color: #ef4444;
   font-size: 0.7rem;
@@ -402,7 +402,7 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding: 0.15rem 0.55rem;
-  border-radius: 999px;
+  border-radius: 2px;
   border: 1px solid;
   white-space: nowrap;
 }
@@ -476,7 +476,7 @@
   width: 1.7rem;
   height: 1.7rem;
   border: 1px solid var(--border);
-  border-radius: 0.4rem;
+  border-radius: 2px;
   background: var(--surface);
   color: var(--text-muted);
   cursor: pointer;
@@ -510,9 +510,9 @@
 .esc-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 0.7rem;
+  border-radius: 0;
   overflow: hidden;
-  box-shadow: 0 1px 3px var(--shadow);
+  border: 1px solid var(--border-strong);
   display: flex;
   flex-direction: column;
 }
@@ -558,7 +558,7 @@
   gap: 0.4rem;
   padding: 0.18rem 0.3rem;
   font-size: 0.82rem;
-  border-radius: 0.35rem;
+  border-radius: 2px;
 }
 
 .esc-row-hoje {
@@ -659,7 +659,7 @@
 .esc-modal {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 0.8rem;
+  border-radius: 2px;
   width: 100%;
   max-width: 560px;
   max-height: 90vh;
@@ -696,7 +696,7 @@
   cursor: pointer;
   display: inline-flex;
   padding: 0.2rem;
-  border-radius: 0.3rem;
+  border-radius: 2px;
 }
 
 .esc-modal-close:hover {
@@ -739,7 +739,7 @@
 .esc-form-field input {
   padding: 0.5rem 0.6rem;
   border: 1px solid var(--border);
-  border-radius: 0.45rem;
+  border-radius: 2px;
   background: var(--bg);
   color: var(--text-strong);
   font-size: 0.88rem;
@@ -748,7 +748,7 @@
 .esc-form-field select {
   padding: 0.5rem 2rem 0.5rem 0.6rem;
   border: 1px solid var(--border);
-  border-radius: 0.45rem;
+  border-radius: 2px;
   background: var(--bg);
   color: var(--text-strong);
   font-size: 0.88rem;
@@ -789,7 +789,7 @@
   background: none;
   border: 1px solid var(--blue);
   color: var(--blue);
-  border-radius: 0.4rem;
+  border-radius: 2px;
   padding: 0.35rem 0.7rem;
   font-size: 0.78rem;
   font-weight: 600;
@@ -836,7 +836,7 @@
 .esc-form-dia-row input {
   padding: 0.45rem 0.5rem;
   border: 1px solid var(--border);
-  border-radius: 0.4rem;
+  border-radius: 2px;
   background: var(--bg);
   color: var(--text-strong);
   font-size: 0.83rem;
@@ -864,7 +864,7 @@
 .esc-form-fer-row select {
   padding: 0.45rem 0.5rem;
   border: 1px solid var(--border);
-  border-radius: 0.4rem;
+  border-radius: 2px;
   background: var(--bg);
   color: var(--text-strong);
   font-size: 0.83rem;
@@ -900,7 +900,7 @@
   cursor: pointer;
   font-size: 0.9rem;
   padding: 0.3rem;
-  border-radius: 0.3rem;
+  border-radius: 2px;
 }
 
 .esc-btn-remove-dia:hover {
@@ -929,7 +929,7 @@
 .esc-btn-save,
 .esc-btn-delete {
   padding: 0.55rem 1.1rem;
-  border-radius: 0.5rem;
+  border-radius: 2px;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
@@ -983,7 +983,7 @@
   flex: 1;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 0.45rem;
+  border-radius: 2px;
   padding: 0.18rem;
 }
 
@@ -995,7 +995,7 @@
   border: none;
   background: transparent;
   color: var(--text-muted);
-  border-radius: 0.3rem;
+  border-radius: 2px;
   cursor: pointer;
   transition: all 0.15s;
   letter-spacing: 0.01em;
@@ -1004,7 +1004,7 @@
 .esc-sidebar-tab-ativo {
   background: var(--surface);
   color: var(--text-strong);
-  box-shadow: 0 1px 3px var(--shadow);
+  border: 1px solid var(--border-strong);
 }
 
 /* ─── Vista da Fila ───────────────────────────────────────────── */
@@ -1023,7 +1023,7 @@
   gap: 0.4rem;
   padding: 0.38rem 0.5rem;
   border: 1px solid var(--border);
-  border-radius: 0.45rem;
+  border-radius: 2px;
   background: var(--bg);
   font-size: 0.82rem;
 }
@@ -1147,7 +1147,7 @@
   letter-spacing: 0.04em;
   color: #ef4444;
   border: 1px solid color-mix(in srgb, #ef4444 45%, transparent);
-  border-radius: 0.3rem;
+  border-radius: 2px;
   padding: 0.05rem 0.3rem;
 }
 
@@ -1160,7 +1160,7 @@
   justify-content: center;
   background: none;
   border: 1px solid var(--border);
-  border-radius: 0.3rem;
+  border-radius: 2px;
   color: var(--text-muted);
   cursor: pointer;
   font-size: 0.7rem;

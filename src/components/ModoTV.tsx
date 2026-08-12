@@ -630,10 +630,9 @@ const CATALOGO: TelaDef[] = [
       const fechadosGeral = kpis.fechados || 0;
 
       const cardStyle = {
-        border: "2px solid #00ccee",
-        boxShadow: "0 0 12px rgba(0, 204, 238, 0.3)",
+        border: "1px solid #00ccee",
         padding: "0.5rem 0.75rem",
-        borderRadius: "8px"
+        borderRadius: "2px"
       };
 
       return (
