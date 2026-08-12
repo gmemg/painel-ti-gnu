@@ -229,24 +229,14 @@ function ImpressoraCard({
         <div className="imp-card-title">
           <span className="imp-card-local">
             {impressora.local || "Sem localização"}
-            {eCritica && (
-              <span className="imp-badge imp-badge-critica" title="Toner em 20% ou menos">
-                ⚠️ Toner ≤20%
-              </span>
-            )}
+          </span>
+          <span className="imp-card-subtitle">
             {impressora.glpiId ? (
               <span className="imp-badge imp-badge-glpi" title="Sincronizada com o GLPI a cada 6h">GLPI</span>
             ) : (
               <span className="imp-badge imp-badge-manual" title="Cadastrada manualmente">Manual</span>
             )}
           </span>
-          {(impressora.marca || impressora.modelo) && (
-            <span className="imp-card-subtitle">
-              {[impressora.marca, impressora.modelo]
-                .filter(Boolean)
-                .join(" · ")}
-            </span>
-          )}
         </div>
         <div className="imp-card-actions">
           {impressora.link && (
@@ -318,6 +308,14 @@ function ImpressoraCard({
       </div>
       <div className="imp-card-body">
         <div className="imp-info-grid">
+          <div className="imp-info-item">
+            <span className="imp-info-label">Marca</span>
+            <span className="imp-info-value">{impressora.marca || "—"}</span>
+          </div>
+          <div className="imp-info-item">
+            <span className="imp-info-label">Modelo</span>
+            <span className="imp-info-value">{impressora.modelo || "—"}</span>
+          </div>
           <div className="imp-info-item">
             <span className="imp-info-label">MAC</span>
             <span className="imp-info-value imp-info-mono">
