@@ -198,6 +198,20 @@ export default function Dashboard() {
   const [tecnicos, setTecnicos] = useState<Tecnico[]>([]);
   const [totalComputadores, setTotalComputadores] = useState<number>(0);
   const [totalImpressoras, setTotalImpressoras] = useState<number>(0);
+  const [totalTotens, setTotalTotens] = useState<number>(() => {
+    const saved = localStorage.getItem("painel_total_totens");
+    return saved !== null ? parseInt(saved, 10) || 0 : 0;
+  });
+  const [editandoTotens, setEditandoTotens] = useState<boolean>(false);
+  const [inputTotens, setInputTotens] = useState<string>("");
+
+  const salvarTotens = () => {
+    const parsed = parseInt(inputTotens, 10);
+    const val = isNaN(parsed) ? 0 : Math.max(0, parsed);
+    setTotalTotens(val);
+    localStorage.setItem("painel_total_totens", String(val));
+    setEditandoTotens(false);
+  };
   const [chamadosAntigos, setChamadosAntigos] = useState<ChamadoAntigo[]>([]);
   const [modalChamadosAntigosAberto, setModalChamadosAntigosAberto] = useState<boolean>(false);
   const [abaModalAntigos, setAbaModalAntigos] = useState<"interacao_30" | "todos">("interacao_30");
@@ -986,8 +1000,22 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Total de Totens */}
+        {/* Totens */}
         <div className="db-card kpi-totens" style={getCardStyle("totens")}>
+          <button
+            type="button"
+            className="db-card-edit-btn"
+            title="Editar quantidade de Totens"
+            onClick={() => {
+              setInputTotens(String(totalTotens));
+              setEditandoTotens(true);
+            }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+          </button>
           <div className="db-card-header">
             <div className="db-card-icon-wrap var-accent-bg-dim">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="db-card-icon var-accent-color">
@@ -1002,8 +1030,33 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="db-card-body">
-            <h3 className="db-card-value">-</h3>
-            <p className="db-card-title">Total de Totens</p>
+            {editandoTotens ? (
+              <div className="toten-edit-container">
+                <input
+                  type="number"
+                  min="0"
+                  autoFocus
+                  value={inputTotens}
+                  onChange={(e) => setInputTotens(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") salvarTotens();
+                    if (e.key === "Escape") setEditandoTotens(false);
+                  }}
+                  className="toten-input-edit"
+                />
+                <button
+                  type="button"
+                  onClick={salvarTotens}
+                  className="toten-btn-save"
+                  title="Salvar"
+                >
+                  ✓
+                </button>
+              </div>
+            ) : (
+              <h3 className="db-card-value">{totalTotens}</h3>
+            )}
+            <p className="db-card-title">Totens</p>
           </div>
         </div>
 
@@ -1122,7 +1175,7 @@ export default function Dashboard() {
           <div className="premium-kpi-card glass-purple">
             <div className="kpi-content">
               <span className="kpi-label" style={{ textAlign: 'center' }}>Chamados Concluídos ({nomeMesCapitalizado})</span>
-              <span className="kpi-value" style={{ margin: '6px 0', fontSize: '2rem', display: 'flex', justifyContent: 'center', color: '#c084fc' }}>
+              <span className="kpi-value" style={{ margin: '6px 0', fontSize: '2rem', display: 'flex', justifyContent: 'center', color: '#34d399' }}>
                 {carregandoGlpi ? "..." : totalChamadosMesTI}
               </span>
               <div style={{ display: 'flex', gap: '8px', marginTop: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -1635,15 +1688,6 @@ export default function Dashboard() {
                     const periodoStr = data?.periodoLabel || `${mesRelatorio}/${anoRelatorio}`;
                     const tipoRelatorioStr = "mensal";
                     const dataEmissao = data?.dataEmissao || new Date().toLocaleString("pt-BR");
-                    const totalFechados = data?.totalFechados ?? 0;
-                    const listRequerentes = data?.requerentes || [];
-
-                    const totalAbertosMes = data?.totalAbertosMes ?? 0;
-                    const totalAbertosAno = data?.totalAbertosAno ?? 0;
-                    const totalAbertosGeral = data?.totalAbertosGeral ?? 0;
-                    const requerentesAbertosMes = data?.requerentesAbertosMes || [];
-
-                    const topRequerente = requerentesAbertosMes.length > 0 ? requerentesAbertosMes[0] : (listRequerentes.length > 0 ? listRequerentes[0] : null);
 
                     const printWindow = window.open("", "_blank");
                     if (!printWindow) {
@@ -1834,66 +1878,93 @@ export default function Dashboard() {
                         <div class="header-bar">
                           <div class="brand-title">
                             <h1>GRÊMIO NÁUTICO UNIÃO — TECNOLOGIA DA INFORMAÇÃO</h1>
-                            <p>Relatório Gerencial de Desempenho, Atendimentos e Montagens (GLPI)</p>
+                            <p>Relatório Mensal de Indicadores e Ativos da TI</p>
                           </div>
                           <div class="period-badge">
                             ${periodoStr}
                           </div>
                         </div>
 
-                        <!-- Grid de Destaques Executivos -->
-                        <div class="meta-grid" style="grid-template-columns: repeat(2, 1fr);">
+                        <!-- Resumo Geral da TI -->
+                        <div class="section-title" style="margin-top: 12px;">📊 Total Chamados TI</div>
+                        <div class="meta-grid" style="grid-template-columns: repeat(3, 1fr);">
                           <div class="meta-card">
-                            <div class="val" style="color: #2b8ffb;">${totalFechados}</div>
-                            <div class="lbl">Chamados Fechados TI</div>
+                            <div class="val">${totalChamadosAnoTI}</div>
+                            <div class="lbl">Total de Atendimentos</div>
                           </div>
                           <div class="meta-card">
-                            <div class="val-sub" title="${topRequerente ? topRequerente.nome : 'Nenhum'}">
-                              ${topRequerente ? topRequerente.nome : 'N/A'}
-                            </div>
-                            <div class="lbl">Maior Requerente (${topRequerente ? topRequerente.count : 0})</div>
+                            <div class="val">${totalFechadosAnoTI}</div>
+                            <div class="lbl">Chamados Fechados</div>
+                          </div>
+                          <div class="meta-card">
+                            <div class="val">${totalSolucionadosAnoTI}</div>
+                            <div class="lbl">Chamados Solucionados</div>
                           </div>
                         </div>
 
-                        <!-- Chamados Abertos e Requerentes -->
-                        <div class="section-title" style="margin-top: 24px;">📈 Totais de Chamados Abertos</div>
-                        <div class="ops-summary-box ops-summary-box-3">
-                          <div class="ops-item">
-                            <span class="title">Total Mensal</span>
-                            <span class="num" style="color: #f97316;">${totalAbertosMes}</span>
+                        <!-- Status dos Chamados GLPI -->
+                        <div class="section-title">🎫 Status dos Chamados GLPI</div>
+                        <div class="meta-grid" style="grid-template-columns: repeat(6, 1fr);">
+                          <div class="meta-card">
+                            <div class="val">${kpis.novos ?? 0}</div>
+                            <div class="lbl">Chamados Novos</div>
                           </div>
-                          <div class="ops-item">
-                            <span class="title">Total Anual</span>
-                            <span class="num" style="color: #f97316;">${totalAbertosAno}</span>
+                          <div class="meta-card">
+                            <div class="val">${kpis.atribuidos ?? 0}</div>
+                            <div class="lbl">Atribuídos</div>
                           </div>
-                          <div class="ops-item">
-                            <span class="title">Total Geral</span>
-                            <span class="num" style="color: #f97316;">${totalAbertosGeral}</span>
+                          <div class="meta-card">
+                            <div class="val">${kpis.pendentes ?? 0}</div>
+                            <div class="lbl">Pendentes</div>
+                          </div>
+                          <div class="meta-card">
+                            <div class="val">${kpis.planejados ?? 0}</div>
+                            <div class="lbl">Planejados</div>
+                          </div>
+                          <div class="meta-card">
+                            <div class="val">${kpis.solucionados ?? 0}</div>
+                            <div class="lbl">Solucionados</div>
+                          </div>
+                          <div class="meta-card">
+                            <div class="val">${kpis.fechados ?? 0}</div>
+                            <div class="lbl">Fechados</div>
                           </div>
                         </div>
 
-                        <div class="section-title">📝 Quantidade de chamados por requerente</div>
-                        <table>
-                          <thead>
-                            <tr>
-                              <th style="width: 35px; text-align: center;">#</th>
-                              <th>Requerente / Setor</th>
-                              <th style="text-align: right;">Qtd. Abertos (Mês)</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            ${requerentesAbertosMes.length === 0 ? '<tr><td colspan="3" style="text-align:center; color:#94a3b8;">Nenhum chamado aberto neste mês</td></tr>' :
-                        requerentesAbertosMes.map((p: any, i: number) => `
-                                <tr>
-                                  <td style="text-align: center;"><span class="pos-badge ${i < 3 ? `pos-${i + 1}` : ''}">${i + 1}</span></td>
-                                  <td><strong>${p.nome}</strong></td>
-                                  <td style="text-align: right; font-weight: 700; color: #f97316;">${p.count}</td>
-                                </tr>
-                              `).join('')
-                      }
-                          </tbody>
-                        </table>
-                        
+                        <!-- Inventário e Ativos -->
+                        <div class="section-title">🖥️ Inventário e Ativos</div>
+                        <div class="meta-grid" style="grid-template-columns: repeat(3, 1fr);">
+                          <div class="meta-card">
+                            <div class="val">${totalComputadores}</div>
+                            <div class="lbl">Total Computadores</div>
+                          </div>
+                          <div class="meta-card">
+                            <div class="val">${totalImpressoras}</div>
+                            <div class="lbl">Total Impressoras</div>
+                          </div>
+                          <div class="meta-card">
+                            <div class="val">${totalTotens}</div>
+                            <div class="lbl">Totens</div>
+                          </div>
+                        </div>
+
+                        <!-- Montagens e Equipamentos -->
+                        <div class="section-title">📦 Montagens e Equipamentos</div>
+                        <div class="meta-grid" style="grid-template-columns: repeat(3, 1fr);">
+                          <div class="meta-card">
+                            <div class="val">${montagensPendentes}</div>
+                            <div class="lbl">Montagens Pendentes</div>
+                          </div>
+                          <div class="meta-card">
+                            <div class="val">${montagensRealizadas}</div>
+                            <div class="lbl">Montagens Realizadas</div>
+                          </div>
+                          <div class="meta-card">
+                            <div class="val">${eqPendentes}</div>
+                            <div class="lbl">Eq. Pendente (Hist.)</div>
+                          </div>
+                        </div>
+
                         <div class="footer-info">
                           <span>Painel de Gerenciamento da TI — Grêmio Náutico União</span>
                           <span>Data de Emissão: ${dataEmissao}</span>
@@ -1922,7 +1993,7 @@ export default function Dashboard() {
                   }
                 }}
               >
-                {gerandoPdf ? "Buscando dados..." : "🚀 Gerar e Baixar PDF"}
+                {gerandoPdf ? "Buscando dados..." : "Gerar relatório"}
               </button>
             </div>
           </div>

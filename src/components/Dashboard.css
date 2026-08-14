@@ -246,6 +246,84 @@
   color: var(--card-accent);
 }
 
+/* Botão de edição do Totens - visível apenas no hover */
+.db-card-edit-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  cursor: pointer;
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+  z-index: 5;
+}
+
+.db-card:hover .db-card-edit-btn {
+  opacity: 0.7;
+}
+
+.db-card-edit-btn:hover {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.12);
+  color: var(--card-accent, #a855f7);
+}
+
+/* Edição inline de Totens */
+.toten-edit-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 4px 0;
+}
+
+.toten-input-edit {
+  width: 80px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--card-accent, #a855f7);
+  border-radius: 4px;
+  color: var(--text-strong);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 2px 4px;
+  outline: none;
+}
+
+.toten-input-edit:focus {
+  border-color: #c084fc;
+  box-shadow: 0 0 6px rgba(168, 85, 247, 0.4);
+}
+
+.toten-btn-save {
+  background: #a855f7;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  width: 28px;
+  height: 28px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s;
+}
+
+.toten-btn-save:hover {
+  background: #9333ea;
+}
+
 /* Menu Popover Flutuante de Cores */
 .db-color-popover {
   position: absolute;
@@ -989,7 +1067,7 @@ html[data-theme="light"] .db-tab-group {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background: linear-gradient(135deg, #2b8ffb 0%, #1d4ed8 100%);
+  background: #2b8ffb;
   color: #ffffff;
   border: none;
   padding: 0.55rem 1.1rem;
@@ -1002,7 +1080,6 @@ html[data-theme="light"] .db-tab-group {
 }
 
 .db-btn-report:hover {
-  transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(43, 143, 251, 0.45);
 }
 
@@ -1212,7 +1289,7 @@ html[data-theme="light"] .db-tab-group {
 
 .db-report-submit-btn {
   padding: 0.6rem 1.4rem;
-  background: linear-gradient(135deg, #2b8ffb 0%, #1d4ed8 100%);
+  background: #2b8ffb;
   border: none;
   border-radius: 2px;
   color: #ffffff;
@@ -1224,7 +1301,6 @@ html[data-theme="light"] .db-tab-group {
 }
 
 .db-report-submit-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(43, 143, 251, 0.4);
 }
 
