@@ -10,6 +10,7 @@ import {
   GlpiUsuarioBusca,
   ChamadoAntigo
 } from "../utils/storage";
+import { tocarSomNovoChamado } from "../utils/audioNotification";
 
 import "./Dashboard.css";
 
@@ -538,6 +539,9 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, []);
 
+  // Ref para monitorar aumento de chamados novos e disparar sinal sonoro
+  const prevNovosRef = useRef<number | null>(null);
+
   // Efeito para carregar dados da API do GLPI
   useEffect(() => {
     let progressTimer: any;
@@ -549,7 +553,18 @@ export default function Dashboard() {
 
       try {
         const data = await getGlpiDashboard();
-        if (data.kpis) setKpis(data.kpis);
+        if (data.kpis) {
+          setKpis(data.kpis);
+          if (typeof data.kpis.novos === "number") {
+            if (prevNovosRef.current !== null && data.kpis.novos > prevNovosRef.current) {
+              const somAtivo = localStorage.getItem("som_novos_chamados_ativo") === "true";
+              if (somAtivo) {
+                tocarSomNovoChamado();
+              }
+            }
+            prevNovosRef.current = data.kpis.novos;
+          }
+        }
         if (data.tecnicos && data.tecnicos.length > 0) setTecnicos(data.tecnicos);
         if (typeof data.totalComputadores === "number") setTotalComputadores(data.totalComputadores);
         if (typeof data.totalImpressoras === "number") setTotalImpressoras(data.totalImpressoras);

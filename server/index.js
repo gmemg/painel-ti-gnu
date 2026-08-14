@@ -20,7 +20,10 @@ const port = Number(process.env.PORT || 3000);
 const isProduction = process.env.NODE_ENV === "production";
 const distPath = path.join(__dirname, "..", "dist");
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET || "desenvolvimento_jwt_secret_mudar_no_env";
+if (!process.env.JWT_SECRET) {
+  console.warn("⚠️ AVISO DE SEGURANÇA: A variável JWT_SECRET não foi configurada no arquivo .env.");
+}
 const TOKEN_EXPIRACAO = "12h";
 
 const pool = new Pool({
@@ -1429,6 +1432,10 @@ const GLPI_API_URL = process.env.GLPI_API_URL || "";
 const GLPI_APP_TOKEN = process.env.GLPI_APP_TOKEN || "";
 const GLPI_USER_TOKEN = process.env.GLPI_USER_TOKEN || "";
 const glpiBaseWebUrl = (process.env.GLPI_WEB_URL || process.env.GLPI_URL || GLPI_API_URL.replace(/\/apirest\.php\/?$/i, "")).replace(/\/$/, "");
+
+if (!GLPI_API_URL || !GLPI_APP_TOKEN || !GLPI_USER_TOKEN) {
+  console.warn("⚠️ AVISO: Variáveis de integração do GLPI (GLPI_API_URL, GLPI_APP_TOKEN, GLPI_USER_TOKEN) não foram totalmente configuradas no arquivo .env.");
+}
 
 let syncTimeoutId = null;
 let syncIntervalId = null;

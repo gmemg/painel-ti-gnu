@@ -140,6 +140,171 @@
   border-color: var(--blue-bright);
 }
 
+.sound-toggle {
+  background: transparent;
+  color: #F1F5F9;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  padding: 0.45rem 0.7rem;
+  border-radius: 2px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.sound-toggle:hover {
+  background: rgba(21, 101, 192, 0.25);
+  border-color: var(--blue-bright);
+}
+
+.sound-toggle.active {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: #10b981;
+  color: #34d399;
+}
+
+.sound-toggle.active:hover {
+  background: rgba(16, 185, 129, 0.28);
+}
+
+/* ─── Popover de Seleção de Som ─── */
+.sound-menu-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.sound-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--surface-3, #1e293b);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 6px;
+  padding: 0.85rem;
+  width: 290px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  animation: soundPopoverFadeIn 0.15s ease-out;
+}
+
+@keyframes soundPopoverFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sound-popover-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.sound-popover-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-strong, #f8fafc);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.sound-switch-btn {
+  background: rgba(148, 163, 184, 0.15);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  color: var(--text-muted, #94a3b8);
+  padding: 0.2rem 0.55rem;
+  border-radius: 12px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sound-switch-btn.active {
+  background: #10b981;
+  border-color: #10b981;
+  color: #ffffff;
+}
+
+.sound-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.sound-option-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.45rem 0.6rem;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.sound-option-item:hover {
+  background: rgba(43, 143, 251, 0.1);
+  border-color: rgba(43, 143, 251, 0.3);
+}
+
+.sound-option-item.selected {
+  background: rgba(43, 143, 251, 0.18);
+  border-color: #2b8ffb;
+}
+
+.sound-option-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sound-option-name {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-strong, #f8fafc);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.sound-option-desc {
+  font-size: 0.65rem;
+  color: var(--text-muted, #94a3b8);
+}
+
+.sound-play-preview-btn {
+  background: transparent;
+  border: none;
+  color: var(--blue-bright, #2b8ffb);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.8;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.sound-play-preview-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
 /* ─── Menu de usuário ─── */
 .user-menu {
   position: relative;

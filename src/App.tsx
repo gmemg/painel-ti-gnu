@@ -23,6 +23,11 @@ import Login from "./components/Login";
 import GlobalSearch from "./components/GlobalSearch";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { getImpressoras, temTonerCritico } from "./utils/storage";
+import {
+  tocarSomNovoChamado,
+  LISTA_EFEITOS_SONOROS,
+  TipoEfeitoSonoro,
+} from "./utils/audioNotification";
 import "./App.css";
 
 /**
@@ -34,6 +39,35 @@ function AppLayout() {
   const location = useLocation();
   const { user, logout } = useAuth();
   const [tema, setTema] = useState<"dark" | "light">("dark");
+  const [somHabilitado, setSomHabilitado] = useState<boolean>(() => {
+    return localStorage.getItem("som_novos_chamados_ativo") === "true";
+  });
+  const [somTipo, setSomTipo] = useState<TipoEfeitoSonoro>(() => {
+    return (
+      (localStorage.getItem("som_novos_chamados_tipo") as TipoEfeitoSonoro) ||
+      "chime"
+    );
+  });
+  const [somMenuAberto, setSomMenuAberto] = useState(false);
+  const soundMenuRef = useRef<HTMLDivElement>(null);
+
+  const toggleSom = () => {
+    setSomHabilitado((prev) => {
+      const novoValor = !prev;
+      localStorage.setItem("som_novos_chamados_ativo", String(novoValor));
+      if (novoValor) {
+        tocarSomNovoChamado(somTipo);
+      }
+      return novoValor;
+    });
+  };
+
+  const selecionarSom = (tipo: TipoEfeitoSonoro) => {
+    setSomTipo(tipo);
+    localStorage.setItem("som_novos_chamados_tipo", tipo);
+    tocarSomNovoChamado(tipo);
+  };
+
   // Em telas grandes o menu começa aberto; em mobile, fechado (vira drawer).
   const [menuAberto, setMenuAberto] = useState(
     () => typeof window === "undefined" || window.innerWidth > 1024,
@@ -62,9 +96,8 @@ function AppLayout() {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const isTVMode = location.pathname === "/tv";
 
-  // Fecha o menu do usuário ao clicar fora dele.
+  // Fecha menus ao clicar fora
   useEffect(() => {
-    if (!menuUsuarioAberto) return;
     const aoClicarFora = (e: MouseEvent) => {
       if (
         userMenuRef.current &&
@@ -72,10 +105,16 @@ function AppLayout() {
       ) {
         setMenuUsuarioAberto(false);
       }
+      if (
+        soundMenuRef.current &&
+        !soundMenuRef.current.contains(e.target as Node)
+      ) {
+        setSomMenuAberto(false);
+      }
     };
     document.addEventListener("mousedown", aoClicarFora);
     return () => document.removeEventListener("mousedown", aoClicarFora);
-  }, [menuUsuarioAberto]);
+  }, []);
 
   useEffect(() => {
     const salvo = localStorage.getItem("tema_app");
@@ -175,6 +214,109 @@ function AppLayout() {
                 )}
               </span>
             </button>
+            <div className="sound-menu-wrapper" ref={soundMenuRef}>
+              <button
+                type="button"
+                className={`sound-toggle ${somHabilitado ? "active" : ""}`}
+                onClick={() => setSomMenuAberto((prev) => !prev)}
+                aria-label="Configurar alertas sonoros"
+                title="Configurar som de novos chamados"
+              >
+                {somHabilitado ? (
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="18"
+                    height="18"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+                  </svg>
+                ) : (
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="18"
+                    height="18"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <line x1="1" y1="1" x2="23" y2="23" />
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                  </svg>
+                )}
+              </button>
+
+              {somMenuAberto && (
+                <div
+                  className="sound-popover"
+                  role="dialog"
+                  aria-label="Seleção de Efeito Sonoro"
+                >
+                  <div className="sound-popover-header">
+                    <span className="sound-popover-title">
+                      🔊 Alerta Sonoro
+                    </span>
+                    <button
+                      type="button"
+                      className={`sound-switch-btn ${somHabilitado ? "active" : ""}`}
+                      onClick={toggleSom}
+                    >
+                      {somHabilitado ? "ATIVADO" : "DESATIVADO"}
+                    </button>
+                  </div>
+
+                  <div className="sound-options-list">
+                    {LISTA_EFEITOS_SONOROS.map((ef) => {
+                      const isSelected = somTipo === ef.id;
+                      return (
+                        <div
+                          key={ef.id}
+                          className={`sound-option-item ${isSelected ? "selected" : ""}`}
+                          onClick={() => selecionarSom(ef.id)}
+                        >
+                          <div className="sound-option-info">
+                            <span className="sound-option-name">
+                              <span>{ef.icone}</span>
+                              <span>{ef.nome}</span>
+                            </span>
+                            <span className="sound-option-desc">
+                              {ef.descricao}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            className="sound-play-preview-btn"
+                            title="Ouvir teste"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              selecionarSom(ef.id);
+                            }}
+                          >
+                            <svg
+                              viewBox="0 0 24 24"
+                              width="16"
+                              height="16"
+                              fill="currentColor"
+                            >
+                              <polygon points="5 3 19 12 5 21 5 3" />
+                            </svg>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
             {user && (
               <div className="user-menu" ref={userMenuRef}>
                 <button
