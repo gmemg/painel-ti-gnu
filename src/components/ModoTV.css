@@ -24,7 +24,6 @@
 }
 
 /* ─── Topbar ─────────────────────────────────────────────────────── */
-.tv-topbar,
 .tv-progress,
 .tv-conteudo {
   position: relative;
@@ -32,6 +31,8 @@
 }
 
 .tv-topbar {
+  position: relative;
+  z-index: 50;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
@@ -172,6 +173,47 @@
   border-color: rgba(59, 130, 246, 0.45);
   color: #ffffff;
   transform: rotate(45deg);
+}
+
+/* botão de som — no mesmo estilo dos botões da topbar do Modo TV */
+.tv-sound-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 2px;
+  color: rgba(255, 255, 255, 0.65);
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    color 0.2s;
+  touch-action: auto;
+}
+
+.tv-sound-btn:hover {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.45);
+  color: #ffffff;
+}
+
+.tv-sound-btn.active {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: #10b981;
+  color: #34d399;
+}
+
+.tv-sound-btn.active:hover {
+  background: rgba(16, 185, 129, 0.28);
+}
+
+.tv-sound-popover {
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 100;
 }
 
 /* estado sem abas ativas */
@@ -621,7 +663,7 @@
 .tv-cfg-overlay {
   position: fixed;
   inset: 0;
-  z-index: 10;
+  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
