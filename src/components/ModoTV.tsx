@@ -12,6 +12,7 @@ import {
   getImpressoras,
   getInventario,
   getGlpiDashboard,
+  getGlpiDashboardCache,
   getTvConfig,
   saveTvConfig,
   TvConfig,
@@ -580,6 +581,12 @@ const CATALOGO: TelaDef[] = [
         return rows;
       } catch (err) {
         console.error("Erro ao carregar ranking no Modo TV:", err);
+        const cache = getGlpiDashboardCache();
+        if (cache) {
+          const rows = asRows(cache.tecnicos || []);
+          (rows as any).__kpis = cache.kpis;
+          return rows;
+        }
         return [];
       }
     },

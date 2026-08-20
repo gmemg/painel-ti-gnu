@@ -3,6 +3,8 @@ import {
   reconcileEventosAutomaticos,
   getHistorico,
   getGlpiDashboard,
+  getGlpiDashboardCache,
+  getGlpiDashboardLastSync,
   getGlpiTecnicoDetalhes,
   buscarGlpiUsuarios,
   getToken,
@@ -187,18 +189,23 @@ const isMesIgual = (
 export default function Dashboard() {
   const [currentTime, setCurrentTime] = useState<string>("");
 
+  // Cache inicial do localStorage (0ms load time)
+  const cacheInicial = getGlpiDashboardCache();
+
   // Estados do GLPI
-  const [kpis, setKpis] = useState<any>({
-    novos: 0,
-    atribuidos: 0,
-    pendentes: 0,
-    planejados: 0,
-    solucionados: 0,
-    fechados: 0,
-  });
-  const [tecnicos, setTecnicos] = useState<Tecnico[]>([]);
-  const [totalComputadores, setTotalComputadores] = useState<number>(0);
-  const [totalImpressoras, setTotalImpressoras] = useState<number>(0);
+  const [kpis, setKpis] = useState<any>(
+    cacheInicial?.kpis || {
+      novos: 0,
+      atribuidos: 0,
+      pendentes: 0,
+      planejados: 0,
+      solucionados: 0,
+      fechados: 0,
+    }
+  );
+  const [tecnicos, setTecnicos] = useState<Tecnico[]>(cacheInicial?.tecnicos || []);
+  const [totalComputadores, setTotalComputadores] = useState<number>(cacheInicial?.totalComputadores || 0);
+  const [totalImpressoras, setTotalImpressoras] = useState<number>(cacheInicial?.totalImpressoras || 0);
   const [totalTotens, setTotalTotens] = useState<number>(() => {
     const saved = localStorage.getItem("painel_total_totens");
     return saved !== null ? parseInt(saved, 10) || 0 : 0;
@@ -213,7 +220,7 @@ export default function Dashboard() {
     localStorage.setItem("painel_total_totens", String(val));
     setEditandoTotens(false);
   };
-  const [chamadosAntigos, setChamadosAntigos] = useState<ChamadoAntigo[]>([]);
+  const [chamadosAntigos, setChamadosAntigos] = useState<ChamadoAntigo[]>(cacheInicial?.chamadosAntigos || []);
   const [modalChamadosAntigosAberto, setModalChamadosAntigosAberto] = useState<boolean>(false);
   const [abaModalAntigos, setAbaModalAntigos] = useState<"interacao_30" | "todos">("interacao_30");
   const [filtroModalAntigos, setFiltroModalAntigos] = useState<string>("");
@@ -222,7 +229,18 @@ export default function Dashboard() {
   const [anoRanking, setAnoRanking] = useState<number>(new Date().getFullYear());
   const [dadosRankingCustom, setDadosRankingCustom] = useState<Record<string, { count: number; fechados: number; solucionados: number }> | null>(null);
 
-  const [carregandoGlpi, setCarregandoGlpi] = useState<boolean>(true);
+  const [carregandoGlpi, setCarregandoGlpi] = useState<boolean>(!cacheInicial);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(() => {
+    const raw = getGlpiDashboardLastSync();
+    if (!raw) return null;
+    try {
+      const d = new Date(raw);
+      return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    } catch {
+      return null;
+    }
+  });
   const [progressoGlpi, setProgressoGlpi] = useState<number>(0);
 
   const [carregandoRanking, setCarregandoRanking] = useState<boolean>(false);
@@ -542,49 +560,54 @@ export default function Dashboard() {
   // Ref para monitorar aumento de chamados novos e disparar sinal sonoro
   const prevNovosRef = useRef<number | null>(null);
 
+  // Função reutilizável para buscar/atualizar dados do GLPI
+  const carregarGlpi = async (force: boolean = false) => {
+    setIsSyncing(true);
+    let progressTimer: any;
+    setProgressoGlpi(15);
+    progressTimer = setInterval(() => {
+      setProgressoGlpi((p) => (p < 90 ? Math.min(90, p + Math.floor(Math.random() * 10 + 5)) : p));
+    }, 250);
+
+    try {
+      const data = await getGlpiDashboard(force);
+      if (data.kpis) {
+        setKpis(data.kpis);
+        if (typeof data.kpis.novos === "number") {
+          if (prevNovosRef.current !== null && data.kpis.novos > prevNovosRef.current) {
+            const somAtivo = localStorage.getItem("som_novos_chamados_ativo") === "true";
+            if (somAtivo) {
+              tocarSomNovoChamado();
+            }
+          }
+          prevNovosRef.current = data.kpis.novos;
+        }
+      }
+      if (data.tecnicos && data.tecnicos.length > 0) setTecnicos(data.tecnicos);
+      if (typeof data.totalComputadores === "number") setTotalComputadores(data.totalComputadores);
+      if (typeof data.totalImpressoras === "number") setTotalImpressoras(data.totalImpressoras);
+      if (data.chamadosAntigos && Array.isArray(data.chamadosAntigos)) setChamadosAntigos(data.chamadosAntigos);
+      
+      const agora = new Date();
+      setLastSyncTime(agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }));
+      setProgressoGlpi(100);
+      setTimeout(() => setCarregandoGlpi(false), 300);
+    } catch (error) {
+      console.error("Erro ao carregar dados do GLPI:", error);
+      setProgressoGlpi(100);
+      setTimeout(() => setCarregandoGlpi(false), 300);
+    } finally {
+      clearInterval(progressTimer);
+      setIsSyncing(false);
+    }
+  };
+
   // Efeito para carregar dados da API do GLPI
   useEffect(() => {
-    let progressTimer: any;
-    const carregarGlpi = async () => {
-      setProgressoGlpi(15);
-      progressTimer = setInterval(() => {
-        setProgressoGlpi((p) => (p < 90 ? Math.min(90, p + Math.floor(Math.random() * 10 + 5)) : p));
-      }, 250);
-
-      try {
-        const data = await getGlpiDashboard();
-        if (data.kpis) {
-          setKpis(data.kpis);
-          if (typeof data.kpis.novos === "number") {
-            if (prevNovosRef.current !== null && data.kpis.novos > prevNovosRef.current) {
-              const somAtivo = localStorage.getItem("som_novos_chamados_ativo") === "true";
-              if (somAtivo) {
-                tocarSomNovoChamado();
-              }
-            }
-            prevNovosRef.current = data.kpis.novos;
-          }
-        }
-        if (data.tecnicos && data.tecnicos.length > 0) setTecnicos(data.tecnicos);
-        if (typeof data.totalComputadores === "number") setTotalComputadores(data.totalComputadores);
-        if (typeof data.totalImpressoras === "number") setTotalImpressoras(data.totalImpressoras);
-        if (data.chamadosAntigos && Array.isArray(data.chamadosAntigos)) setChamadosAntigos(data.chamadosAntigos);
-        setProgressoGlpi(100);
-        setTimeout(() => setCarregandoGlpi(false), 300);
-      } catch (error) {
-        console.error("Erro ao carregar dados do GLPI:", error);
-        setProgressoGlpi(100);
-        setTimeout(() => setCarregandoGlpi(false), 300);
-      } finally {
-        clearInterval(progressTimer);
-      }
-    };
-
-    carregarGlpi();
-    const interval = setInterval(carregarGlpi, 60000); // Atualiza a cada 1 minuto
+    carregarGlpi(false);
+    const interval = setInterval(() => carregarGlpi(false), 60000); // Atualiza a cada 1 minuto
     return () => {
       clearInterval(interval);
-      clearInterval(progressTimer);
     };
   }, []);
 
@@ -846,9 +869,52 @@ export default function Dashboard() {
             </svg>
             Gerar Relatório PDF
           </button>
+          <button
+            type="button"
+            className="db-btn-refresh"
+            onClick={() => carregarGlpi(true)}
+            disabled={isSyncing}
+            title="Forçar sincronização manual com o GLPI"
+            style={{
+              background: "rgba(15, 23, 42, 0.6)",
+              border: "1px solid rgba(148, 163, 184, 0.25)",
+              color: "#f1f5f9",
+              borderRadius: "4px",
+              padding: "0.45rem 0.75rem",
+              cursor: isSyncing ? "not-allowed" : "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.4rem",
+              fontSize: "0.8rem",
+              fontWeight: 600,
+              transition: "all 0.15s ease"
+            }}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              width="14"
+              height="14"
+              style={{
+                transform: isSyncing ? "rotate(360deg)" : "none",
+                transition: isSyncing ? "transform 1s linear infinite" : "none"
+              }}
+            >
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            {isSyncing ? "Sincronizando..." : "Recarregar"}
+          </button>
           <div className="db-update-badge">
-            <span className="db-pulse-dot"></span>
-            <span>Atualizando ao vivo • {currentTime}</span>
+            <span className="db-pulse-dot" style={{ backgroundColor: isSyncing ? "#eab308" : "#10b981" }}></span>
+            <span>
+              {isSyncing
+                ? "Sincronizando com GLPI..."
+                : lastSyncTime
+                ? `Atualizado às ${lastSyncTime} • Em cache`
+                : `Atualizando ao vivo • ${currentTime}`}
+            </span>
           </div>
         </div>
       </div>

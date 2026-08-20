@@ -448,6 +448,22 @@ export interface MesDetalhes {
 export interface TecnicoDetalhesResponse {
   nome: string;
   glpiId?: string;
+  status?: string;
+  mesAnoAbertura?: string;
+  criadoOutroMes?: boolean;
+  url?: string;
+}
+
+export interface MesDetalhes {
+  mes: number;
+  nomeMes: string;
+  total: number;
+  chamados: ChamadoDetalhe[];
+}
+
+export interface TecnicoDetalhesResponse {
+  nome: string;
+  glpiId?: string;
   ano: number;
   totalAno: number;
   meses: MesDetalhes[];
@@ -470,8 +486,38 @@ export interface GlpiSyncStatus {
   nextSync: string | null;
 }
 
-export const getGlpiDashboard = (): Promise<GlpiDashboardData> =>
-  requestJson<GlpiDashboardData>("/glpi/dashboard");
+const GLPI_DASHBOARD_CACHE_KEY = "glpi_dashboard_cache";
+const GLPI_DASHBOARD_LAST_SYNC_KEY = "glpi_dashboard_last_sync";
+
+export const getGlpiDashboardCache = (): GlpiDashboardData | null => {
+  try {
+    const raw = localStorage.getItem(GLPI_DASHBOARD_CACHE_KEY);
+    return raw ? (JSON.parse(raw) as GlpiDashboardData) : null;
+  } catch {
+    return null;
+  }
+};
+
+export const getGlpiDashboardLastSync = (): string | null => {
+  return localStorage.getItem(GLPI_DASHBOARD_LAST_SYNC_KEY);
+};
+
+export const getGlpiDashboard = async (
+  force: boolean = false
+): Promise<GlpiDashboardData> => {
+  const url = force ? "/glpi/dashboard?force=true" : "/glpi/dashboard";
+  const data = await requestJson<GlpiDashboardData>(url);
+  try {
+    localStorage.setItem(GLPI_DASHBOARD_CACHE_KEY, JSON.stringify(data));
+    localStorage.setItem(
+      GLPI_DASHBOARD_LAST_SYNC_KEY,
+      new Date().toISOString()
+    );
+  } catch (err) {
+    console.warn("Erro ao salvar cache do GLPI no localStorage:", err);
+  }
+  return data;
+};
 
 export const getGlpiTecnicoDetalhes = (
   nome: string,
@@ -526,5 +572,3 @@ export const syncGlpiPrintersNow = (): Promise<{ success: boolean; lastSync: str
   requestJson<{ success: boolean; lastSync: string | null; nextSync: string | null }>("/glpi/sync-now", {
     method: "POST"
   });
-
-

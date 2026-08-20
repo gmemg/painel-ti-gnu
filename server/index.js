@@ -1763,12 +1763,24 @@ async function schedulePrintersSync() {
     }, tempoRestante);
   } catch (e) {
     console.error("[GLPI Sync] Erro ao agendar sincronização:", e.message);
-  }
+}
 }
 
 // --- ENDPOINTS EXPRESS DO GLPI ---
 
+// Cache em memória para o Dashboard do GLPI (60 segundos)
+let glpiDashboardCache = null;
+let glpiDashboardCacheTime = 0;
+const GLPI_DASHBOARD_CACHE_TTL = 60 * 1000;
+
 app.get("/api/glpi/dashboard", async (req, res, next) => {
+  const force = req.query.force === "true";
+  const now = Date.now();
+
+  if (!force && glpiDashboardCache && (now - glpiDashboardCacheTime < GLPI_DASHBOARD_CACHE_TTL)) {
+    return res.json(glpiDashboardCache);
+  }
+
   let sessionToken = null;
   try {
     sessionToken = await initGlpiSession();
@@ -2438,14 +2450,19 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
       console.error("[GLPI] Erro ao buscar chamados para ranking:", e.message);
     }
     
-    res.json({
+    const payload = {
       kpis: statusCounts,
       tecnicos: tecnicosList,
       pessoas: pessoasList,
       totalComputadores,
       totalImpressoras: totalImpressorasGlpi,
       chamadosAntigos
-    });
+    };
+
+    glpiDashboardCache = payload;
+    glpiDashboardCacheTime = Date.now();
+
+    res.json(payload);
   } catch (error) {
     next(error);
   } finally {
