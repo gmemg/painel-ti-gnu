@@ -2985,3 +2985,193 @@ html[data-theme="light"] .db-tab-group {
   background: rgba(239, 68, 68, 0.22);
   border-color: rgba(239, 68, 68, 0.4);
 }
+
+/* ─── Botão de Visão Mensal por Pessoa (Apenas Ícone) ──────────────── */
+.db-btn-ver-meses {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  color: #38bdf8;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.db-btn-ver-meses:hover {
+  background: rgba(56, 189, 248, 0.25);
+  border-color: rgba(56, 189, 248, 0.5);
+  color: #60a5fa;
+  transform: translateY(-1px);
+}
+
+/* ─── Card e Tabela de Meses (Janeiro a Dezembro Lado a Lado) ───── */
+.db-meses-resumo-card {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.db-meses-resumo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.db-meses-resumo-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.db-meses-total-badge {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.25rem 0.65rem;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.db-meses-total-badge strong {
+  color: #10b981;
+  font-size: 0.9rem;
+}
+
+/* Wrapper garantindo rolagem horizontal em telas pequenas se necessário */
+.db-meses-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.db-meses-table-wrapper::-webkit-scrollbar {
+  height: 5px;
+}
+
+.db-meses-table-wrapper::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+/* Tabela de 12 meses lado a lado */
+.db-meses-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  min-width: 680px;
+}
+
+.db-meses-table th {
+  background: rgba(30, 41, 59, 0.7);
+  color: #94a3b8;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0.6rem 0.3rem;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.db-meses-table th:last-child {
+  border-right: none;
+}
+
+.db-meses-table td {
+  padding: 0.75rem 0.3rem;
+  text-align: center;
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background 0.2s ease;
+}
+
+.db-meses-table td:last-child {
+  border-right: none;
+}
+
+.db-meses-table td.empty {
+  background: rgba(255, 255, 255, 0.01);
+  color: #64748b;
+}
+
+.db-meses-table td.has-tickets {
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.db-meses-table td.has-tickets:hover {
+  background: rgba(16, 185, 129, 0.16);
+}
+
+.db-mes-val {
+  font-size: 0.95rem;
+  font-weight: 800;
+  font-family: "IBM Plex Mono", monospace;
+  color: #cbd5e1;
+}
+
+.db-meses-table td.has-tickets .db-mes-val {
+  color: #34d399;
+  text-shadow: 0 0 10px rgba(52, 211, 153, 0.25);
+}
+
+/* ─── Layout do Modal Resumo Mensal por Pessoa ──────────────────── */
+.db-modal-meses-pessoa {
+  max-width: 820px !important;
+  width: 92% !important;
+}
+
+.db-meses-modal-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.75rem 1rem;
+  border-radius: 2px;
+}
+
+.db-meses-modal-year-select {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.db-meses-modal-year-select label {
+  color: #94a3b8;
+}
+
+.db-meses-total-badge-modal {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  color: #cbd5e1;
+}
+
+.db-meses-total-badge-modal strong {
+  color: #34d399;
+  font-size: 1.05rem;
+  font-weight: 800;
+}

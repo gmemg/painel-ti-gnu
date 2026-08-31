@@ -23,7 +23,7 @@ import {
   faltam12HorasOuMenos,
   faltam24HorasOuMenos,
 } from "../utils/dateUtils";
-import { EscalaCard } from "./EscalaPlantao";
+import { EscalaCard, getIndiceEscalaAtiva } from "./EscalaPlantao";
 import {
   tocarSomNovoChamado,
   LISTA_EFEITOS_SONOROS,
@@ -920,20 +920,13 @@ export default function ModoTV() {
     if (tela) carregarTela(tela);
   }, [tela, carregarTela]);
 
-  /* Reseta para o mês atual ao entrar na tela de escala. */
+  /* Reseta para a escala ativa (mês atual ou próximo mês se o atual já tiver todos os plantões riscados/concluídos). */
   useEffect(() => {
     if (tela !== "escala-plantao") return;
     const escalas = dadosPorTela["escala-plantao"] ?? [];
     if (escalas.length === 0) return;
-    const agora = new Date();
-    const mes = agora.getMonth() + 1;
-    const ano = agora.getFullYear();
-    const idx = escalas.findIndex(
-      (e) =>
-        (e as unknown as Escala).mes === mes &&
-        (e as unknown as Escala).ano === ano,
-    );
-    setEscalaIdx(idx >= 0 ? idx : Math.max(0, escalas.length - 1));
+    const idx = getIndiceEscalaAtiva(escalas as unknown as Escala[]);
+    setEscalaIdx(idx >= 0 ? idx : 0);
   }, [tela, dadosPorTela]);
 
   const avancarTela = useCallback(() => {

@@ -2753,6 +2753,9 @@ app.get("/api/glpi/tecnico-detalhes", async (req, res, next) => {
       console.error("[GLPI] Erro ao carregar mapa de usuários para detalhes do técnico:", err.message);
     }
 
+    const currentYear = new Date().getFullYear();
+    const buscaTodosAnos = req.query.todosAnos === "true" || !req.query.ano;
+
     const start = `${ano}-01-01 00:00:00`;
     const end = `${ano}-12-31 23:59:59`;
 
@@ -2761,19 +2764,27 @@ app.get("/api/glpi/tecnico-detalhes", async (req, res, next) => {
       techCriteria = `&criteria[0][link]=AND&criteria[0][field]=5&criteria[0][searchtype]=equals&criteria[0][value]=${glpiId}`;
     }
 
+    let dateCriteriaFechados = "";
+    let dateCriteriaSolucionados = "";
+
+    if (!buscaTodosAnos) {
+      dateCriteriaFechados = `&criteria[2][link]=AND&criteria[2][field]=17&criteria[2][searchtype]=morethan&criteria[2][value]=${encodeURIComponent(start)}` +
+        `&criteria[3][link]=AND&criteria[3][field]=17&criteria[3][searchtype]=lessthan&criteria[3][value]=${encodeURIComponent(end)}`;
+      dateCriteriaSolucionados = `&criteria[2][link]=AND&criteria[2][field]=15&criteria[2][searchtype]=morethan&criteria[2][value]=${encodeURIComponent(start)}` +
+        `&criteria[3][link]=AND&criteria[3][field]=15&criteria[3][searchtype]=lessthan&criteria[3][value]=${encodeURIComponent(end)}`;
+    }
+
     const searchUrlFechados = `${GLPI_API_URL}/search/Ticket?sort=17&order=DESC` +
       `&forcedisplay[0]=1&forcedisplay[1]=2&forcedisplay[2]=4&forcedisplay[3]=5&forcedisplay[4]=12&forcedisplay[5]=15&forcedisplay[6]=17` +
       `&criteria[1][link]=AND&criteria[1][field]=12&criteria[1][searchtype]=equals&criteria[1][value]=6` +
-      `&criteria[2][link]=AND&criteria[2][field]=17&criteria[2][searchtype]=morethan&criteria[2][value]=${encodeURIComponent(start)}` +
-      `&criteria[3][link]=AND&criteria[3][field]=17&criteria[3][searchtype]=lessthan&criteria[3][value]=${encodeURIComponent(end)}` +
+      dateCriteriaFechados +
       techCriteria +
       `&range=0-1000`;
 
     const searchUrlSolucionados = `${GLPI_API_URL}/search/Ticket?sort=15&order=DESC` +
       `&forcedisplay[0]=1&forcedisplay[1]=2&forcedisplay[2]=4&forcedisplay[3]=5&forcedisplay[4]=12&forcedisplay[5]=15&forcedisplay[6]=17` +
       `&criteria[1][link]=AND&criteria[1][field]=12&criteria[1][searchtype]=equals&criteria[1][value]=5` +
-      `&criteria[2][link]=AND&criteria[2][field]=15&criteria[2][searchtype]=morethan&criteria[2][value]=${encodeURIComponent(start)}` +
-      `&criteria[3][link]=AND&criteria[3][field]=15&criteria[3][searchtype]=lessthan&criteria[3][value]=${encodeURIComponent(end)}` +
+      dateCriteriaSolucionados +
       techCriteria +
       `&range=0-1000`;
 
@@ -2797,6 +2808,9 @@ app.get("/api/glpi/tecnico-detalhes", async (req, res, next) => {
         tickets.push(t);
       }
     });
+
+    const anosMap = {};
+    let minYear = currentYear;
 
     tickets.forEach(ticket => {
       const rawTech = ticket["5"];
@@ -2835,6 +2849,27 @@ app.get("/api/glpi/tecnico-detalhes", async (req, res, next) => {
       const dataFechamentoRaw = ticket["17"] || ticket["15"] || "";
       const dataAberturaRaw = ticket["15"] || "";
 
+      if (dataFechamentoRaw) {
+        const parts = dataFechamentoRaw.split(" ")[0].split("-");
+        if (parts.length === 3) {
+          const tYear = parseInt(parts[0], 10);
+          const tMonth = parseInt(parts[1], 10);
+          if (tYear >= 2015 && tYear <= currentYear) {
+            if (tYear < minYear) minYear = tYear;
+            if (!anosMap[tYear]) {
+              anosMap[tYear] = Array.from({ length: 12 }, (_, i) => ({
+                mes: i + 1,
+                nomeMes: nomesMeses[i],
+                total: 0
+              }));
+            }
+            if (tMonth >= 1 && tMonth <= 12) {
+              anosMap[tYear][tMonth - 1].total += 1;
+            }
+          }
+        }
+      }
+
       let mesIndex = -1;
       if (dataFechamentoRaw) {
         const parts = dataFechamentoRaw.split(" ")[0].split("-");
@@ -2871,7 +2906,6 @@ app.get("/api/glpi/tecnico-detalhes", async (req, res, next) => {
             }
           }
         }
-
         meses[mesIndex].chamados.push({
           id: ticketId,
           titulo: titulo,
@@ -2889,12 +2923,30 @@ app.get("/api/glpi/tecnico-detalhes", async (req, res, next) => {
       }
     });
 
+    const anosList = [];
+    for (let y = currentYear; y >= minYear; y--) {
+      const mList = anosMap[y] || Array.from({ length: 12 }, (_, i) => ({
+        mes: i + 1,
+        nomeMes: nomesMeses[i],
+        total: 0
+      }));
+      const totalY = mList.reduce((acc, curr) => acc + curr.total, 0);
+      anosList.push({
+        ano: y,
+        totalAno: totalY,
+        meses: mList
+      });
+    }
+
     res.json({
       nome: nome || (glpiId && usersMap[glpiId]) || "Técnico",
       glpiId: glpiId,
       ano: ano,
       totalAno: totalAno,
-      meses: meses
+      meses: meses,
+      primeiroAno: minYear,
+      anoAtual: currentYear,
+      anos: anosList
     });
   } catch (error) {
     console.error("[GLPI] Erro ao buscar detalhes do técnico:", error.message);
@@ -2911,7 +2963,23 @@ app.get("/api/glpi/tecnico-detalhes", async (req, res, next) => {
         ][i],
         total: 0,
         chamados: []
-      }))
+      })),
+      primeiroAno: new Date().getFullYear(),
+      anoAtual: new Date().getFullYear(),
+      anos: [
+        {
+          ano: new Date().getFullYear(),
+          totalAno: 0,
+          meses: Array.from({ length: 12 }, (_, i) => ({
+            mes: i + 1,
+            nomeMes: [
+              "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+              "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+            ][i],
+            total: 0
+          }))
+        }
+      ]
     });
   } finally {
     if (sessionToken) {

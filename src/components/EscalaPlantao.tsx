@@ -51,7 +51,7 @@ function gerarId(prefixo: string): string {
 }
 
 /** Data local de hoje no formato ISO "YYYY-MM-DD" (sem deslocamento de fuso). */
-function hojeISO(): string {
+export function hojeISO(): string {
   const d = new Date();
   const mes = String(d.getMonth() + 1).padStart(2, "0");
   const dia = String(d.getDate()).padStart(2, "0");
@@ -337,14 +337,96 @@ function gerarEscalaRoundRobin(
   return resultado;
 }
 
-/** Retorna a escala cujo mês/ano corresponde à data de referência (default: hoje). */
+/**
+ * Retorna true se a escala ainda possui plantões a serem realizados
+ * (ou seja, pelo menos um dia com data >= hoje).
+ * Se todos os dias tiverem data < hoje, todos os nomes já estão riscados.
+ */
+export function escalaTemPlantoesFuturos(
+  escala: Escala,
+  hoje: string = hojeISO(),
+): boolean {
+  if (!escala.dias || escala.dias.length === 0) return false;
+  return escala.dias.some((d) => Boolean(d.data && d.data.trim() >= hoje));
+}
+
+/**
+ * Determina o índice da escala ativa a ser exibida.
+ * Se a escala do mês atual já teve todos os seus plantões realizados (todos os nomes riscados),
+ * avança automaticamente para a próxima escala (próximo mês com plantões a serem feitos).
+ */
+export function getIndiceEscalaAtiva(
+  escalas: Escala[],
+  ref: Date = new Date(),
+): number {
+  if (escalas.length === 0) return 0;
+
+  const ordenadas = [...escalas].sort(
+    (a, b) => a.ano - b.ano || a.mes - b.mes,
+  );
+  const hoje = hojeISO();
+  const anoAtual = ref.getFullYear();
+  const mesAtual = ref.getMonth() + 1;
+
+  // 1. Procura a escala correspondente ao mês atual
+  const idxMesAtual = ordenadas.findIndex(
+    (e) => e.ano === anoAtual && e.mes === mesAtual,
+  );
+
+  if (idxMesAtual >= 0) {
+    const escalaMesAtual = ordenadas[idxMesAtual];
+
+    // Se o mês atual ainda possui algum plantão hoje ou futuro, exibe o mês atual
+    if (escalaTemPlantoesFuturos(escalaMesAtual, hoje)) {
+      const idAlvo = escalaMesAtual.id;
+      return Math.max(0, escalas.findIndex((e) => e.id === idAlvo));
+    }
+
+    // Se todos os nomes do mês atual já estão riscados (não há mais plantão a ser feito no mês atual),
+    // avança para a próxima escala cronológica que tenha plantões ou simplesmente a próxima escala
+    const escalasPosteriores = ordenadas.slice(idxMesAtual + 1);
+    const proximaComPlantoes =
+      escalasPosteriores.find((e) => escalaTemPlantoesFuturos(e, hoje)) ||
+      escalasPosteriores[0];
+
+    if (proximaComPlantoes) {
+      return Math.max(
+        0,
+        escalas.findIndex((e) => e.id === proximaComPlantoes.id),
+      );
+    }
+
+    // Se não há escalas posteriores, permanece na do mês atual
+    return Math.max(
+      0,
+      escalas.findIndex((e) => e.id === escalaMesAtual.id),
+    );
+  }
+
+  // 2. Se o mês atual não estiver cadastrado nas escalas:
+  // Procura a primeira escala futura que ainda tenha plantões ou data futura
+  const escalaFutura =
+    ordenadas.find(
+      (e) =>
+        escalaTemPlantoesFuturos(e, hoje) ||
+        e.ano > anoAtual ||
+        (e.ano === anoAtual && e.mes > mesAtual),
+    ) || ordenadas[ordenadas.length - 1];
+
+  return Math.max(
+    0,
+    escalas.findIndex((e) => e.id === escalaFutura.id),
+  );
+}
+
+/** Retorna a escala cujo mês/ano corresponde à data de referência (default: hoje) ou a próxima se o mês atual já terminou. */
 export function escalaDoMes(
   escalas: Escala[],
   ref: Date = new Date(),
 ): Escala | undefined {
-  return escalas.find(
-    (e) => e.ano === ref.getFullYear() && e.mes === ref.getMonth() + 1,
-  );
+  if (escalas.length === 0) return undefined;
+  const idx = getIndiceEscalaAtiva(escalas, ref);
+  return escalas[idx];
 }
 
 /**
@@ -1078,7 +1160,9 @@ xmlns="http://www.w3.org/TR/REC-html40">
             </div>
           ) : (
             <div className="esc-grid">
-              {escalas.map((escala) => {
+              {[...escalas]
+                .sort((a, b) => a.ano - b.ano || a.mes - b.mes)
+                .map((escala) => {
                 const deFerias = membrosDeFeriasNoMes(equipe, escala);
                 return (
                   <div key={escala.id} className="esc-card-wrap">

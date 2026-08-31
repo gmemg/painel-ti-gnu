@@ -267,6 +267,66 @@ export default function Dashboard() {
   const [filtroDetalhesTecnico, setFiltroDetalhesTecnico] = useState<string>("todos");
   const [filtroDetalhesMes, setFiltroDetalhesMes] = useState<string>("todos");
 
+  // Estados para Modal Resumo Mensal de Chamados por Pessoa
+  const [modalMesesPessoa, setModalMesesPessoa] = useState<{
+    aberto: boolean;
+    pessoa: Tecnico | null;
+    ano: number;
+    dados: TecnicoDetalhesResponse | null;
+    carregando: boolean;
+  }>({
+    aberto: false,
+    pessoa: null,
+    ano: new Date().getFullYear(),
+    dados: null,
+    carregando: false,
+  });
+
+  const abrirModalMesesPessoa = async (tech: Tecnico) => {
+    setModalMesesPessoa({
+      aberto: true,
+      pessoa: tech,
+      ano: new Date().getFullYear(),
+      dados: null,
+      carregando: true,
+    });
+    try {
+      const resp = await getGlpiTecnicoDetalhes(tech.nome, tech.glpiId, undefined, true);
+      setModalMesesPessoa((prev) => ({
+        ...prev,
+        dados: resp,
+        carregando: false,
+      }));
+    } catch (err) {
+      console.error("Erro ao carregar resumo mensal da pessoa:", err);
+      setModalMesesPessoa((prev) => ({
+        ...prev,
+        dados: {
+          nome: tech.nome,
+          glpiId: tech.glpiId,
+          ano: new Date().getFullYear(),
+          totalAno: 0,
+          meses: [],
+          anos: [
+            {
+              ano: new Date().getFullYear(),
+              totalAno: 0,
+              meses: Array.from({ length: 12 }, (_, i) => ({
+                mes: i + 1,
+                nomeMes: [
+                  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+                ][i],
+                total: 0
+              }))
+            }
+          ]
+        },
+        carregando: false,
+      }));
+    }
+  };
+
   const carregarDetalhesTecnico = async (tech: Tecnico, ano: number) => {
     setCarregandoDetalhes(true);
     try {
@@ -1357,10 +1417,11 @@ export default function Dashboard() {
                   value={anoRanking}
                   onChange={(e) => setAnoRanking(Number(e.target.value))}
                 >
-                  <option value={2024}>2024</option>
-                  <option value={2025}>2025</option>
-                  <option value={2026}>2026</option>
-                  <option value={2027}>2027</option>
+                  {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
                 </select>
               )}
               <button
@@ -1478,7 +1539,24 @@ export default function Dashboard() {
                         <span className="db-ranking-value">{valorExibido}</span>
                         <span className="db-ranking-label">{labelExibido}</span>
                       </div>
-                      <div style={{ position: "relative" }}>
+                      <div style={{ position: "relative", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                        <button
+                          type="button"
+                          className="db-btn-ver-meses"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            abrirModalMesesPessoa(tech);
+                          }}
+                          title={`Ver total de chamados resolvidos por mês de ${tech.nome}`}
+                          aria-label={`Ver meses de ${tech.nome}`}
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                            <line x1="16" y1="2" x2="16" y2="6" />
+                            <line x1="8" y1="2" x2="8" y2="6" />
+                            <line x1="3" y1="10" x2="21" y2="10" />
+                          </svg>
+                        </button>
                         <button
                           type="button"
                           className={`db-btn-ranking-menu ${activeRankingMenuId === tech.id ? "active" : ""}`}
@@ -1498,6 +1576,22 @@ export default function Dashboard() {
                           <div className="db-ranking-popover" onClick={(e) => e.stopPropagation()}>
                             <button
                               type="button"
+                              className="db-ranking-popover-item"
+                              onClick={() => {
+                                abrirModalMesesPessoa(tech);
+                                setActiveRankingMenuId(null);
+                              }}
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                                <line x1="16" y1="2" x2="16" y2="6" />
+                                <line x1="8" y1="2" x2="8" y2="6" />
+                                <line x1="3" y1="10" x2="21" y2="10" />
+                              </svg>
+                              Ver Meses (Jan-Dez)
+                            </button>
+                            <button
+                              type="button"
                               className="db-ranking-popover-item db-popover-danger"
                               onClick={() => {
                                 ocultarDoRanking(tech.id);
@@ -1515,6 +1609,52 @@ export default function Dashboard() {
                     </div>
                     {isRankingOpen && (
                       <div className="db-ranking-details-panel" onClick={(e) => e.stopPropagation()}>
+                        {/* Resumo Mensal dos Chamados (Janeiro a Dezembro Lado a Lado) */}
+                        <div className="db-meses-resumo-card">
+                          <div className="db-meses-resumo-header">
+                            <div className="db-meses-resumo-title">
+                              <span>📊 Chamados Resolvidos por Mês ({anoDetalhes})</span>
+                            </div>
+                            <div className="db-meses-total-badge">
+                              Total no Ano: <strong>{dadosDetalhes?.totalAno ?? 0}</strong> chamados
+                            </div>
+                          </div>
+                          <div className="db-meses-table-wrapper">
+                            <table className="db-meses-table">
+                              <thead>
+                                <tr>
+                                  <th>Jan</th>
+                                  <th>Fev</th>
+                                  <th>Mar</th>
+                                  <th>Abr</th>
+                                  <th>Mai</th>
+                                  <th>Jun</th>
+                                  <th>Jul</th>
+                                  <th>Ago</th>
+                                  <th>Set</th>
+                                  <th>Out</th>
+                                  <th>Nov</th>
+                                  <th>Dez</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr>
+                                  {Array.from({ length: 12 }, (_, i) => {
+                                    const mesNum = i + 1;
+                                    const mData = dadosDetalhes?.meses.find((m) => m.mes === mesNum);
+                                    const count = mData ? mData.total : 0;
+                                    return (
+                                      <td key={mesNum} className={count > 0 ? "has-tickets" : "empty"}>
+                                        <span className="db-mes-val">{count}</span>
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
                         <div className="db-ranking-details-toolbar">
                           <div className="db-ranking-details-summary">
                             <strong>{chamadosInlineFiltrados.length}</strong>
@@ -2747,6 +2887,107 @@ export default function Dashboard() {
                 type="button"
                 className="db-report-submit-btn"
                 onClick={() => setModalChamadosAntigosAberto(false)}
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Resumo Mensal de Chamados por Pessoa */}
+      {modalMesesPessoa.aberto && modalMesesPessoa.pessoa && (
+        <div
+          className="db-report-overlay"
+          onMouseDown={(e) => {
+            overlayMouseDownRef.current = e.target === e.currentTarget;
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && overlayMouseDownRef.current) {
+              setModalMesesPessoa((prev) => ({ ...prev, aberto: false }));
+            }
+            overlayMouseDownRef.current = false;
+          }}
+        >
+          <div className="db-report-modal db-modal-meses-pessoa" onClick={(e) => e.stopPropagation()}>
+            <div className="db-report-modal-header">
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                <div className="db-ranking-avatar" style={{ width: "36px", height: "36px", fontSize: "0.85rem" }}>
+                  {modalMesesPessoa.pessoa.avatar}
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "1.1rem" }}>{modalMesesPessoa.pessoa.nome}</h3>
+                  <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                    Total de chamados resolvidos por mês
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="db-report-close-btn"
+                onClick={() => setModalMesesPessoa((prev) => ({ ...prev, aberto: false }))}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="db-report-modal-body" style={{ display: "flex", flexDirection: "column", gap: "1.25rem", maxHeight: "70vh", overflowY: "auto" }}>
+              {modalMesesPessoa.carregando ? (
+                <div className="db-ranking-details-loading" style={{ padding: "2rem 0" }}>
+                  Buscando estatísticas mensais desde o ano de entrada...
+                </div>
+              ) : !modalMesesPessoa.dados?.anos || modalMesesPessoa.dados.anos.length === 0 ? (
+                <div className="db-ranking-details-empty">Nenhum chamado registrado para esta pessoa.</div>
+              ) : (
+                modalMesesPessoa.dados.anos.map((anoItem) => (
+                  <div key={anoItem.ano} className="db-meses-resumo-card">
+                    <div className="db-meses-resumo-header">
+                      <div className="db-meses-resumo-title">
+                        <span style={{ fontSize: "1.05rem", color: "#38bdf8", fontWeight: 800 }}>Ano {anoItem.ano}</span>
+                      </div>
+                      <div className="db-meses-total-badge">
+                        Total no Ano: <strong>{anoItem.totalAno}</strong> chamados
+                      </div>
+                    </div>
+                    <div className="db-meses-table-wrapper">
+                      <table className="db-meses-table">
+                        <thead>
+                          <tr>
+                            <th>Jan</th>
+                            <th>Fev</th>
+                            <th>Mar</th>
+                            <th>Abr</th>
+                            <th>Mai</th>
+                            <th>Jun</th>
+                            <th>Jul</th>
+                            <th>Ago</th>
+                            <th>Set</th>
+                            <th>Out</th>
+                            <th>Nov</th>
+                            <th>Dez</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            {anoItem.meses.map((m) => (
+                              <td key={m.mes} className={m.total > 0 ? "has-tickets" : "empty"}>
+                                <span className="db-mes-val">{m.total}</span>
+                              </td>
+                            ))}
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="db-report-modal-footer">
+              <button
+                type="button"
+                className="db-btn-report-cancel"
+                onClick={() => setModalMesesPessoa((prev) => ({ ...prev, aberto: false }))}
               >
                 Fechar
               </button>

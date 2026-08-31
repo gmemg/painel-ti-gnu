@@ -461,12 +461,25 @@ export interface MesDetalhes {
   chamados: ChamadoDetalhe[];
 }
 
+export interface AnoHistoricoItem {
+  ano: number;
+  totalAno: number;
+  meses: Array<{
+    mes: number;
+    nomeMes: string;
+    total: number;
+  }>;
+}
+
 export interface TecnicoDetalhesResponse {
   nome: string;
   glpiId?: string;
   ano: number;
   totalAno: number;
   meses: MesDetalhes[];
+  primeiroAno?: number;
+  anoAtual?: number;
+  anos?: AnoHistoricoItem[];
 }
 
 export interface GlpiPrinterAvailable {
@@ -522,12 +535,14 @@ export const getGlpiDashboard = async (
 export const getGlpiTecnicoDetalhes = (
   nome: string,
   glpiId?: string,
-  ano?: number
+  ano?: number,
+  todosAnos?: boolean
 ): Promise<TecnicoDetalhesResponse> => {
   const params = new URLSearchParams();
   if (nome) params.append("nome", nome);
   if (glpiId) params.append("glpiId", glpiId);
   if (ano) params.append("ano", ano.toString());
+  if (todosAnos) params.append("todosAnos", "true");
   return requestJson<TecnicoDetalhesResponse>(`/glpi/tecnico-detalhes?${params.toString()}`);
 };
 
