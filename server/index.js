@@ -3214,6 +3214,7 @@ app.get("/api/glpi/relatorio", async (req, res, next) => {
     let solucionadosAnoCount = 0;
     let fechadosAteEpocaCount = 0;
     let solucionadosAteEpocaCount = 0;
+    let tecnicosAno = [];
     const reqAbertosMesCounts = {};
     let chamadosAbertosMes = [];
 
@@ -3263,14 +3264,14 @@ app.get("/api/glpi/relatorio", async (req, res, next) => {
           `${GLPI_API_URL}/search/Ticket?criteria[0][field]=12&criteria[0][searchtype]=equals&criteria[0][value]=6` +
           `&criteria[1][link]=AND&criteria[1][field]=17&criteria[1][searchtype]=morethan&criteria[1][value]=${encodeURIComponent(startAno)}` +
           `&criteria[2][link]=AND&criteria[2][field]=17&criteria[2][searchtype]=lessthan&criteria[2][value]=${encodeURIComponent(endMes)}` +
-          `&range=0-1`,
+          `&forcedisplay[0]=5&forcedisplay[1]=12&forcedisplay[2]=17&range=0-5000`,
           { headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken } }
         ),
         fetch(
           `${GLPI_API_URL}/search/Ticket?criteria[0][field]=12&criteria[0][searchtype]=equals&criteria[0][value]=5` +
           `&criteria[1][link]=AND&criteria[1][field]=15&criteria[1][searchtype]=morethan&criteria[1][value]=${encodeURIComponent(startAno)}` +
           `&criteria[2][link]=AND&criteria[2][field]=15&criteria[2][searchtype]=lessthan&criteria[2][value]=${encodeURIComponent(endMes)}` +
-          `&range=0-1`,
+          `&forcedisplay[0]=5&forcedisplay[1]=12&forcedisplay[2]=15&range=0-5000`,
           { headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken } }
         ),
         fetch(
@@ -3287,14 +3288,55 @@ app.get("/api/glpi/relatorio", async (req, res, next) => {
         )
       ]);
 
+      const techAnoCounts = {};
+      const techAnoFechados = {};
+      const techAnoSolucionados = {};
+
       if (fechadosAnoRes && fechadosAnoRes.ok) {
         const dF = await fechadosAnoRes.json();
         fechadosAnoCount = dF.totalcount || 0;
+        (dF.data || []).forEach(t => {
+          const rawTech = t["5"];
+          const techIds = Array.isArray(rawTech) ? rawTech.map(String) : [String(rawTech || "")];
+          techIds.forEach(tid => {
+            if (tid && usersMap[tid]) {
+              const lower = usersMap[tid].toLowerCase().trim();
+              if (lower !== "infraestrutura" && lower !== "sistemas" && lower !== "infra/sistemas") {
+                techAnoCounts[tid] = (techAnoCounts[tid] || 0) + 1;
+                techAnoFechados[tid] = (techAnoFechados[tid] || 0) + 1;
+              }
+            }
+          });
+        });
       }
       if (solucionadosAnoRes && solucionadosAnoRes.ok) {
         const dS = await solucionadosAnoRes.json();
         solucionadosAnoCount = dS.totalcount || 0;
+        (dS.data || []).forEach(t => {
+          const rawTech = t["5"];
+          const techIds = Array.isArray(rawTech) ? rawTech.map(String) : [String(rawTech || "")];
+          techIds.forEach(tid => {
+            if (tid && usersMap[tid]) {
+              const lower = usersMap[tid].toLowerCase().trim();
+              if (lower !== "infraestrutura" && lower !== "sistemas" && lower !== "infra/sistemas") {
+                techAnoCounts[tid] = (techAnoCounts[tid] || 0) + 1;
+                techAnoSolucionados[tid] = (techAnoSolucionados[tid] || 0) + 1;
+              }
+            }
+          });
+        });
       }
+
+      tecnicosAno = Object.entries(techAnoCounts)
+        .map(([id, count]) => ({
+          id,
+          nome: usersMap[id],
+          count,
+          fechados: techAnoFechados[id] || 0,
+          solucionados: techAnoSolucionados[id] || 0
+        }))
+        .sort((a, b) => b.count - a.count);
+
       if (fechadosAteEpocaRes && fechadosAteEpocaRes.ok) {
         const dFa = await fechadosAteEpocaRes.json();
         fechadosAteEpocaCount = dFa.totalcount || 0;
@@ -3529,6 +3571,7 @@ app.get("/api/glpi/relatorio", async (req, res, next) => {
       kpis,
       totalFechados,
       tecnicos,
+      tecnicosAno,
       requerentes,
       montagensRealizadas,
       montagensPendentes,

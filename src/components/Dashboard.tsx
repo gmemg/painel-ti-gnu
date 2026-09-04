@@ -1186,18 +1186,54 @@ export default function Dashboard() {
   // Top 3 Técnicos do Mês (Puxado diretamente do Ranking TI do período ativo)
   const top3Tecnicos = rankingTITecnicos.slice(0, 3);
 
-  // Top 3 Integrantes da TI que mais resolveram chamados no ano
-  const top3TecnicosAno = [...tecnicosExibidos]
-    .map((tech) => {
-      const valAno = tech.resolvidosAno ?? (
-        tech.fechadosAno != null || tech.solucionadosAno != null
-          ? (tech.fechadosAno || 0) + (tech.solucionadosAno || 0)
-          : (tech.resolvidos ?? 0)
-      );
-      return { ...tech, valAno };
-    })
-    .sort((a, b) => b.valAno - a.valAno)
-    .slice(0, 3);
+  // Top 3 Integrantes da TI que mais resolveram chamados no ano (acumulado até o mês selecionado)
+  const top3TecnicosAno = (() => {
+    if (modoPeriodo === "especifico" && dadosDashboardPeriodo?.tecnicosAno) {
+      const techAnoPeriodoMap = new Map<string, number>();
+      dadosDashboardPeriodo.tecnicosAno.forEach((t) => {
+        if (t.nome) techAnoPeriodoMap.set(t.nome.toLowerCase().trim(), t.count || t.fechados || 0);
+      });
+
+      const lista = tecnicosExibidos.map((tech) => {
+        const c = techAnoPeriodoMap.get(tech.nome.toLowerCase().trim()) || 0;
+        return { ...tech, valAno: c };
+      });
+
+      dadosDashboardPeriodo.tecnicosAno.forEach((t) => {
+        const lower = (t.nome || "").toLowerCase().trim();
+        if (
+          lower &&
+          !excluidosRanking.includes(t.id) &&
+          !excluidosRanking.includes(t.nome) &&
+          !lista.some((x) => x.nome.toLowerCase().trim() === lower)
+        ) {
+          lista.push({
+            id: t.id || lower.replace(/\s+/g, "-"),
+            glpiId: t.id,
+            nome: t.nome,
+            avatar: t.nome.trim().split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase(),
+            role: "Técnico de Suporte",
+            resolvidos: t.count || 0,
+            valAno: t.count || t.fechados || 0
+          });
+        }
+      });
+
+      return lista.sort((a, b) => b.valAno - a.valAno).slice(0, 3);
+    }
+
+    return [...tecnicosExibidos]
+      .map((tech) => {
+        const valAno = tech.resolvidosAno ?? (
+          tech.fechadosAno != null || tech.solucionadosAno != null
+            ? (tech.fechadosAno || 0) + (tech.solucionadosAno || 0)
+            : (tech.resolvidos ?? 0)
+        );
+        return { ...tech, valAno };
+      })
+      .sort((a, b) => b.valAno - a.valAno)
+      .slice(0, 3);
+  })();
 
   // Lista de Requerentes / Solicitantes (Top 10 que mais abriram chamados para a TI)
   const pessoasExibidas = [...pessoas, ...adicionadosPessoas]
@@ -1816,17 +1852,27 @@ export default function Dashboard() {
 
           <div className="premium-kpi-card glass-amber">
             <div className="kpi-content">
-              <span className="kpi-label">Chamados no Ano ({anoDashboard})</span>
+              <span className="kpi-label">
+                {modoPeriodo === "especifico"
+                  ? `Chamados no Ano (até ${nomeMesCapitalizado}/${anoDashboard})`
+                  : `Chamados no Ano (${anoDashboard})`}
+              </span>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
-                {top3TecnicosAno.length > 0 ? top3TecnicosAno.map((t, idx) => (
-                  <div key={idx} className="top3-row">
-                    <div className="top3-left">
-                      {renderTrofeuIcon(idx)}
-                      <span>{formatNomeComInicial(t.nome)}</span>
+                {(carregandoGlpi || carregandoPeriodo) ? (
+                  <span className="kpi-value" style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>Carregando...</span>
+                ) : top3TecnicosAno.length > 0 ? (
+                  top3TecnicosAno.map((t, idx) => (
+                    <div key={idx} className="top3-row">
+                      <div className="top3-left">
+                        {renderTrofeuIcon(idx)}
+                        <span>{formatNomeComInicial(t.nome)}</span>
+                      </div>
+                      <span className="top3-val-badge">{t.valAno || 0}</span>
                     </div>
-                    <span className="top3-val-badge">{t.valAno || 0}</span>
-                  </div>
-                )) : <span className="kpi-value">Nenhum</span>}
+                  ))
+                ) : (
+                  <span className="kpi-value">Nenhum</span>
+                )}
               </div>
             </div>
           </div>

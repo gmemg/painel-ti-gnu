@@ -613,6 +613,13 @@ export interface GlpiPeriodoData {
     fechados: number;
     solucionados: number;
   }>;
+  tecnicosAno?: Array<{
+    id: string;
+    nome: string;
+    count: number;
+    fechados: number;
+    solucionados: number;
+  }>;
   requerentes: Array<{
     id: string;
     nome: string;
