@@ -390,20 +390,28 @@ export interface ChamadoAntigo {
   url?: string;
 }
 
-export interface GlpiDashboardData {
-  kpis: {
-    novos: number;
-    atribuidos: number;
-    planejados: number;
-    pendentes: number;
-    solucionados: number;
-    fechados: number;
-    abertosMes?: number;
-    fechadosMes?: number;
-    abertosAno?: number;
-    fechadosAno?: number;
-    abertosGeral?: number;
+export interface GlpiKpis {
+  novos: number;
+  atribuidos: number;
+  planejados: number;
+  pendentes: number;
+  solucionados: number;
+  fechados: number;
+  abertosMes?: number;
+  fechadosMes?: number;
+  abertosAno?: number;
+  fechadosAno?: number;
+  abertosGeral?: number;
+  solucionadosAno?: number;
+  solucionadosMes?: number;
+  historicoMensal?: {
+    abertos: number[];
+    concluidos: number[];
   };
+}
+
+export interface GlpiDashboardData {
+  kpis: GlpiKpis;
   tecnicos: Array<{
     id: string;
     glpiId?: string;
@@ -413,11 +421,24 @@ export interface GlpiDashboardData {
     resolvidos: number;
     resolvidosMes?: number;
     resolvidosAno?: number;
+    fechadosGeral?: number;
+    fechadosAno?: number;
+    fechadosMes?: number;
+    solucionadosGeral?: number;
+    solucionadosAno?: number;
+    solucionadosMes?: number;
   }>;
   pessoas: Array<{
     id: string;
+    glpiId?: string;
     nome: string;
     chamados: number;
+    abertos?: number;
+    fechados?: number;
+    total?: number;
+    abertosMes?: number;
+    fechadosMes?: number;
+    fechadosAno?: number;
     cor: string;
   }>;
   totalComputadores?: number;
@@ -432,22 +453,6 @@ export interface ChamadoDetalhe {
   tecnico?: string;
   dataAbertura?: string;
   dataFechamento?: string;
-  status?: string;
-  mesAnoAbertura?: string;
-  criadoOutroMes?: boolean;
-  url?: string;
-}
-
-export interface MesDetalhes {
-  mes: number;
-  nomeMes: string;
-  total: number;
-  chamados: ChamadoDetalhe[];
-}
-
-export interface TecnicoDetalhesResponse {
-  nome: string;
-  glpiId?: string;
   status?: string;
   mesAnoAbertura?: string;
   criadoOutroMes?: boolean;
@@ -546,6 +551,21 @@ export const getGlpiTecnicoDetalhes = (
   return requestJson<TecnicoDetalhesResponse>(`/glpi/tecnico-detalhes?${params.toString()}`);
 };
 
+export const getGlpiRequerenteDetalhes = (
+  nome: string,
+  glpiId?: string,
+  ano?: number,
+  todosAnos?: boolean
+): Promise<TecnicoDetalhesResponse> => {
+  const params = new URLSearchParams();
+  if (nome) params.append("nome", nome);
+  if (glpiId) params.append("glpiId", glpiId);
+  if (ano) params.append("ano", ano.toString());
+  if (todosAnos) params.append("todosAnos", "true");
+  params.append("tipo", "requerente");
+  return requestJson<TecnicoDetalhesResponse>(`/glpi/tecnico-detalhes?${params.toString()}`);
+};
+
 export interface GlpiUsuarioBusca {
   id: string;
   glpiId: string;
@@ -561,6 +581,70 @@ export interface GlpiUsuarioBusca {
   resolvidosAno?: number;
   cor?: string;
 }
+
+export interface GlpiPeriodoData {
+  dataEmissao: string;
+  tipo: "mensal" | "anual" | "total";
+  mes: number;
+  ano: number;
+  periodoLabel: string;
+  kpis?: {
+    novos: number;
+    atribuidos: number;
+    pendentes: number;
+    planejados: number;
+    solucionados: number;
+    fechados: number;
+    solucionadosMes: number;
+    fechadosMes: number;
+    fechadosAno: number;
+    solucionadosAno: number;
+    fechadosAteEpoca?: number;
+    solucionadosAteEpoca?: number;
+    totalChamadosMes: number;
+    totalChamadosAno: number;
+    totalChamadosAteEpoca?: number;
+  };
+  totalFechados: number;
+  tecnicos: Array<{
+    id: string;
+    nome: string;
+    count: number;
+    fechados: number;
+    solucionados: number;
+  }>;
+  requerentes: Array<{
+    id: string;
+    nome: string;
+    count: number;
+  }>;
+  montagensRealizadas: number;
+  montagensPendentes: number;
+  eqPendentes: number;
+  totalAbertosMes: number;
+  totalAbertosAno: number;
+  totalAbertosGeral: number;
+  requerentesAbertosMes: Array<{ id: string; nome: string; count: number }>;
+  chamadosAbertosMes: Array<{
+    id: string;
+    titulo: string;
+    requerente: string;
+    tecnico: string;
+    status: string;
+    dataAbertura: string;
+    dataFechamento: string;
+    mesAnoAbertura?: string;
+    criadoOutroMes?: boolean;
+    url?: string;
+  }>;
+}
+
+export const getGlpiDashboardPeriodo = (
+  mes: number,
+  ano: number
+): Promise<GlpiPeriodoData> => {
+  return requestJson<GlpiPeriodoData>(`/glpi/relatorio?tipo=mensal&mes=${mes}&ano=${ano}`);
+};
 
 export const buscarGlpiUsuarios = (query: string): Promise<GlpiUsuarioBusca[]> => {
   if (!query || query.trim().length < 2) return Promise.resolve([]);

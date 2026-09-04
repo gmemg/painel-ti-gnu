@@ -5,16 +5,24 @@ import {
   getGlpiDashboard,
   getGlpiDashboardCache,
   getGlpiDashboardLastSync,
+  getGlpiDashboardPeriodo,
   getGlpiTecnicoDetalhes,
+  getGlpiRequerenteDetalhes,
   buscarGlpiUsuarios,
   getToken,
   TecnicoDetalhesResponse,
+  GlpiPeriodoData,
   GlpiUsuarioBusca,
   ChamadoAntigo
 } from "../utils/storage";
 import { tocarSomNovoChamado } from "../utils/audioNotification";
 
 import "./Dashboard.css";
+
+const NOMES_MESES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+];
 
 interface Tecnico {
   id: string;
@@ -35,6 +43,7 @@ interface Tecnico {
 
 interface Pessoa {
   id: string;
+  glpiId?: string;
   nome: string;
   chamados: number;
   abertos?: number;
@@ -204,6 +213,7 @@ export default function Dashboard() {
     }
   );
   const [tecnicos, setTecnicos] = useState<Tecnico[]>(cacheInicial?.tecnicos || []);
+  const [pessoas, setPessoas] = useState<Pessoa[]>(cacheInicial?.pessoas || []);
   const [totalComputadores, setTotalComputadores] = useState<number>(cacheInicial?.totalComputadores || 0);
   const [totalImpressoras, setTotalImpressoras] = useState<number>(cacheInicial?.totalImpressoras || 0);
   const [totalTotens, setTotalTotens] = useState<number>(() => {
@@ -224,10 +234,104 @@ export default function Dashboard() {
   const [modalChamadosAntigosAberto, setModalChamadosAntigosAberto] = useState<boolean>(false);
   const [abaModalAntigos, setAbaModalAntigos] = useState<"interacao_30" | "todos">("interacao_30");
   const [filtroModalAntigos, setFiltroModalAntigos] = useState<string>("");
+
+  // Estados para Filtro Global de Período do Dashboard (Mês/Ano)
+  const [modoPeriodo, setModoPeriodo] = useState<"atual" | "especifico">("atual");
+  const [mesDashboard, setMesDashboard] = useState<number>(new Date().getMonth() + 1);
+  const [anoDashboard, setAnoDashboard] = useState<number>(new Date().getFullYear());
+  const [dadosDashboardPeriodo, setDadosDashboardPeriodo] = useState<GlpiPeriodoData | null>(null);
+  const [carregandoPeriodo, setCarregandoPeriodo] = useState<boolean>(false);
+  const [progressoPeriodo, setProgressoPeriodo] = useState<number>(0);
+
+  const irMesAnterior = () => {
+    setModoPeriodo("especifico");
+    let novoMes = mesDashboard - 1;
+    let novoAno = anoDashboard;
+    if (novoMes < 1) {
+      novoMes = 12;
+      novoAno -= 1;
+    }
+    setMesDashboard(novoMes);
+    setAnoDashboard(novoAno);
+    setMesRanking(novoMes);
+    setAnoRanking(novoAno);
+    setMesSolicitantes(novoMes);
+    setAnoSolicitantes(novoAno);
+  };
+
+  const irProximoMes = () => {
+    const now = new Date();
+    const curMonth = now.getMonth() + 1;
+    const curYear = now.getFullYear();
+    if (anoDashboard > curYear || (anoDashboard === curYear && mesDashboard >= curMonth)) {
+      return;
+    }
+    let novoMes = mesDashboard + 1;
+    let novoAno = anoDashboard;
+    if (novoMes > 12) {
+      novoMes = 1;
+      novoAno += 1;
+    }
+    if (novoMes === curMonth && novoAno === curYear) {
+      setModoPeriodo("atual");
+    } else {
+      setModoPeriodo("especifico");
+    }
+    setMesDashboard(novoMes);
+    setAnoDashboard(novoAno);
+    setMesRanking(novoMes);
+    setAnoRanking(novoAno);
+    setMesSolicitantes(novoMes);
+    setAnoSolicitantes(novoAno);
+  };
+
+  const irMesAtual = () => {
+    const now = new Date();
+    setModoPeriodo("atual");
+    setMesDashboard(now.getMonth() + 1);
+    setAnoDashboard(now.getFullYear());
+    setMesRanking(now.getMonth() + 1);
+    setAnoRanking(now.getFullYear());
+    setMesSolicitantes(now.getMonth() + 1);
+    setAnoSolicitantes(now.getFullYear());
+  };
+
+  const selecionarMes = (m: number) => {
+    const now = new Date();
+    if (m === now.getMonth() + 1 && anoDashboard === now.getFullYear()) {
+      setModoPeriodo("atual");
+    } else {
+      setModoPeriodo("especifico");
+    }
+    setMesDashboard(m);
+    setMesRanking(m);
+    setMesSolicitantes(m);
+  };
+
+  const selecionarAno = (a: number) => {
+    const now = new Date();
+    if (mesDashboard === now.getMonth() + 1 && a === now.getFullYear()) {
+      setModoPeriodo("atual");
+    } else {
+      setModoPeriodo("especifico");
+    }
+    setAnoDashboard(a);
+    setAnoRanking(a);
+    setAnoSolicitantes(a);
+  };
+
   const [filtroRankingMode, setFiltroRankingMode] = useState<"especifico" | "geral">("especifico");
   const [mesRanking, setMesRanking] = useState<number>(new Date().getMonth() + 1);
   const [anoRanking, setAnoRanking] = useState<number>(new Date().getFullYear());
   const [dadosRankingCustom, setDadosRankingCustom] = useState<Record<string, { count: number; fechados: number; solucionados: number }> | null>(null);
+
+  // Estados para o Ranking de Solicitantes TI
+  const [filtroSolicitantesMode, setFiltroSolicitantesMode] = useState<"especifico" | "geral">("especifico");
+  const [mesSolicitantes, setMesSolicitantes] = useState<number>(new Date().getMonth() + 1);
+  const [anoSolicitantes, setAnoSolicitantes] = useState<number>(new Date().getFullYear());
+  const [dadosSolicitantesCustom, setDadosSolicitantesCustom] = useState<Record<string, { count: number; fechados: number; total: number }> | null>(null);
+  const [carregandoRankingSolicitantes, setCarregandoRankingSolicitantes] = useState<boolean>(false);
+  const [progressoRankingSolicitantes, setProgressoRankingSolicitantes] = useState<number>(0);
 
   const [carregandoGlpi, setCarregandoGlpi] = useState<boolean>(!cacheInicial);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
@@ -252,8 +356,6 @@ export default function Dashboard() {
   const [anoRelatorio, setAnoRelatorio] = useState<number>(new Date().getFullYear());
   const [gerandoPdf, setGerandoPdf] = useState(false);
 
-
-
   // Estados para Modal de Detalhes do Técnico (Ranking TI)
   const [modalDetalhesAberto, setModalDetalhesAberto] = useState(false);
   const [tecnicoDetalhes, setTecnicoDetalhes] = useState<Tecnico | null>(null);
@@ -267,10 +369,22 @@ export default function Dashboard() {
   const [filtroDetalhesTecnico, setFiltroDetalhesTecnico] = useState<string>("todos");
   const [filtroDetalhesMes, setFiltroDetalhesMes] = useState<string>("todos");
 
+  // Estados para Detalhes do Solicitante (Top 10 Solicitantes TI)
+  const [rankingSolicitanteDetalhesAbertoId, setRankingSolicitanteDetalhesAbertoId] = useState<string | null>(null);
+  const [solicitanteDetalhes, setSolicitanteDetalhes] = useState<Pessoa | null>(null);
+  const [anoDetalhesSolicitante, setAnoDetalhesSolicitante] = useState<number>(new Date().getFullYear());
+  const [dadosDetalhesSolicitante, setDadosDetalhesSolicitante] = useState<TecnicoDetalhesResponse | null>(null);
+  const [carregandoDetalhesSolicitante, setCarregandoDetalhesSolicitante] = useState<boolean>(false);
+  const [buscaChamadosSolicitante, setBuscaChamadosSolicitante] = useState<string>("");
+  const [filtroSolicitanteStatus, setFiltroSolicitanteStatus] = useState<string>("todos");
+  const [filtroSolicitanteTecnico, setFiltroSolicitanteTecnico] = useState<string>("todos");
+  const [filtroSolicitanteMes, setFiltroSolicitanteMes] = useState<string>("todos");
+  const [activeSolicitanteMenuId, setActiveSolicitanteMenuId] = useState<string | null>(null);
+
   // Estados para Modal Resumo Mensal de Chamados por Pessoa
   const [modalMesesPessoa, setModalMesesPessoa] = useState<{
     aberto: boolean;
-    pessoa: Tecnico | null;
+    pessoa: (Tecnico | Pessoa) & { avatar?: string } | null;
     ano: number;
     dados: TecnicoDetalhesResponse | null;
     carregando: boolean;
@@ -282,16 +396,19 @@ export default function Dashboard() {
     carregando: false,
   });
 
-  const abrirModalMesesPessoa = async (tech: Tecnico) => {
+  const abrirModalMesesPessoa = async (tech: Tecnico | Pessoa, isRequerente: boolean = false) => {
+    const avatar = (tech as Tecnico).avatar || tech.nome.trim().split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase();
     setModalMesesPessoa({
       aberto: true,
-      pessoa: tech,
+      pessoa: { ...tech, avatar },
       ano: new Date().getFullYear(),
       dados: null,
       carregando: true,
     });
     try {
-      const resp = await getGlpiTecnicoDetalhes(tech.nome, tech.glpiId, undefined, true);
+      const resp = isRequerente
+        ? await getGlpiRequerenteDetalhes(tech.nome, tech.glpiId, undefined, true)
+        : await getGlpiTecnicoDetalhes(tech.nome, tech.glpiId, undefined, true);
       setModalMesesPessoa((prev) => ({
         ...prev,
         dados: resp,
@@ -377,6 +494,55 @@ export default function Dashboard() {
     }
   };
 
+  const carregarDetalhesSolicitante = async (pessoa: Pessoa, ano: number) => {
+    setCarregandoDetalhesSolicitante(true);
+    try {
+      const resp = await getGlpiRequerenteDetalhes(pessoa.nome, pessoa.glpiId, ano);
+      setDadosDetalhesSolicitante(resp);
+    } catch (err) {
+      console.error("Erro ao carregar detalhes do solicitante:", err);
+      setDadosDetalhesSolicitante({
+        nome: pessoa.nome,
+        glpiId: pessoa.glpiId,
+        ano: ano,
+        totalAno: 0,
+        meses: Array.from({ length: 12 }, (_, i) => ({
+          mes: i + 1,
+          nomeMes: [
+            "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+            "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+          ][i],
+          total: 0,
+          chamados: []
+        }))
+      });
+    } finally {
+      setCarregandoDetalhesSolicitante(false);
+    }
+  };
+
+  const abrirModalDetalhesSolicitante = (pessoa: Pessoa) => {
+    if (rankingSolicitanteDetalhesAbertoId === pessoa.id) {
+      setRankingSolicitanteDetalhesAbertoId(null);
+      return;
+    }
+    setSolicitanteDetalhes(pessoa);
+    setBuscaChamadosSolicitante("");
+    setFiltroSolicitanteStatus("todos");
+    setFiltroSolicitanteTecnico("todos");
+    setFiltroSolicitanteMes("todos");
+    setDadosDetalhesSolicitante(null);
+    setRankingSolicitanteDetalhesAbertoId(pessoa.id);
+    carregarDetalhesSolicitante(pessoa, anoDetalhesSolicitante);
+  };
+
+  const alterarAnoDetalhesSolicitante = (novoAno: number) => {
+    setAnoDetalhesSolicitante(novoAno);
+    if (solicitanteDetalhes) {
+      carregarDetalhesSolicitante(solicitanteDetalhes, novoAno);
+    }
+  };
+
   // Estados para gerenciar exclusão e adição manual de pessoas nos rankings
   const [excluidosRanking, setExcluidosRanking] = useState<string[]>(() => {
     try {
@@ -415,6 +581,7 @@ export default function Dashboard() {
   useEffect(() => {
     const handleOutsideClick = () => {
       setActiveRankingMenuId(null);
+      setActiveSolicitanteMenuId(null);
     };
     document.addEventListener("click", handleOutsideClick);
     return () => document.removeEventListener("click", handleOutsideClick);
@@ -644,6 +811,7 @@ export default function Dashboard() {
         }
       }
       if (data.tecnicos && data.tecnicos.length > 0) setTecnicos(data.tecnicos);
+      if (data.pessoas && data.pessoas.length > 0) setPessoas(data.pessoas);
       if (typeof data.totalComputadores === "number") setTotalComputadores(data.totalComputadores);
       if (typeof data.totalImpressoras === "number") setTotalImpressoras(data.totalImpressoras);
       if (data.chamadosAntigos && Array.isArray(data.chamadosAntigos)) setChamadosAntigos(data.chamadosAntigos);
@@ -709,6 +877,82 @@ export default function Dashboard() {
       })
       .finally(() => clearInterval(progressTimer));
   }, [mesRanking, anoRanking, filtroRankingMode]);
+
+  // Efeito para carregar dados de mês/ano customizados para o ranking de solicitantes
+  useEffect(() => {
+    if (filtroSolicitantesMode === "geral") return;
+    setCarregandoRankingSolicitantes(true);
+    setProgressoRankingSolicitantes(20);
+    const progressTimer = setInterval(() => {
+      setProgressoRankingSolicitantes((p) => (p < 90 ? Math.min(90, p + Math.floor(Math.random() * 12 + 6)) : p));
+    }, 200);
+
+    const token = getToken();
+    fetch(`/api/glpi/relatorio?tipo=mensal&mes=${mesSolicitantes}&ano=${anoSolicitantes}`, {
+      headers: { Authorization: token ? `Bearer ${token}` : "" }
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && data.requerentes) {
+          const map: Record<string, { count: number; fechados: number; total: number }> = {};
+          data.requerentes.forEach((r: any) => {
+            if (r.nome) {
+              map[r.nome.toLowerCase().trim()] = {
+                count: r.count || 0,
+                fechados: r.fechados ?? r.count ?? 0,
+                total: r.count || 0
+              };
+            }
+          });
+          setDadosSolicitantesCustom(map);
+        }
+        setProgressoRankingSolicitantes(100);
+        setTimeout(() => setCarregandoRankingSolicitantes(false), 250);
+      })
+      .catch((err) => {
+        console.error("Erro ao filtrar ranking de solicitantes por mes/ano:", err);
+        setProgressoRankingSolicitantes(100);
+        setTimeout(() => setCarregandoRankingSolicitantes(false), 250);
+      })
+      .finally(() => clearInterval(progressTimer));
+  }, [mesSolicitantes, anoSolicitantes, filtroSolicitantesMode]);
+
+  // Efeito para carregar dados consolidados do período selecionado para o Dashboard
+  useEffect(() => {
+    if (modoPeriodo === "atual") {
+      setDadosDashboardPeriodo(null);
+      return;
+    }
+
+    let isCancelled = false;
+    setCarregandoPeriodo(true);
+    setProgressoPeriodo(25);
+    const progressTimer = setInterval(() => {
+      setProgressoPeriodo((p) => (p < 90 ? Math.min(90, p + Math.floor(Math.random() * 12 + 6)) : p));
+    }, 180);
+
+    getGlpiDashboardPeriodo(mesDashboard, anoDashboard)
+      .then((data) => {
+        if (!isCancelled) {
+          setDadosDashboardPeriodo(data);
+          setProgressoPeriodo(100);
+          setTimeout(() => setCarregandoPeriodo(false), 200);
+        }
+      })
+      .catch((err) => {
+        console.error("Erro ao carregar dados do período do dashboard:", err);
+        if (!isCancelled) {
+          setProgressoPeriodo(100);
+          setTimeout(() => setCarregandoPeriodo(false), 200);
+        }
+      })
+      .finally(() => clearInterval(progressTimer));
+
+    return () => {
+      isCancelled = true;
+      clearInterval(progressTimer);
+    };
+  }, [mesDashboard, anoDashboard, modoPeriodo]);
 
 
 
@@ -823,45 +1067,123 @@ export default function Dashboard() {
 
 
 
-  const chamadosFechadosMesTI = Math.max(0, kpis.fechadosMes || 0);
-  const chamadosSolucionadosMesTI = Math.max(0, kpis.solucionadosMes || 0);
+  const kpisExibidos = (modoPeriodo === "especifico" && dadosDashboardPeriodo?.kpis)
+    ? dadosDashboardPeriodo.kpis
+    : kpis;
+
+  const chamadosFechadosMesTI = (modoPeriodo === "especifico" && dadosDashboardPeriodo?.kpis)
+    ? (dadosDashboardPeriodo.kpis.fechadosMes || 0)
+    : Math.max(0, kpis.fechadosMes || 0);
+
+  const chamadosSolucionadosMesTI = (modoPeriodo === "especifico" && dadosDashboardPeriodo?.kpis)
+    ? (dadosDashboardPeriodo.kpis.solucionadosMes || 0)
+    : Math.max(0, kpis.solucionadosMes || 0);
+
   const totalChamadosMesTI = chamadosFechadosMesTI + chamadosSolucionadosMesTI;
-  const nomeMesAtual = new Date().toLocaleDateString("pt-BR", { month: "long" });
+  const nomeMesAtual = NOMES_MESES[mesDashboard - 1] || new Date().toLocaleDateString("pt-BR", { month: "long" });
   const nomeMesCapitalizado = nomeMesAtual.charAt(0).toUpperCase() + nomeMesAtual.slice(1);
 
+  // Estatísticas globais do ano / acumulado até a época
+  const totalFechadosAnoTI = (modoPeriodo === "especifico" && dadosDashboardPeriodo?.kpis)
+    ? (dadosDashboardPeriodo.kpis.fechadosAno || 0)
+    : Math.max(0, kpis.fechados ?? kpis.fechadosAno ?? 0);
 
+  const totalSolucionadosAnoTI = (modoPeriodo === "especifico" && dadosDashboardPeriodo?.kpis)
+    ? (dadosDashboardPeriodo.kpis.solucionadosAno || 0)
+    : Math.max(0, kpis.solucionados ?? kpis.solucionadosAno ?? 0);
 
-  // Usa as estatísticas globais do ano (ou geral se o usuário não quiser filtrar por ano, mas as variáveis do backend são fechados/solucionados)
-  const totalFechadosAnoTI = Math.max(0, kpis.fechados ?? kpis.fechadosAno ?? 0);
-  const totalSolucionadosAnoTI = Math.max(0, kpis.solucionados ?? kpis.solucionadosAno ?? 0);
-  const totalChamadosAnoTI = totalFechadosAnoTI + totalSolucionadosAnoTI;
+  const totalFechadosAteEpocaTI = (modoPeriodo === "especifico" && dadosDashboardPeriodo?.kpis)
+    ? (dadosDashboardPeriodo.kpis.fechadosAteEpoca ?? dadosDashboardPeriodo.kpis.fechadosAno ?? 0)
+    : Math.max(0, kpis.fechados ?? kpis.fechadosAno ?? 0);
 
-  // Lista de Técnicos do Ranking TI (ordenados conforme o filtro ativo do Ranking TI)
-  const rankingTITecnicos = [...tecnicosExibidos]
-    .map((tech) => {
-      let val = 0;
-      let fechadosVal = 0;
-      let solucionadosVal = 0;
+  const totalSolucionadosAteEpocaTI = (modoPeriodo === "especifico" && dadosDashboardPeriodo?.kpis)
+    ? (dadosDashboardPeriodo.kpis.solucionadosAteEpoca ?? dadosDashboardPeriodo.kpis.solucionadosAno ?? 0)
+    : Math.max(0, kpis.solucionados ?? kpis.solucionadosAno ?? 0);
 
-      if (filtroRankingMode === "geral") {
-        val = tech.resolvidos;
-        fechadosVal = tech.fechadosGeral ?? tech.resolvidos;
-        solucionadosVal = tech.solucionadosGeral ?? 0;
-      } else if (dadosRankingCustom) {
-        const customData = dadosRankingCustom[tech.nome.toLowerCase().trim()];
-        val = customData ? customData.count : 0;
-        fechadosVal = customData ? customData.fechados : 0;
-        solucionadosVal = customData ? customData.solucionados : 0;
-      } else {
-        val = tech.resolvidosMes ?? 0;
-        fechadosVal = tech.fechadosMes ?? tech.resolvidosMes ?? 0;
-        solucionadosVal = tech.solucionadosMes ?? 0;
-      }
-      return { ...tech, val, fechadosVal, solucionadosVal };
-    })
-    .sort((a, b) => b.val - a.val);
+  const totalChamadosAteEpocaTI = (modoPeriodo === "especifico" && dadosDashboardPeriodo?.kpis)
+    ? (dadosDashboardPeriodo.kpis.totalChamadosAteEpoca ?? (totalFechadosAteEpocaTI + totalSolucionadosAteEpocaTI))
+    : (totalFechadosAnoTI + totalSolucionadosAnoTI);
 
-  // Top 3 Técnicos de TI (Puxado diretamente do Ranking TI)
+  const totalChamadosAnoTI = (modoPeriodo === "especifico" && dadosDashboardPeriodo?.kpis)
+    ? dadosDashboardPeriodo.kpis.totalChamadosAno
+    : (totalFechadosAnoTI + totalSolucionadosAnoTI);
+
+  // Lista de Técnicos do Ranking TI (ordenados conforme o filtro ativo do Ranking TI ou período selecionado)
+  const rankingTITecnicos = (() => {
+    if (modoPeriodo === "especifico" && dadosDashboardPeriodo?.tecnicos) {
+      const techPeriodoMap = new Map<string, { count: number; fechados: number; solucionados: number }>();
+      dadosDashboardPeriodo.tecnicos.forEach((t) => {
+        if (t.nome) {
+          techPeriodoMap.set(t.nome.toLowerCase().trim(), {
+            count: t.count || 0,
+            fechados: t.fechados || 0,
+            solucionados: t.solucionados || 0
+          });
+        }
+      });
+
+      const lista = tecnicosExibidos.map((tech) => {
+        const d = techPeriodoMap.get(tech.nome.toLowerCase().trim());
+        return {
+          ...tech,
+          val: d ? d.count : 0,
+          fechadosVal: d ? d.fechados : 0,
+          solucionadosVal: d ? d.solucionados : 0
+        };
+      });
+
+      // Se houver algum técnico do GLPI do período não listado nos fixos, adiciona
+      dadosDashboardPeriodo.tecnicos.forEach((t) => {
+        const lower = (t.nome || "").toLowerCase().trim();
+        if (
+          lower &&
+          !excluidosRanking.includes(t.id) &&
+          !excluidosRanking.includes(t.nome) &&
+          !lista.some((x) => x.nome.toLowerCase().trim() === lower)
+        ) {
+          lista.push({
+            id: t.id || lower.replace(/\s+/g, "-"),
+            glpiId: t.id,
+            nome: t.nome,
+            avatar: t.nome.trim().split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase(),
+            role: "Técnico de Suporte",
+            resolvidos: t.count || 0,
+            val: t.count || 0,
+            fechadosVal: t.fechados || 0,
+            solucionadosVal: t.solucionados || 0
+          });
+        }
+      });
+
+      return lista.sort((a, b) => b.val - a.val);
+    }
+
+    return tecnicosExibidos
+      .map((tech) => {
+        let val = 0;
+        let fechadosVal = 0;
+        let solucionadosVal = 0;
+
+        if (filtroRankingMode === "geral") {
+          val = tech.resolvidos;
+          fechadosVal = tech.fechadosGeral ?? tech.resolvidos;
+          solucionadosVal = tech.solucionadosGeral ?? 0;
+        } else if (dadosRankingCustom) {
+          const customData = dadosRankingCustom[tech.nome.toLowerCase().trim()];
+          val = customData ? customData.count : 0;
+          fechadosVal = customData ? customData.fechados : 0;
+          solucionadosVal = customData ? customData.solucionados : 0;
+        } else {
+          val = tech.resolvidosMes ?? 0;
+          fechadosVal = tech.fechadosMes ?? tech.resolvidosMes ?? 0;
+          solucionadosVal = tech.solucionadosMes ?? 0;
+        }
+        return { ...tech, val, fechadosVal, solucionadosVal };
+      })
+      .sort((a, b) => b.val - a.val);
+  })();
+
+  // Top 3 Técnicos do Mês (Puxado diretamente do Ranking TI do período ativo)
   const top3Tecnicos = rankingTITecnicos.slice(0, 3);
 
   // Top 3 Integrantes da TI que mais resolveram chamados no ano
@@ -876,6 +1198,64 @@ export default function Dashboard() {
     })
     .sort((a, b) => b.valAno - a.valAno)
     .slice(0, 3);
+
+  // Lista de Requerentes / Solicitantes (Top 10 que mais abriram chamados para a TI)
+  const pessoasExibidas = [...pessoas, ...adicionadosPessoas]
+    .filter((p, idx, self) => self.findIndex((x) => x.id === p.id || x.nome.toLowerCase() === p.nome.toLowerCase()) === idx)
+    .filter((p) => !excluidosRanking.includes(p.id) && !excluidosRanking.includes(p.nome) && !excluidosRanking.includes(String(p.glpiId || "")));
+
+  const rankingSolicitantes = (() => {
+    if (modoPeriodo === "especifico" && dadosDashboardPeriodo?.requerentes) {
+      const reqPeriodoMap = new Map<string, number>();
+      dadosDashboardPeriodo.requerentes.forEach((r) => {
+        if (r.nome) reqPeriodoMap.set(r.nome.toLowerCase().trim(), r.count || 0);
+      });
+
+      const lista = pessoasExibidas.map((p) => {
+        const c = reqPeriodoMap.get(p.nome.toLowerCase().trim()) || 0;
+        return { ...p, val: c };
+      });
+
+      const coresSetores = ["#2b8ffb", "#10b981", "#eab308", "#f97316", "#a855f7", "#ef4444", "#6366f1", "#14b8a6", "#ec4899", "#f43f5e"];
+      dadosDashboardPeriodo.requerentes.forEach((r, idx) => {
+        const lower = (r.nome || "").toLowerCase().trim();
+        if (
+          lower &&
+          !excluidosRanking.includes(r.id) &&
+          !excluidosRanking.includes(r.nome) &&
+          !lista.some((x) => x.nome.toLowerCase().trim() === lower)
+        ) {
+          lista.push({
+            id: r.id || lower.replace(/\s+/g, "-"),
+            glpiId: r.id,
+            nome: r.nome,
+            chamados: r.count,
+            val: r.count,
+            cor: coresSetores[idx % coresSetores.length]
+          });
+        }
+      });
+
+      return lista.sort((a, b) => b.val - a.val);
+    }
+
+    return pessoasExibidas
+      .map((p) => {
+        let val = 0;
+        if (filtroSolicitantesMode === "geral") {
+          val = p.chamados || p.total || p.fechados || 0;
+        } else if (dadosSolicitantesCustom) {
+          const customData = dadosSolicitantesCustom[p.nome.toLowerCase().trim()];
+          val = customData ? customData.count : 0;
+        } else {
+          val = p.fechadosMes ?? p.abertosMes ?? p.chamados ?? 0;
+        }
+        return { ...p, val };
+      })
+      .sort((a, b) => b.val - a.val);
+  })();
+
+  const top10Solicitantes = rankingSolicitantes.slice(0, 10);
 
   const totalSemSolucaoTI = Math.max(0, (kpis.novos || 0) + (kpis.atribuidos || 0) + (kpis.pendentes || 0));
 
@@ -979,6 +1359,119 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Barra Global de Seleção de Período (Mês e Ano) */}
+      <div className="db-periodo-control-bar">
+        <div className="db-periodo-control-left">
+          <div className="db-periodo-icon-tag">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            <span>Filtrar por Mês / Ano:</span>
+          </div>
+
+          <div className="db-periodo-nav-group">
+            <button
+              type="button"
+              className="db-periodo-nav-btn"
+              onClick={irMesAnterior}
+              title="Mês anterior"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+              <span>Anterior</span>
+            </button>
+
+            <select
+              className="db-periodo-select"
+              value={mesDashboard}
+              onChange={(e) => selecionarMes(Number(e.target.value))}
+            >
+              <option value={1}>Janeiro</option>
+              <option value={2}>Fevereiro</option>
+              <option value={3}>Março</option>
+              <option value={4}>Abril</option>
+              <option value={5}>Maio</option>
+              <option value={6}>Junho</option>
+              <option value={7}>Julho</option>
+              <option value={8}>Agosto</option>
+              <option value={9}>Setembro</option>
+              <option value={10}>Outubro</option>
+              <option value={11}>Novembro</option>
+              <option value={12}>Dezembro</option>
+            </select>
+
+            <select
+              className="db-periodo-select"
+              value={anoDashboard}
+              onChange={(e) => selecionarAno(Number(e.target.value))}
+            >
+              {Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i).map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+
+            <button
+              type="button"
+              className="db-periodo-nav-btn"
+              onClick={irProximoMes}
+              disabled={anoDashboard >= new Date().getFullYear() && mesDashboard >= new Date().getMonth() + 1}
+              title="Próximo mês"
+            >
+              <span>Próximo</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div className="db-periodo-control-right">
+          <button
+            type="button"
+            className={`db-periodo-live-btn ${modoPeriodo === "atual" ? "active" : ""}`}
+            onClick={irMesAtual}
+            title="Visualizar dados do mês atual em tempo real"
+          >
+            <span className="db-periodo-live-dot" />
+            <span>Mês Atual (Ao Vivo)</span>
+          </button>
+        </div>
+      </div>
+
+      {carregandoPeriodo && (
+        <div style={{ marginBottom: "1rem" }}>
+          {renderProgressBar(`Carregando dados de ${NOMES_MESES[mesDashboard - 1]} de ${anoDashboard}...`, progressoPeriodo)}
+        </div>
+      )}
+
+      {modoPeriodo === "especifico" && !carregandoPeriodo && (
+        <div className="db-periodo-banner">
+          <div className="db-periodo-banner-content">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <span>
+              Visualizando dados históricos de <strong>{NOMES_MESES[mesDashboard - 1]} de {anoDashboard}</strong>. Os indicadores e métricas abaixo refletem este período.
+            </span>
+          </div>
+          <button
+            type="button"
+            className="db-periodo-banner-action"
+            onClick={irMesAtual}
+          >
+            Voltar para Mês Atual
+          </button>
+        </div>
+      )}
+
       {/* Grid Principal de Indicadores */}
       <div className="db-kpi-grid">
         {/* Chamados Novos */}
@@ -995,7 +1488,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="db-card-body">
-            <h3 className="db-card-value">{carregandoGlpi ? "..." : kpis.novos}</h3>
+            <h3 className="db-card-value">{(carregandoGlpi || carregandoPeriodo) ? "..." : (kpisExibidos.novos ?? 0)}</h3>
             <p className="db-card-title">Chamados Novos</p>
           </div>
         </div>
@@ -1015,7 +1508,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="db-card-body">
-            <h3 className="db-card-value">{carregandoGlpi ? "..." : kpis.atribuidos}</h3>
+            <h3 className="db-card-value">{(carregandoGlpi || carregandoPeriodo) ? "..." : (kpisExibidos.atribuidos ?? 0)}</h3>
             <p className="db-card-title">Atribuídos</p>
           </div>
         </div>
@@ -1035,7 +1528,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="db-card-body">
-            <h3 className="db-card-value">{carregandoGlpi ? "..." : kpis.pendentes}</h3>
+            <h3 className="db-card-value">{(carregandoGlpi || carregandoPeriodo) ? "..." : (kpisExibidos.pendentes ?? 0)}</h3>
             <p className="db-card-title">Chamados Pendentes</p>
           </div>
         </div>
@@ -1057,7 +1550,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="db-card-body">
-            <h3 className="db-card-value">{carregandoGlpi ? "..." : kpis.planejados}</h3>
+            <h3 className="db-card-value">{(carregandoGlpi || carregandoPeriodo) ? "..." : (kpisExibidos.planejados ?? 0)}</h3>
             <p className="db-card-title">Planejados</p>
           </div>
         </div>
@@ -1076,7 +1569,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="db-card-body">
-            <h3 className="db-card-value">{carregandoGlpi ? "..." : (kpis.solucionados ?? 0)}</h3>
+            <h3 className="db-card-value">{(carregandoGlpi || carregandoPeriodo) ? "..." : (kpisExibidos.solucionados ?? 0)}</h3>
             <p className="db-card-title">Chamados Solucionados</p>
           </div>
         </div>
@@ -1095,7 +1588,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="db-card-body">
-            <h3 className="db-card-value">{carregandoGlpi ? "..." : kpis.fechados}</h3>
+            <h3 className="db-card-value">{(carregandoGlpi || carregandoPeriodo) ? "..." : (kpisExibidos.fechados ?? 0)}</h3>
             <p className="db-card-title">Chamados Fechados</p>
           </div>
         </div>
@@ -1268,37 +1761,62 @@ export default function Dashboard() {
         <div className="premium-kpi-grid">
           <div className="premium-kpi-card glass-blue">
             <div className="kpi-content">
-              <span className="kpi-label">Total Chamados TI</span>
+              <span className="kpi-label">
+                {modoPeriodo === "especifico"
+                  ? `Total Chamados TI (até ${nomeMesCapitalizado}/${anoDashboard})`
+                  : `Total Chamados TI`}
+              </span>
               <span className="kpi-value" style={{ margin: '6px 0' }}>
-                {carregandoGlpi ? "..." : totalChamadosAnoTI} <small>atendimentos</small>
+                {(carregandoGlpi || carregandoPeriodo)
+                  ? "..."
+                  : totalChamadosAteEpocaTI}{" "}
+                <small>atendimentos</small>
               </span>
               <div style={{ display: 'flex', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
-                <span className="kpi-pill kpi-pill-green">Fechados: {totalFechadosAnoTI}</span>
-                <span className="kpi-pill kpi-pill-cyan">Solucionados: {totalSolucionadosAnoTI}</span>
+                <span className="kpi-pill kpi-pill-green">
+                  Fechados: {(carregandoGlpi || carregandoPeriodo)
+                    ? "..."
+                    : totalFechadosAteEpocaTI}
+                </span>
+                <span className="kpi-pill kpi-pill-cyan">
+                  Solucionados: {(carregandoGlpi || carregandoPeriodo)
+                    ? "..."
+                    : totalSolucionadosAteEpocaTI}
+                </span>
               </div>
             </div>
           </div>
 
           <div className="premium-kpi-card glass-orange">
             <div className="kpi-content">
-              <span className="kpi-label">Chamados no Mês Atual</span>
+              <span className="kpi-label">
+                {modoPeriodo === "especifico"
+                  ? `Top 3 Técnicos (${nomeMesCapitalizado})`
+                  : "Chamados no Mês Atual"}
+              </span>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
-                {top3Tecnicos.length > 0 ? top3Tecnicos.map((t, idx) => (
-                  <div key={idx} className="top3-row">
-                    <div className="top3-left">
-                      {renderTrofeuIcon(idx)}
-                      <span>{formatNomeComInicial(t.nome)}</span>
+                {(carregandoGlpi || carregandoPeriodo) ? (
+                  <span className="kpi-value" style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>Carregando...</span>
+                ) : top3Tecnicos.length > 0 ? (
+                  top3Tecnicos.map((t, idx) => (
+                    <div key={idx} className="top3-row">
+                      <div className="top3-left">
+                        {renderTrofeuIcon(idx)}
+                        <span>{formatNomeComInicial(t.nome)}</span>
+                      </div>
+                      <span className="top3-val-badge">{t.val || 0}</span>
                     </div>
-                    <span className="top3-val-badge">{t.val || 0}</span>
-                  </div>
-                )) : <span className="kpi-value">Nenhum</span>}
+                  ))
+                ) : (
+                  <span className="kpi-value">Nenhum</span>
+                )}
               </div>
             </div>
           </div>
 
           <div className="premium-kpi-card glass-amber">
             <div className="kpi-content">
-              <span className="kpi-label">Chamados no Ano</span>
+              <span className="kpi-label">Chamados no Ano ({anoDashboard})</span>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
                 {top3TecnicosAno.length > 0 ? top3TecnicosAno.map((t, idx) => (
                   <div key={idx} className="top3-row">
@@ -1317,11 +1835,15 @@ export default function Dashboard() {
             <div className="kpi-content">
               <span className="kpi-label" style={{ textAlign: 'center' }}>Chamados Concluídos ({nomeMesCapitalizado})</span>
               <span className="kpi-value" style={{ margin: '6px 0', fontSize: '2rem', display: 'flex', justifyContent: 'center', color: '#34d399' }}>
-                {carregandoGlpi ? "..." : totalChamadosMesTI}
+                {(carregandoGlpi || carregandoPeriodo) ? "..." : totalChamadosMesTI}
               </span>
               <div style={{ display: 'flex', gap: '8px', marginTop: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                <span className="kpi-pill kpi-pill-green">Fechados: {chamadosFechadosMesTI}</span>
-                <span className="kpi-pill kpi-pill-cyan">Solucionados: {chamadosSolucionadosMesTI}</span>
+                <span className="kpi-pill kpi-pill-green">
+                  Fechados: {(carregandoGlpi || carregandoPeriodo) ? "..." : chamadosFechadosMesTI}
+                </span>
+                <span className="kpi-pill kpi-pill-cyan">
+                  Solucionados: {(carregandoGlpi || carregandoPeriodo) ? "..." : chamadosSolucionadosMesTI}
+                </span>
               </div>
             </div>
           </div>
@@ -1814,7 +2336,448 @@ export default function Dashboard() {
           )}
         </div>
 
+        {/* Widget 2: Top 10 Solicitantes TI */}
+        <div className="db-tech-widget db-solicitantes-widget">
+          <div className="db-widget-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+            <div className="db-widget-title-group">
+              <h3>Top 10 Solicitantes TI</h3>
+              <p>
+                {filtroSolicitantesMode === "geral"
+                  ? "Usuários que mais abriram chamados (Histórico Geral)"
+                  : `Usuários que mais abriram chamados em ${["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"][mesSolicitantes - 1]} de ${anoSolicitantes}`}
+              </p>
+            </div>
+            <div className="db-tab-group" style={{ display: "flex", gap: "0.4rem", alignItems: "center", flexWrap: "wrap" }}>
+              <select
+                className="db-select-filtro"
+                value={filtroSolicitantesMode === "geral" ? "geral" : mesSolicitantes}
+                onChange={(e) => {
+                  if (e.target.value === "geral") {
+                    setFiltroSolicitantesMode("geral");
+                  } else {
+                    setFiltroSolicitantesMode("especifico");
+                    setMesSolicitantes(Number(e.target.value));
+                  }
+                }}
+              >
+                <option value={1}>Janeiro</option>
+                <option value={2}>Fevereiro</option>
+                <option value={3}>Março</option>
+                <option value={4}>Abril</option>
+                <option value={5}>Maio</option>
+                <option value={6}>Junho</option>
+                <option value={7}>Julho</option>
+                <option value={8}>Agosto</option>
+                <option value={9}>Setembro</option>
+                <option value={10}>Outubro</option>
+                <option value={11}>Novembro</option>
+                <option value={12}>Dezembro</option>
+                <option value="geral">Histórico Geral</option>
+              </select>
 
+              {filtroSolicitantesMode !== "geral" && (
+                <select
+                  className="db-select-filtro"
+                  value={anoSolicitantes}
+                  onChange={(e) => setAnoSolicitantes(Number(e.target.value))}
+                >
+                  {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <button
+                type="button"
+                className="db-btn-add-person"
+                onClick={() => {
+                  setTipoPessoaAdd("requerente");
+                  setModalAddPessoaAberto(true);
+                }}
+                title="Adicionar solicitante manualmente"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
+                  <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" strokeLinecap="round" strokeLinejoin="round" />
+                  <circle cx="8.5" cy="7" r="4" strokeLinecap="round" strokeLinejoin="round" />
+                  <line x1="20" y1="8" x2="20" y2="14" strokeLinecap="round" strokeLinejoin="round" />
+                  <line x1="17" y1="11" x2="23" y2="11" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              {excluidosRanking.length > 0 && (
+                <button
+                  type="button"
+                  className="db-btn-manage-hidden"
+                  onClick={() => setModalGerenciarOcultosAberto(true)}
+                  title={`Pessoas ocultadas (${excluidosRanking.length})`}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                    <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <span className="db-hidden-count-badge">{excluidosRanking.length}</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {carregandoGlpi || carregandoRankingSolicitantes ? (
+            renderProgressBar("Carregando Top Solicitantes...", carregandoGlpi ? progressoGlpi : progressoRankingSolicitantes)
+          ) : top10Solicitantes.length === 0 ? (
+            <div className="db-widget-empty">Nenhum solicitante encontrado.</div>
+          ) : (
+            <div className="db-ranking-list">
+              {top10Solicitantes.map((pessoa, index) => {
+                const isTop3 = index < 3;
+                const medalColor = index === 0 ? "gold" : index === 1 ? "silver" : "bronze";
+                const valorExibido = pessoa.val;
+                const siglaMeses = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+                const labelExibido =
+                  filtroSolicitantesMode === "geral"
+                    ? "total"
+                    : `${siglaMeses[mesSolicitantes - 1]}/${anoSolicitantes}`;
+                const isRankingOpen = rankingSolicitanteDetalhesAbertoId === pessoa.id;
+                const detalhesDaPessoa = isRankingOpen ? dadosDetalhesSolicitante : null;
+                const chamadosDaPessoa = detalhesDaPessoa
+                  ? detalhesDaPessoa.meses.flatMap((mes) =>
+                    mes.chamados.map((chamado) => ({ ...chamado, mes: mes.mes, nomeMes: mes.nomeMes }))
+                  )
+                  : [];
+                const statusDisponiveis = Array.from(
+                  new Set(chamadosDaPessoa.map((c) => c.status || "Sem status"))
+                ).sort();
+                const tecnicosDisponiveis = Array.from(
+                  new Set(chamadosDaPessoa.map((c) => c.tecnico || "TI"))
+                ).sort();
+                const mesesDisponiveis = detalhesDaPessoa
+                  ? detalhesDaPessoa.meses.filter((m) => m.total > 0)
+                  : [];
+                const chamadosInlineFiltrados = chamadosDaPessoa
+                  .filter((c) => filtroSolicitanteStatus === "todos" || (c.status || "Sem status") === filtroSolicitanteStatus)
+                  .filter((c) => filtroSolicitanteTecnico === "todos" || (c.tecnico || "TI") === filtroSolicitanteTecnico)
+                  .filter((c) => filtroSolicitanteMes === "todos" || String(c.mes) === filtroSolicitanteMes)
+                  .filter((c) => {
+                    if (!buscaChamadosSolicitante.trim()) return true;
+                    const q = buscaChamadosSolicitante.toLowerCase().trim();
+                    return (
+                      c.id.toLowerCase().includes(q) ||
+                      c.titulo.toLowerCase().includes(q) ||
+                      c.requerente.toLowerCase().includes(q) ||
+                      (c.tecnico || "").toLowerCase().includes(q) ||
+                      (c.status || "").toLowerCase().includes(q)
+                    );
+                  })
+                  .sort((a, b) => {
+                    const numA = parseInt(a.id.replace(/\D/g, ""), 10) || 0;
+                    const numB = parseInt(b.id.replace(/\D/g, ""), 10) || 0;
+                    return numB - numA;
+                  });
+                const avatar = pessoa.nome.trim().split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase();
+
+                return (
+                  <div key={pessoa.id} className={`db-ranking-item-block ${isRankingOpen ? "open" : ""}`}>
+                    <div
+                      className="db-ranking-item db-ranking-item-clickable"
+                      onClick={() => abrirModalDetalhesSolicitante(pessoa)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          abrirModalDetalhesSolicitante(pessoa);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      title={`Ver chamados abertos por ${pessoa.nome}`}
+                    >
+                      <div className="db-ranking-position-wrap">
+                        <span className={`db-ranking-position ${isTop3 ? `medal-${medalColor}` : ""}`}>
+                          {index + 1}
+                        </span>
+                      </div>
+                      <div className="db-ranking-avatar" style={{ background: "var(--indigo, #6366f1)" }}>{avatar}</div>
+                      <div className="db-ranking-info">
+                        <span className="db-ranking-name">{pessoa.nome}</span>
+                        <div className="db-ranking-sub-breakdown" style={{ display: 'flex', gap: '6px', fontSize: '0.78rem', marginTop: '2px', fontWeight: 500 }}>
+                          <span style={{ color: '#a5b4fc' }}>Chamados abertos para TI</span>
+                        </div>
+                      </div>
+                      <div className="db-ranking-value-wrap">
+                        <span className="db-ranking-value">{valorExibido}</span>
+                        <span className="db-ranking-label">{labelExibido}</span>
+                      </div>
+                      <div style={{ position: "relative", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                        <button
+                          type="button"
+                          className="db-btn-ver-meses"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            abrirModalMesesPessoa(pessoa, true);
+                          }}
+                          title={`Ver total de chamados por mês de ${pessoa.nome}`}
+                          aria-label={`Ver meses de ${pessoa.nome}`}
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                            <line x1="16" y1="2" x2="16" y2="6" />
+                            <line x1="8" y1="2" x2="8" y2="6" />
+                            <line x1="3" y1="10" x2="21" y2="10" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          className={`db-btn-ranking-menu ${activeSolicitanteMenuId === pessoa.id ? "active" : ""}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveSolicitanteMenuId(activeSolicitanteMenuId === pessoa.id ? null : pessoa.id);
+                          }}
+                          title="Opções"
+                        >
+                          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                            <circle cx="12" cy="5" r="2" />
+                            <circle cx="12" cy="12" r="2" />
+                            <circle cx="12" cy="19" r="2" />
+                          </svg>
+                        </button>
+                        {activeSolicitanteMenuId === pessoa.id && (
+                          <div className="db-ranking-popover" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              className="db-ranking-popover-item"
+                              onClick={() => {
+                                abrirModalMesesPessoa(pessoa, true);
+                                setActiveSolicitanteMenuId(null);
+                              }}
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                                <line x1="16" y1="2" x2="16" y2="6" />
+                                <line x1="8" y1="2" x2="8" y2="6" />
+                                <line x1="3" y1="10" x2="21" y2="10" />
+                              </svg>
+                              Ver Meses (Jan-Dez)
+                            </button>
+                            <button
+                              type="button"
+                              className="db-ranking-popover-item db-popover-danger"
+                              onClick={() => {
+                                ocultarDoRanking(pessoa.id);
+                                setActiveSolicitanteMenuId(null);
+                              }}
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                                <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                              Remover
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {isRankingOpen && (
+                      <div className="db-ranking-details-panel" onClick={(e) => e.stopPropagation()}>
+                        {/* Resumo Mensal dos Chamados (Janeiro a Dezembro Lado a Lado) */}
+                        <div className="db-meses-resumo-card">
+                          <div className="db-meses-resumo-header">
+                            <div className="db-meses-resumo-title">
+                              <span>📊 Chamados Abertos por Mês ({anoDetalhesSolicitante})</span>
+                            </div>
+                            <div className="db-meses-total-badge">
+                              Total no Ano: <strong>{dadosDetalhesSolicitante?.totalAno ?? 0}</strong> chamados
+                            </div>
+                          </div>
+                          <div className="db-meses-table-wrapper">
+                            <table className="db-meses-table">
+                              <thead>
+                                <tr>
+                                  <th>Jan</th>
+                                  <th>Fev</th>
+                                  <th>Mar</th>
+                                  <th>Abr</th>
+                                  <th>Mai</th>
+                                  <th>Jun</th>
+                                  <th>Jul</th>
+                                  <th>Ago</th>
+                                  <th>Set</th>
+                                  <th>Out</th>
+                                  <th>Nov</th>
+                                  <th>Dez</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr>
+                                  {Array.from({ length: 12 }, (_, i) => {
+                                    const mesNum = i + 1;
+                                    const mData = dadosDetalhesSolicitante?.meses.find((m) => m.mes === mesNum);
+                                    const count = mData ? mData.total : 0;
+                                    return (
+                                      <td key={mesNum} className={count > 0 ? "has-tickets" : "empty"}>
+                                        <span className="db-mes-val">{count}</span>
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                        <div className="db-ranking-details-toolbar">
+                          <div className="db-ranking-details-summary">
+                            <strong>{chamadosInlineFiltrados.length}</strong>
+                            <span>
+                              {chamadosInlineFiltrados.length === 1 ? "chamado exibido" : "chamados exibidos"}
+                            </span>
+                          </div>
+
+                          <div className="db-ranking-details-filters">
+                            <select
+                              className="db-select-filtro"
+                              value={filtroSolicitanteStatus}
+                              onChange={(e) => setFiltroSolicitanteStatus(e.target.value)}
+                            >
+                              <option value="todos">Todos os status</option>
+                              {statusDisponiveis.map((status) => (
+                                <option key={status} value={status}>
+                                  {status}
+                                </option>
+                              ))}
+                            </select>
+
+                            <select
+                              className="db-select-filtro"
+                              value={filtroSolicitanteTecnico}
+                              onChange={(e) => setFiltroSolicitanteTecnico(e.target.value)}
+                            >
+                              <option value="todos">Todos os técnicos</option>
+                              {tecnicosDisponiveis.map((tecnico) => (
+                                <option key={tecnico} value={tecnico}>
+                                  {tecnico}
+                                </option>
+                              ))}
+                            </select>
+
+                            <select
+                              className="db-select-filtro"
+                              value={filtroSolicitanteMes}
+                              onChange={(e) => setFiltroSolicitanteMes(e.target.value)}
+                            >
+                              <option value="todos">Todos os meses</option>
+                              {mesesDisponiveis.map((mes) => (
+                                <option key={mes.mes} value={String(mes.mes)}>
+                                  {mes.nomeMes}
+                                </option>
+                              ))}
+                            </select>
+
+                            <select
+                              className="db-select-filtro"
+                              value={anoDetalhesSolicitante}
+                              onChange={(e) => alterarAnoDetalhesSolicitante(Number(e.target.value))}
+                            >
+                              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
+                                <option key={y} value={y}>
+                                  {y}
+                                </option>
+                              ))}
+                            </select>
+
+                            <input
+                              type="text"
+                              className="db-ranking-details-search"
+                              placeholder="Buscar ID, título, técnico..."
+                              value={buscaChamadosSolicitante}
+                              onChange={(e) => setBuscaChamadosSolicitante(e.target.value)}
+                            />
+                          </div>
+                        </div>
+
+                        {carregandoDetalhesSolicitante ? (
+                          <div className="db-ranking-details-loading">Buscando chamados do solicitante...</div>
+                        ) : chamadosInlineFiltrados.length === 0 ? (
+                          <div className="db-ranking-details-empty">Nenhum chamado encontrado para os filtros selecionados.</div>
+                        ) : (
+                          <div className="db-tickets-table-wrap">
+                            <table className="db-tickets-table">
+                              <thead>
+                                <tr>
+                                  <th style={{ width: "56px" }}>Nº</th>
+                                  <th style={{ width: "96px" }}>ID</th>
+                                  <th>Título</th>
+                                  <th>Requerente</th>
+                                  <th>Técnico / Grupo</th>
+                                  <th style={{ width: "120px" }}>Status</th>
+                                  <th style={{ width: "140px", textAlign: "right" }}>Data</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {chamadosInlineFiltrados.map((c, chamadoIndex) => (
+                                  <tr key={`${c.id}-${chamadoIndex}`}>
+                                    <td>
+                                      <span className="db-ticket-row-number">{chamadoIndex + 1}</span>
+                                    </td>
+                                    <td>
+                                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2px" }}>
+                                        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
+                                          {c.url ? (
+                                            <a
+                                              href={c.url}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="db-ticket-id"
+                                              style={{ textDecoration: "none" }}
+                                              title={`Abrir chamado #${c.id} no GLPI`}
+                                            >
+                                              #{c.id}
+                                            </a>
+                                          ) : (
+                                            <span className="db-ticket-id">#{c.id}</span>
+                                          )}
+                                        </div>
+                                        {filtroSolicitanteMes !== "todos" && (() => {
+                                          const mesSelecionado = parseInt(filtroSolicitanteMes, 10);
+                                          const isSame = isMesIgual(c, mesSelecionado, anoDetalhesSolicitante);
+                                          const tag = getMesAnoAberturaTag(c);
+                                          return !isSame && tag ? (
+                                            <span
+                                              className="db-ticket-mes-abertura outro-mes"
+                                              title={`Chamado criado em ${c.dataAbertura || tag}`}
+                                            >
+                                              Aberto em {tag}
+                                            </span>
+                                          ) : null;
+                                        })()}
+                                      </div>
+                                    </td>
+                                    <td>
+                                      <span className="db-ticket-title">{c.titulo}</span>
+                                    </td>
+                                    <td>
+                                      <span className="db-ticket-req">{c.requerente || pessoa.nome}</span>
+                                    </td>
+                                    <td>
+                                      <span className="db-ticket-req">{c.tecnico || "TI"}</span>
+                                    </td>
+                                    <td>
+                                      <span className={`db-ticket-status ${(c.status || "").toLowerCase()}`}>
+                                        {c.status || "-"}
+                                      </span>
+                                    </td>
+                                    <td style={{ textAlign: "right" }}>
+                                      <span className="db-ticket-date">{c.dataFechamento || c.dataAbertura || "-"}</span>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Modal de Relatórios em PDF */}
