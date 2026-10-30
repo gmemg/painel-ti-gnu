@@ -9,6 +9,9 @@ import {
   MembroEquipe,
   Tarefa,
   TonerRegistro,
+  ChamadoStatusType,
+  ChamadoItem,
+  ChamadosResponse,
 } from "../types";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "/api";
@@ -678,3 +681,13 @@ export const syncGlpiPrintersNow = (): Promise<{ success: boolean; lastSync: str
   requestJson<{ success: boolean; lastSync: string | null; nextSync: string | null }>("/glpi/sync-now", {
     method: "POST"
   });
+
+export const getGlpiChamados = (
+  status: ChamadoStatusType = "novos",
+  force: boolean = false
+): Promise<ChamadosResponse> => {
+  const url = `/glpi/chamados?status=${status}${force ? "&force=true" : ""}`;
+  return requestJson<ChamadosResponse>(url);
+};
+
+export type { ChamadoItem, ChamadoStatusType, ChamadosResponse };

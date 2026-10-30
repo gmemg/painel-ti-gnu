@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   reconcileEventosAutomaticos,
   getHistorico,
@@ -196,6 +197,7 @@ const isMesIgual = (
 };
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState<string>("");
 
   // Cache inicial do localStorage (0ms load time)
@@ -815,7 +817,7 @@ export default function Dashboard() {
       if (typeof data.totalComputadores === "number") setTotalComputadores(data.totalComputadores);
       if (typeof data.totalImpressoras === "number") setTotalImpressoras(data.totalImpressoras);
       if (data.chamadosAntigos && Array.isArray(data.chamadosAntigos)) setChamadosAntigos(data.chamadosAntigos);
-      
+
       const agora = new Date();
       setLastSyncTime(agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }));
       setProgressoGlpi(100);
@@ -1378,7 +1380,7 @@ export default function Dashboard() {
                 transition: isSyncing ? "transform 1s linear infinite" : "none"
               }}
             >
-              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             {isSyncing ? "Sincronizando..." : "Recarregar"}
           </button>
@@ -1388,8 +1390,8 @@ export default function Dashboard() {
               {isSyncing
                 ? "Sincronizando com GLPI..."
                 : lastSyncTime
-                ? `Atualizado às ${lastSyncTime} • Em cache`
-                : `Atualizando ao vivo • ${currentTime}`}
+                  ? `Atualizado às ${lastSyncTime} • Em cache`
+                  : `Atualizando ao vivo • ${currentTime}`}
             </span>
           </div>
         </div>
@@ -1525,7 +1527,7 @@ export default function Dashboard() {
           </div>
           <div className="db-card-body">
             <h3 className="db-card-value">{(carregandoGlpi || carregandoPeriodo) ? "..." : (kpisExibidos.novos ?? 0)}</h3>
-            <p className="db-card-title">Chamados Novos</p>
+            <p className="db-card-title" onClick={() => navigate("/chamados?status=novos")} style={{ cursor: "pointer" }} title="Ver lista de chamados novos">Chamados Novos</p>
           </div>
         </div>
 
@@ -1545,7 +1547,7 @@ export default function Dashboard() {
           </div>
           <div className="db-card-body">
             <h3 className="db-card-value">{(carregandoGlpi || carregandoPeriodo) ? "..." : (kpisExibidos.atribuidos ?? 0)}</h3>
-            <p className="db-card-title">Atribuídos</p>
+            <p className="db-card-title" onClick={() => navigate("/chamados?status=atribuidos")} style={{ cursor: "pointer" }} title="Ver lista de chamados atribuídos">Atribuídos</p>
           </div>
         </div>
 
@@ -1565,7 +1567,7 @@ export default function Dashboard() {
           </div>
           <div className="db-card-body">
             <h3 className="db-card-value">{(carregandoGlpi || carregandoPeriodo) ? "..." : (kpisExibidos.pendentes ?? 0)}</h3>
-            <p className="db-card-title">Chamados Pendentes</p>
+            <p className="db-card-title" onClick={() => navigate("/chamados?status=pendentes")} style={{ cursor: "pointer" }} title="Ver lista de chamados pendentes">Chamados Pendentes</p>
           </div>
         </div>
 
@@ -1587,7 +1589,7 @@ export default function Dashboard() {
           </div>
           <div className="db-card-body">
             <h3 className="db-card-value">{(carregandoGlpi || carregandoPeriodo) ? "..." : (kpisExibidos.planejados ?? 0)}</h3>
-            <p className="db-card-title">Planejados</p>
+            <p className="db-card-title" onClick={() => navigate("/chamados?status=planejados")} style={{ cursor: "pointer" }} title="Ver lista de chamados planejados">Planejados</p>
           </div>
         </div>
 
@@ -1606,7 +1608,7 @@ export default function Dashboard() {
           </div>
           <div className="db-card-body">
             <h3 className="db-card-value">{(carregandoGlpi || carregandoPeriodo) ? "..." : (kpisExibidos.solucionados ?? 0)}</h3>
-            <p className="db-card-title">Chamados Solucionados</p>
+            <p className="db-card-title" onClick={() => navigate("/chamados?status=solucionados")} style={{ cursor: "pointer" }} title="Ver lista de chamados solucionados">Chamados Solucionados</p>
           </div>
         </div>
 
@@ -1625,7 +1627,7 @@ export default function Dashboard() {
           </div>
           <div className="db-card-body">
             <h3 className="db-card-value">{(carregandoGlpi || carregandoPeriodo) ? "..." : (kpisExibidos.fechados ?? 0)}</h3>
-            <p className="db-card-title">Chamados Fechados</p>
+            <p className="db-card-title" onClick={() => navigate("/chamados?status=fechados")} style={{ cursor: "pointer" }} title="Ver lista de chamados fechados">Chamados Fechados</p>
           </div>
         </div>
 
@@ -2181,7 +2183,7 @@ export default function Dashboard() {
                         <div className="db-meses-resumo-card">
                           <div className="db-meses-resumo-header">
                             <div className="db-meses-resumo-title">
-                              <span>📊 Chamados Resolvidos por Mês ({anoDetalhes})</span>
+                              <span>Chamados Resolvidos por Mês ({anoDetalhes})</span>
                             </div>
                             <div className="db-meses-total-badge">
                               Total no Ano: <strong>{dadosDetalhes?.totalAno ?? 0}</strong> chamados
@@ -2624,7 +2626,7 @@ export default function Dashboard() {
                         <div className="db-meses-resumo-card">
                           <div className="db-meses-resumo-header">
                             <div className="db-meses-resumo-title">
-                              <span>📊 Chamados Abertos por Mês ({anoDetalhesSolicitante})</span>
+                              <span>Chamados Abertos por Mês ({anoDetalhesSolicitante})</span>
                             </div>
                             <div className="db-meses-total-badge">
                               Total no Ano: <strong>{dadosDetalhesSolicitante?.totalAno ?? 0}</strong> chamados

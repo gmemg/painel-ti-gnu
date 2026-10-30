@@ -13,6 +13,7 @@ import {
   getInventario,
   getGlpiDashboard,
   getGlpiDashboardCache,
+  getGlpiChamados,
   getTvConfig,
   saveTvConfig,
   TvConfig,
@@ -97,11 +98,11 @@ const TONERS_MINI: Array<{
   label: string;
   cor: string;
 }> = [
-  { key: "tonerPreto", label: "P", cor: "#d1d5db" },
-  { key: "tonerCiano", label: "C", cor: "#22d3ee" },
-  { key: "tonerMagenta", label: "M", cor: "#f0138a" },
-  { key: "tonerAmarelo", label: "A", cor: "#f5c200" },
-];
+    { key: "tonerPreto", label: "P", cor: "#d1d5db" },
+    { key: "tonerCiano", label: "C", cor: "#22d3ee" },
+    { key: "tonerMagenta", label: "M", cor: "#f0138a" },
+    { key: "tonerAmarelo", label: "A", cor: "#f5c200" },
+  ];
 
 function TonerMini({ imp }: { imp: Impressora }) {
   return (
@@ -323,6 +324,64 @@ const COLUNAS_TAREFA_HISTORICO: Coluna[] = [
         cor={TAREFA_STATUS_COR[String(r.status)] ?? "#9ca3af"}
       />
     ),
+  },
+];
+
+/* Colunas para a tela de Chamados Novos */
+const COLUNAS_CHAMADOS_NOVOS: Coluna[] = [
+  {
+    titulo: "ID",
+    largura: "6%",
+    render: (r) => (
+      <span style={{ fontWeight: 700, fontFamily: "monospace", color: "#60a5fa" }}>
+        {r.id ? `#${String(r.id)}` : "—"}
+      </span>
+    ),
+  },
+  {
+    titulo: "Título",
+    largura: "24%",
+    classe: "tv-td-destaque",
+    render: (r) => txt(r.titulo),
+  },
+  {
+    titulo: "Status",
+    largura: "7%",
+    render: (r) => (
+      <span style={{ color: "#38bdf8", fontWeight: 600 }}>
+        {txt(r.status) || "Novo"}
+      </span>
+    ),
+  },
+  {
+    titulo: "Abertura",
+    largura: "10%",
+    render: (r) => txt(r.dataAbertura) || "—",
+  },
+  {
+    titulo: "Última Atualização",
+    largura: "10%",
+    render: (r) => txt(r.dataModificacao) || "—",
+  },
+  {
+    titulo: "Requerente",
+    largura: "12%",
+    render: (r) => txt(r.requerente) || "—",
+  },
+  {
+    titulo: "Técnico Atribuído",
+    largura: "11%",
+    render: (r) => txt(r.tecnico) || "Não atribuído",
+  },
+  {
+    titulo: "Categoria",
+    largura: "10%",
+    render: (r) => txt(r.categoria) || "—",
+  },
+  {
+    titulo: "Grupo Técnico",
+    largura: "10%",
+    render: (r) => txt(r.grupoTecnico) || "—",
   },
 ];
 
@@ -567,9 +626,25 @@ const CATALOGO: TelaDef[] = [
       }) as Record<string, unknown>[];
     },
   },
+    {
+    id: "chamados",
+    label: "CHAMADOS",
+    accent: "azul",
+    colunas: COLUNAS_CHAMADOS_NOVOS,
+    vazioMsg: "Nenhum chamado novo no momento.",
+    load: async () => {
+      try {
+        const res = await getGlpiChamados("novos", true);
+        return asRows(res.chamados || []);
+      } catch (err) {
+        console.error("Erro ao carregar chamados novos no Modo TV:", err);
+        return [];
+      }
+    },
+  },
   {
     id: "ranking-ti",
-    label: "CHAMADOS",
+    label: "RANKING TI",
     accent: "azul",
     vazioMsg: "Nenhum técnico encontrado no GLPI.",
     colunas: [],
@@ -769,7 +844,7 @@ const ACCENT_CLASSE: Record<Accent, string> = {
 };
 
 /* Telas ativas por padrão (preserva o comportamento original). */
-const PADRAO_ATIVAS = new Set(["montagens", "tarefas", "equipamentos", "ranking-ti"]);
+const PADRAO_ATIVAS = new Set(["montagens", "tarefas", "equipamentos", "chamados", "ranking-ti"]);
 
 function configPadrao(): { id: string; ativo: boolean }[] {
   return CATALOGO.map((t) => ({ id: t.id, ativo: PADRAO_ATIVAS.has(t.id) }));
@@ -787,7 +862,7 @@ function normalizarConfig(
   const presentes = new Set(validas.map((t) => t.id));
   const faltantes = CATALOGO.filter((c) => !presentes.has(c.id)).map((c) => ({
     id: c.id,
-    ativo: false,
+    ativo: PADRAO_ATIVAS.has(c.id),
   }));
   return [...validas, ...faltantes];
 }
@@ -1075,7 +1150,11 @@ export default function ModoTV() {
     <div className="tv-page">
       <img
         className="tv-watermark"
-        src="https://www.gnu.com.br/site/img/logo-gnu.svg"
+        src="/logo-gnu.png"
+        onError={(e) => {
+          e.currentTarget.onerror = null;
+          e.currentTarget.src = "https://www.gnu.com.br/site/img/core-favoritos.png";
+        }}
         alt=""
         aria-hidden="true"
       />
@@ -1156,7 +1235,7 @@ export default function ModoTV() {
               >
                 <div className="sound-popover-header">
                   <span className="sound-popover-title">
-                    🔊 Alerta Sonoro
+                    Alerta Sonoro
                   </span>
                   <button
                     type="button"
@@ -1305,9 +1384,8 @@ export default function ModoTV() {
               </div>
             ) : (
               <table
-                className={`tv-tabela ${
-                  defAtual ? ACCENT_CLASSE[defAtual.accent] : ""
-                }`}
+                className={`tv-tabela ${defAtual ? ACCENT_CLASSE[defAtual.accent] : ""
+                  }`}
               >
                 <colgroup>
                   {colunas.map((c, i) => (

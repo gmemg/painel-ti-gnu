@@ -32,7 +32,11 @@ export default function Login() {
       <form className="login-card" onSubmit={aoEnviar}>
         <img
           className="login-logo"
-          src="https://www.gnu.com.br/site/img/logo-gnu.svg"
+          src="/logo-gnu.png"
+          onError={(e) => {
+            e.currentTarget.onerror = null;
+            e.currentTarget.src = "https://www.gnu.com.br/site/img/core-favoritos.png";
+          }}
           alt="Logo GNU"
         />
         <h1 className="login-title">PAINEL T.I. GNU</h1>

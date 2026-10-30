@@ -191,3 +191,35 @@ export interface TonerRegistro {
   amarelo: number;
   updatedAt: string;
 }
+
+export type ChamadoStatusType =
+  | "novos"
+  | "atribuidos"
+  | "planejados"
+  | "pendentes"
+  | "solucionados"
+  | "fechados";
+
+export interface ChamadoItem {
+  id: string;
+  titulo: string;
+  status: string;
+  statusCode: number;
+  dataAbertura: string;
+  dataAberturaRaw?: string;
+  dataModificacao: string;
+  dataModificacaoRaw?: string;
+  requerente: string;
+  tecnico: string;
+  categoria: string;
+  grupoTecnico: string;
+  url?: string;
+}
+
+export interface ChamadosResponse {
+  statusAtual: ChamadoStatusType;
+  counts: Record<ChamadoStatusType, number>;
+  total: number;
+  lastSync: string | null;
+  chamados: ChamadoItem[];
+}

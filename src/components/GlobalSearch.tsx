@@ -37,6 +37,13 @@ interface SearchResult {
 
 const PAGES_INDEX: Array<{ title: string; subtitle: string; url: string; keywords: string; icon: string }> = [
   {
+    title: "Chamados GLPI",
+    subtitle: "Listagem de chamados novos, atribuídos, pendentes, planejados, solucionados e fechados",
+    url: "/chamados",
+    keywords: "chamados glpi novos atribuidos pendentes planejados solucionados fechados tickets suporte ti",
+    icon: "🎫",
+  },
+  {
     title: "Dashboard / Visão Geral",
     subtitle: "KPIs do GLPI, Chamados por Requerente, Ranking TI",
     url: "/",

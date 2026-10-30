@@ -17,25 +17,25 @@ export const LISTA_EFEITOS_SONOROS: OpcaoSom[] = [
     id: "chime",
     nome: "Chime Digital Suave",
     descricao: "Dois tons ascendentes suaves (C5 -> E5)",
-    icone: "🔔",
+    icone: "",
   },
   {
     id: "alerta",
     nome: "Alerta Triplo",
     descricao: "Três notas rápidas ascendentes (Sol5 -> Do6 -> Mi6)",
-    icone: "🚨",
+    icone: "",
   },
   {
     id: "sonar",
     nome: "Sonar / Ping Cristalino",
     descricao: "Nota pura ressonante com decaimento suave",
-    icone: "📡",
+    icone: "",
   },
   {
     id: "pop",
     nome: "Pop / Blip Amigável",
     descricao: "Efeito rápido de rampa de frequência",
-    icone: "💬",
+    icone: "",
   },
 ];
 

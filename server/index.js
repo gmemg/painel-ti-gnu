@@ -2474,6 +2474,320 @@ app.get("/api/glpi/dashboard", async (req, res, next) => {
 });
 
 // Endpoint para buscar usuários/requerentes do GLPI e calcular estatísticas reais de chamados
+// --- CACHE E METADADOS PARA LISTAGEM DE CHAMADOS GLPI ---
+let glpiChamadosMetadataCache = {
+  time: 0,
+  users: {},
+  categories: {},
+  groups: {}
+};
+const GLPI_METADATA_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
+async function getGlpiMetadataShared(sessionToken, force = false) {
+  const now = Date.now();
+  if (
+    !force &&
+    now - glpiChamadosMetadataCache.time < GLPI_METADATA_CACHE_TTL &&
+    Object.keys(glpiChamadosMetadataCache.users).length > 0
+  ) {
+    return glpiChamadosMetadataCache;
+  }
+
+  const usersMap = {};
+  const categoriesMap = {};
+  const groupsMap = {};
+
+  await Promise.allSettled([
+    (async () => {
+      try {
+        const res = await fetch(`${GLPI_API_URL}/User?range=0-1000`, {
+          headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken }
+        });
+        if (res.ok) {
+          const list = await res.json();
+          if (Array.isArray(list)) {
+            list.forEach(u => {
+              const fullname = [u.firstname, u.realname].filter(Boolean).join(" ") || u.name || `User ${u.id}`;
+              usersMap[String(u.id)] = fullname;
+            });
+          }
+        }
+      } catch (err) {
+        console.error("[GLPI] Erro ao carregar mapa de usuários:", err.message);
+      }
+    })(),
+    (async () => {
+      try {
+        const res = await fetch(`${GLPI_API_URL}/ITILCategory?range=0-1000`, {
+          headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken }
+        });
+        if (res.ok) {
+          const list = await res.json();
+          if (Array.isArray(list)) {
+            list.forEach(c => {
+              categoriesMap[String(c.id)] = c.completename || c.name || `Categoria ${c.id}`;
+            });
+          }
+        }
+      } catch (err) {
+        // ITILCategory pode não estar acessível
+      }
+    })(),
+    (async () => {
+      try {
+        const res = await fetch(`${GLPI_API_URL}/Group?range=0-1000`, {
+          headers: { "App-Token": GLPI_APP_TOKEN, "Session-Token": sessionToken }
+        });
+        if (res.ok) {
+          const list = await res.json();
+          if (Array.isArray(list)) {
+            list.forEach(g => {
+              groupsMap[String(g.id)] = g.completename || g.name || `Grupo ${g.id}`;
+            });
+          }
+        }
+      } catch (err) {
+        // Group pode não estar acessível
+      }
+    })()
+  ]);
+
+  glpiChamadosMetadataCache = {
+    time: now,
+    users: usersMap,
+    categories: categoriesMap,
+    groups: groupsMap
+  };
+  return glpiChamadosMetadataCache;
+}
+
+const glpiChamadosCache = {};
+const GLPI_CHAMADOS_CACHE_TTL = 30 * 1000; // 30 segundos
+
+// Endpoint para listagem de chamados por status (novos, atribuídos, pendentes, planejados, solucionados, fechados)
+app.get("/api/glpi/chamados", async (req, res, next) => {
+  const force = req.query.force === "true";
+  const rawStatus = (req.query.status || "novos").toLowerCase().trim();
+  const validStatuses = ["novos", "atribuidos", "planejados", "pendentes", "solucionados", "fechados"];
+  const statusKey = validStatuses.includes(rawStatus) ? rawStatus : "novos";
+  const now = Date.now();
+
+  if (!force && glpiChamadosCache[statusKey] && (now - glpiChamadosCache[statusKey].time < GLPI_CHAMADOS_CACHE_TTL)) {
+    return res.json(glpiChamadosCache[statusKey].data);
+  }
+
+  const emptyResponse = {
+    statusAtual: statusKey,
+    counts: { novos: 0, atribuidos: 0, planejados: 0, pendentes: 0, solucionados: 0, fechados: 0 },
+    total: 0,
+    lastSync: null,
+    chamados: []
+  };
+
+  if (!GLPI_API_URL || !GLPI_APP_TOKEN || !GLPI_USER_TOKEN) {
+    return res.json(emptyResponse);
+  }
+
+  let sessionToken = null;
+  try {
+    sessionToken = await initGlpiSession();
+
+    const STATUS_MAP = {
+      novos: { code: 1, label: "Novo" },
+      atribuidos: { code: 2, label: "Atribuído" },
+      planejados: { code: 3, label: "Planejado" },
+      pendentes: { code: 4, label: "Pendente" },
+      solucionados: { code: 5, label: "Solucionado" },
+      fechados: { code: 6, label: "Fechado" }
+    };
+
+    const CODE_TO_LABEL = {
+      1: "Novo",
+      2: "Atribuído",
+      3: "Planejado",
+      4: "Pendente",
+      5: "Solucionado",
+      6: "Fechado"
+    };
+
+    const statusCounts = {
+      novos: 0,
+      atribuidos: 0,
+      planejados: 0,
+      pendentes: 0,
+      solucionados: 0,
+      fechados: 0
+    };
+
+    // Contagem de todos os status em paralelo
+    const countPromises = Object.entries(STATUS_MAP).map(async ([key, info]) => {
+      try {
+        const response = await fetch(
+          `${GLPI_API_URL}/search/Ticket?criteria[0][field]=12&criteria[0][searchtype]=equals&criteria[0][value]=${info.code}&range=0-1`,
+          {
+            headers: {
+              "App-Token": GLPI_APP_TOKEN,
+              "Session-Token": sessionToken
+            }
+          }
+        );
+        if (response.ok) {
+          const countData = await response.json();
+          statusCounts[key] = countData.totalcount || 0;
+        }
+      } catch (e) {
+        statusCounts[key] = 0;
+      }
+    });
+
+    const metadataPromise = getGlpiMetadataShared(sessionToken, force);
+
+    const selectedCode = STATUS_MAP[statusKey].code;
+    const sortField = statusKey === "solucionados" ? "17" : statusKey === "fechados" ? "16" : "15";
+
+    const searchUrl =
+      `${GLPI_API_URL}/search/Ticket?criteria[0][field]=12&criteria[0][searchtype]=equals&criteria[0][value]=${selectedCode}` +
+      `&sort=${sortField}&order=DESC` +
+      `&forcedisplay[0]=1` +  // Título
+      `&forcedisplay[1]=2` +  // ID
+      `&forcedisplay[2]=4` +  // Requerente
+      `&forcedisplay[3]=5` +  // Técnico
+      `&forcedisplay[4]=7` +  // Categoria
+      `&forcedisplay[5]=8` +  // Grupo Técnico
+      `&forcedisplay[6]=12` + // Status
+      `&forcedisplay[7]=15` + // Data de Abertura
+      `&forcedisplay[8]=19` + // Data de Modificação
+      `&range=0-300`;
+
+    const ticketsPromise = fetch(searchUrl, {
+      headers: {
+        "App-Token": GLPI_APP_TOKEN,
+        "Session-Token": sessionToken
+      }
+    }).then(r => r.ok ? r.json() : { data: [] }).catch(() => ({ data: [] }));
+
+    const [, metadata, ticketsRes] = await Promise.all([
+      Promise.all(countPromises),
+      metadataPromise,
+      ticketsPromise
+    ]);
+
+    const usersMap = metadata.users || {};
+    const categoriesMap = metadata.categories || {};
+    const groupsMap = metadata.groups || {};
+    const rawTickets = ticketsRes.data || [];
+
+    const glpiBaseWebUrl = (process.env.GLPI_WEB_URL || process.env.GLPI_URL || GLPI_API_URL.replace(/\/apirest\.php\/?$/i, "")).replace(/\/$/, "");
+
+    const formatDataHora = (raw) => {
+      if (!raw) return "-";
+      const [datePart, timePart] = raw.split(" ");
+      if (!datePart) return raw;
+      const parts = datePart.split("-");
+      if (parts.length !== 3) return raw;
+      const [y, m, d] = parts;
+      const t = timePart ? timePart.substring(0, 5) : "";
+      return `${d}/${m}/${y}${t ? ` às ${t}` : ""}`;
+    };
+
+    const chamados = rawTickets.map((ticket) => {
+      let rawId = ticket["2"] || ticket.id || "";
+      let rawName = ticket["1"] || ticket.name || "";
+      if (isNaN(parseInt(rawId, 10)) && !isNaN(parseInt(rawName, 10))) {
+        const temp = rawId;
+        rawId = rawName;
+        rawName = temp;
+      }
+      const ticketId = String(rawId || ticket.id || "");
+      const titulo = String(rawName || `Chamado #${ticketId}`).trim();
+
+      const statusCode = Number(ticket["12"]) || selectedCode;
+      const statusLabel = CODE_TO_LABEL[statusCode] || STATUS_MAP[statusKey].label;
+
+      // Requerente
+      let requerente = "Não informado";
+      if (ticket["4"] !== undefined && ticket["4"] !== null) {
+        const rawReq = ticket["4"];
+        const reqIds = Array.isArray(rawReq) ? rawReq.map(String) : [String(rawReq)];
+        const reqNames = reqIds.map(id => usersMap[id] || (isNaN(id) && id ? id : null)).filter(Boolean);
+        requerente = reqNames.length > 0 ? reqNames.join(", ") : (isNaN(reqIds[0]) ? reqIds[0] : `Usuário #${reqIds[0]}`);
+      }
+
+      // Técnico
+      let tecnico = "Não atribuído";
+      if (ticket["5"] !== undefined && ticket["5"] !== null) {
+        const rawTech = ticket["5"];
+        const techIds = Array.isArray(rawTech) ? rawTech.map(String) : [String(rawTech)];
+        const techNames = techIds.map(id => usersMap[id] || (isNaN(id) && id ? id : null)).filter(Boolean);
+        tecnico = techNames.length > 0 ? techNames.join(", ") : (isNaN(techIds[0]) && techIds[0] ? techIds[0] : "Não atribuído");
+      }
+
+      // Categoria
+      let categoria = "Sem categoria";
+      if (ticket["7"] !== undefined && ticket["7"] !== null) {
+        const rawCat = ticket["7"];
+        const catIds = Array.isArray(rawCat) ? rawCat.map(String) : [String(rawCat)];
+        const catNames = catIds.map(id => categoriesMap[id] || (isNaN(id) && id ? id : null)).filter(Boolean);
+        categoria = catNames.length > 0 ? catNames.join(", ") : (isNaN(catIds[0]) && catIds[0] ? catIds[0] : (catIds[0] ? `Categoria #${catIds[0]}` : "Sem categoria"));
+      }
+
+      // Grupo Técnico
+      let grupoTecnico = "Não atribuído";
+      if (ticket["8"] !== undefined && ticket["8"] !== null) {
+        const rawGrp = ticket["8"];
+        const grpIds = Array.isArray(rawGrp) ? rawGrp.map(String) : [String(rawGrp)];
+        const grpNames = grpIds.map(id => groupsMap[id] || (isNaN(id) && id ? id : null)).filter(Boolean);
+        grupoTecnico = grpNames.length > 0 ? grpNames.join(", ") : (isNaN(grpIds[0]) && grpIds[0] ? grpIds[0] : (grpIds[0] ? `Grupo #${grpIds[0]}` : "Não atribuído"));
+      }
+
+      const dataAberturaRaw = ticket["15"] || "";
+      const dataModificacaoRaw = ticket["19"] || dataAberturaRaw;
+
+      const ticketUrl = glpiBaseWebUrl ? `${glpiBaseWebUrl}/front/ticket.form.php?id=${ticketId}` : "";
+
+      return {
+        id: ticketId,
+        titulo,
+        status: statusLabel,
+        statusCode,
+        dataAbertura: formatDataHora(dataAberturaRaw),
+        dataAberturaRaw,
+        dataModificacao: formatDataHora(dataModificacaoRaw),
+        dataModificacaoRaw,
+        requerente,
+        tecnico,
+        categoria,
+        grupoTecnico,
+        url: ticketUrl
+      };
+    });
+
+    const nowFormatted = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+    const payload = {
+      statusAtual: statusKey,
+      counts: statusCounts,
+      total: statusCounts[statusKey] || chamados.length,
+      lastSync: nowFormatted,
+      chamados
+    };
+
+    glpiChamadosCache[statusKey] = {
+      time: now,
+      data: payload
+    };
+
+    res.json(payload);
+  } catch (error) {
+    console.error("[GLPI] Erro ao buscar lista de chamados:", error.message);
+    res.json(emptyResponse);
+  } finally {
+    if (sessionToken) {
+      await killGlpiSession(sessionToken);
+    }
+  }
+});
+
 app.get("/api/glpi/usuarios-busca", async (req, res, next) => {
   let sessionToken = null;
   try {
@@ -3785,6 +4099,7 @@ app.post("/api/glpi/sync-now", async (req, res, next) => {
 });
 
 const setupFrontend = async () => {
+  app.use(express.static(path.join(__dirname, "..", "public")));
   if (isProduction) {
     app.use(express.static(distPath));
     app.get(/^(?!\/api).*/, (_req, res) => {

@@ -10,6 +10,7 @@ import {
 import Painel from "./components/Painel";
 import Historico from "./components/Historico";
 import Dashboard from "./components/Dashboard";
+import Chamados from "./components/Chamados";
 import InventarioMontagem from "./components/InventarioMontagem";
 import Impressoras from "./components/Impressoras";
 import EscalaPlantao from "./components/EscalaPlantao";
@@ -81,7 +82,7 @@ function AppLayout() {
         .then((list) => {
           setTemAlertaImpressoras(list.some(temTonerCritico));
         })
-        .catch(() => {});
+        .catch(() => { });
     };
 
     checarImpressoras();
@@ -160,7 +161,11 @@ function AppLayout() {
           </button>
           <img
             className="header-logo"
-            src="https://www.gnu.com.br/site/img/logo-gnu.svg"
+            src="/logo-gnu.png"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = "https://www.gnu.com.br/site/img/core-favoritos.png";
+            }}
             alt="Logo GNU"
           />
           <h1 className="header-title">PAINEL T.I. GNU</h1>
@@ -263,7 +268,7 @@ function AppLayout() {
                 >
                   <div className="sound-popover-header">
                     <span className="sound-popover-title">
-                      🔊 Alerta Sonoro
+                      Alerta Sonoro
                     </span>
                     <button
                       type="button"
@@ -391,6 +396,14 @@ function AppLayout() {
                 Dashboard
               </NavLink>
               <NavLink
+                to="/chamados"
+                className={({ isActive }) =>
+                  `side-nav-link${isActive ? " active" : ""}`
+                }
+              >
+                Chamados
+              </NavLink>
+              <NavLink
                 to="/montagens"
                 className={({ isActive }) =>
                   `side-nav-link${isActive ? " active" : ""}`
@@ -487,6 +500,7 @@ function AppLayout() {
           {/* Rotas separadas para manter cada tela isolada e simples */}
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/chamados" element={<Chamados />} />
             <Route path="/montagens" element={<Painel />} />
             <Route
               path="/equipamentos-pendentes"
